@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hoopo(フーポ)ワイヤーフレーム v6(完全版)</title>
+<style>
+:root{--bg:#EFECE7;--paper:#FFF;--ink:#1A1511;--sub:#7D7368;--faint:#B3A99E;--hair:rgba(58,42,22,.12);
+--accent:#EF8432;--tint:#FCEBDA;--deep:#9C4E0E;--line-green:#06C755;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px;line-height:1.6;}
+.wrap{max-width:880px;margin:0 auto;padding:40px 20px 80px;}
+.page-h{font-size:21px;font-weight:600;}
+.page-sub{font-size:13px;color:var(--sub);margin-top:6px;}
+.sec{margin-top:44px;}
+.sec-h{font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tag{font-size:11px;font-weight:600;color:var(--deep);background:var(--tint);border-radius:99px;padding:3px 10px;}
+.ic{width:1em;height:1em;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.12em;}
+.stage{margin-top:20px;}
+.rail{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-ms-overflow-style:none;scrollbar-width:none;}
+.rail::-webkit-scrollbar{display:none;}
+.slide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;padding:6px 0 2px;}
+.slide-cap{font-size:12.5px;color:var(--sub);margin-bottom:12px;text-align:center;max-width:560px;}
+.slide-cap b{color:var(--ink);font-weight:600;}
+.nav-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px;}
+.arrow{width:38px;height:38px;border-radius:50%;border:1px solid var(--hair);background:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;}
+.arrow:active{transform:scale(.95);}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:300px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--faint);opacity:.5;transition:.2s;}
+.dot.on{opacity:1;background:var(--ink);transform:scale(1.25);}
+/* phone */
+.phone{width:302px;height:634px;background:#FDFCFA;border:1px solid #DCD4C8;border-radius:40px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 40px -24px rgba(40,25,10,.35);}
+.statusbar{height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:12.5px;font-weight:600;}
+.screen{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#F5F3EF;}
+.sc-head{padding:2px 16px 8px;flex:none;}
+.sc-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.sc-title .back{color:var(--accent);font-size:17px;display:flex;}
+.sc-body{flex:1;overflow:hidden;padding:2px 16px 12px;display:flex;flex-direction:column;gap:10px;}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--tint);color:var(--deep);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-left:auto;}
+.card{background:var(--paper);border-radius:16px;padding:13px 14px;border:1px solid rgba(58,42,22,.06);}
+.kv{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--sub);}
+.kv .ic{color:var(--accent);}
+.kv + .kv{margin-top:7px;}
+.label{font-size:12px;font-weight:600;color:var(--sub);}
+.hero .kicker{font-size:11px;font-weight:600;color:var(--deep);}
+.hero .big{font-size:23px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+.notice{display:flex;align-items:center;gap:10px;background:var(--tint);border-radius:14px;padding:10px 14px;font-size:12px;color:var(--deep);font-weight:500;}
+.notice .go{margin-left:auto;font-size:11px;font-weight:600;white-space:nowrap;}
+.linebtn{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--line-green);color:#fff;border-radius:14px;padding:11px 0;font-size:13px;font-weight:600;}
+.news{background:var(--paper);border-radius:16px;border:1px solid rgba(58,42,22,.06);overflow:hidden;}
+.news .row{padding:10px 14px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.news .row + .row{border-top:1px solid var(--hair);}
+.news time{font-size:11px;color:var(--faint);flex:none;}
+/* forms */
+.fld2{display:flex;flex-direction:column;gap:5px;}
+.fld2 label{font-size:11px;font-weight:600;color:var(--sub);}
+.inbox{background:#FBF8F3;border:1px solid var(--hair);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--ink);}
+.inbox.ph{color:var(--faint);}
+.seg2{display:flex;background:#EAE4DA;border-radius:12px;padding:3px;}
+.seg2 span{flex:1;text-align:center;padding:7px 0;font-size:12px;font-weight:600;color:var(--sub);border-radius:9px;}
+.seg2 .on{background:#FFF;color:var(--accent);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.days7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.days7 span{text-align:center;padding:8px 0;font-size:12px;font-weight:600;border-radius:10px;background:#FBF8F3;border:1px solid var(--hair);color:var(--sub);}
+.days7 .on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.addlink{font-size:12px;color:var(--deep);font-weight:600;display:inline-flex;align-items:center;gap:4px;}
+/* schedule */
+.month-nav{display:flex;align-items:center;justify-content:center;gap:16px;font-size:13px;font-weight:600;}
+.month-nav .ic{color:var(--faint);}
+.seg{display:flex;background:#E9E4DC;border-radius:9px;padding:2px;font-size:11px;font-weight:600;color:var(--sub);margin-left:auto;}
+.seg span{padding:4px 9px;border-radius:7px;display:flex;align-items:center;gap:4px;}
+.seg .on{background:#FFF;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.sched{background:var(--paper);border-radius:16px;border:1px solid rgba(58,42,22,.06);overflow:hidden;}
+.sr{display:flex;align-items:center;gap:12px;padding:11px 14px;}
+.sr + .sr{border-top:1px solid var(--hair);}
+.sr .d{width:38px;flex:none;text-align:center;}
+.sr .d b{display:block;font-size:16px;font-weight:700;color:var(--accent);line-height:1.1;font-variant-numeric:tabular-nums;}
+.sr .d span{font-size:10px;color:var(--faint);}
+.sr .t{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;}
+.sr .p{font-size:11px;color:var(--sub);margin-top:1px;}
+.sr .badge{margin-left:auto;font-size:10px;font-weight:600;color:var(--deep);background:var(--tint);border-radius:99px;padding:3px 8px;flex:none;}
+/* calendar */
+.cal{background:var(--paper);border-radius:16px;border:1px solid rgba(58,42,22,.06);padding:12px 10px 10px;}
+.cal .wk,.cal .days{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal .wk div{font-size:10px;color:var(--faint);text-align:center;padding-bottom:6px;font-weight:600;}
+.cell{height:37px;display:flex;align-items:center;justify-content:center;}
+.cell i{font-style:normal;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-variant-numeric:tabular-nums;}
+.cell.mute i{color:#D5CCC1;}
+.cell.off i{color:var(--faint);}
+.cell.pr i{cursor:pointer;font-weight:600;}
+.cell.prac i{background:var(--tint);color:var(--deep);}
+.cell.prac.sel i{background:var(--accent);color:#fff;}
+.cell.s-none i{border:1.5px solid var(--accent);color:var(--deep);}
+.cell.s-full i{background:var(--accent);color:#fff;}
+.cell.s-part i{background:var(--tint);border:1.5px solid var(--accent);color:var(--deep);}
+.cell.s-abs i{background:#E7E1D8;color:#9A8F82;text-decoration:line-through;}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--sub);margin-top:8px;padding-left:4px;}
+.legend em{font-style:normal;display:inline-flex;align-items:center;gap:5px;}
+.legend .sw{width:11px;height:11px;border-radius:50%;}
+/* submit */
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{font-size:11.5px;font-weight:600;color:var(--deep);background:var(--tint);border-radius:99px;padding:5px 12px;cursor:pointer;}
+.chip.ghost{background:transparent;border:1px solid var(--hair);color:var(--sub);}
+.sub-list{background:var(--paper);border-radius:16px;border:1px solid rgba(58,42,22,.06);overflow:hidden;}
+.sbr{padding:10px 13px;}
+.sbr + .sbr{border-top:1px solid var(--hair);}
+.sbr .top{display:flex;align-items:center;gap:8px;}
+.sbr .d{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}
+.sbr .p{font-size:10.5px;color:var(--sub);}
+.sbr select{margin-left:auto;font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);background:#F1EDE6;border:1px solid var(--hair);border-radius:9px;padding:5px 6px;max-width:132px;}
+.sbr input{margin-top:8px;width:100%;font:inherit;font-size:11.5px;background:#FBF8F3;border:1px solid var(--hair);border-radius:9px;padding:7px 9px;color:var(--ink);}
+.sbr input::placeholder{color:var(--faint);}
+.cta{margin-top:auto;background:var(--ink);color:#fff;border-radius:15px;padding:13px 0;font-size:14px;font-weight:600;text-align:center;}
+.cta.sec2{margin-top:0;background:var(--paper);color:var(--ink);border:1px solid var(--hair);}
+.cta small{font-weight:500;opacity:.7;font-size:11px;margin-left:6px;}
+.sync{font-size:10.5px;color:var(--faint);text-align:center;}
+/* court */
+.court-wrap{position:relative;background:#F8ECDD;border-radius:16px;border:1px solid rgba(58,42,22,.06);overflow:hidden;}
+.court-wrap svg{display:block;width:100%;height:auto;}
+.pl{position:absolute;width:58px;margin-left:-29px;text-align:center;}
+.pl .face{width:42px;height:42px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--deep);background:#fff;border:2px solid var(--accent);position:relative;}
+.pl .pos{position:absolute;top:-7px;right:-6px;background:var(--ink);color:#fff;font-size:8px;font-weight:700;border-radius:99px;padding:1.5px 5px;}
+.pl .nm{font-size:9.5px;font-weight:600;margin-top:3px;text-shadow:0 1px 0 #F8ECDD;}
+.bench{background:var(--paper);border-radius:16px;border:1px solid rgba(58,42,22,.06);padding:11px 14px;}
+.bench .bh{font-size:12px;font-weight:600;color:var(--sub);margin-bottom:8px;}
+.bench .bl{display:flex;gap:14px;}
+.bp{text-align:center;}
+.bp .face{width:34px;height:34px;border-radius:50%;background:#EFE9E0;color:var(--sub);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto;}
+.bp .nm{font-size:9.5px;color:var(--sub);margin-top:3px;font-weight:600;}
+/* roster */
+.roster{background:var(--paper);border-radius:16px;border:1px solid rgba(58,42,22,.06);overflow:hidden;}
+.rr{display:flex;align-items:center;gap:11px;padding:9px 14px;}
+.rr + .rr{border-top:1px solid var(--hair);}
+.rr .face{width:33px;height:33px;border-radius:50%;background:var(--tint);color:var(--deep);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;}
+.rr .nm{font-size:13px;font-weight:600;}
+.rr .yb{font-size:11px;color:var(--sub);}
+.rr .gr{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--sub);background:#EDE8E0;border-radius:99px;padding:3px 9px;flex:none;}
+/* fee */
+.fee-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.fee{background:var(--paper);border:1px solid rgba(58,42,22,.06);border-radius:14px;padding:8px 0 9px;text-align:center;}
+.fee .m{font-size:10.5px;color:var(--sub);font-weight:600;}
+.fee .st{width:29px;height:29px;margin:5px auto 0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.fee.paid .st{border:2px solid var(--deep);color:var(--deep);}
+.fee.due{border-color:var(--accent);}
+.fee.due .st{border:2px dashed var(--faint);color:var(--faint);font-size:10px;}
+.fee.later .st{color:#D8D0C5;}
+/* tabbar */
+.tabbar{flex:none;background:rgba(253,252,250,.96);border-top:1px solid var(--hair);padding:8px 6px 6px;display:flex;align-items:flex-end;}
+.tb{flex:1;text-align:center;color:#A79B8D;font-size:9.5px;font-weight:600;padding-bottom:2px;}
+.tb .ic{width:22px;height:22px;display:block;margin:0 auto 2px;}
+.tb.on{color:var(--accent);}
+.tb.center{margin-top:-22px;}
+.tb.center .orb{width:50px;height:50px;border-radius:50%;background:var(--ink);color:#F5F3EF;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;border:4px solid #F5F3EF;box-shadow:0 6px 14px -6px rgba(20,12,4,.5);}
+.tb.center .orb .ic{width:22px;height:22px;margin:0;}
+.tb.center.on .orb{background:var(--accent);}
+.homebar{height:16px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(253,252,250,.96);}
+.homebar i{width:110px;height:4px;border-radius:2px;background:#D8D2C8;}
+/* admin */
+#admin2[data-theme="light"]{--abg:#F2F2F1;--acard:#FFF;--aink:#1C1C1B;--asub:#6F6E6A;--ahair:#E3E2DE;--afield:#F6F6F5;--aacc:#1C1C1B;--aon:#FFF;}
+#admin2[data-theme="dark"]{--abg:#151514;--acard:#1F1F1E;--aink:#F0EFEC;--asub:#A2A19B;--ahair:#33322F;--afield:#262625;--aacc:#F0EFEC;--aon:#171716;}
+#admin2[data-fs="s"]{--afs:12px;} #admin2[data-fs="m"]{--afs:13.5px;} #admin2[data-fs="l"]{--afs:16px;}
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--acard);border:1px solid var(--ahair);border-radius:14px;padding:10px 14px;color:var(--aink);margin-top:14px;}
+.toolbar .tl{font-size:12px;color:var(--asub);font-weight:600;}
+.tgl{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;}
+.sw2{width:40px;height:23px;border-radius:99px;background:var(--ahair);position:relative;transition:.2s;}
+.sw2 i{position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:var(--acard);transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+#admin2[data-theme="dark"] .sw2{background:#4A4A46;} #admin2[data-theme="dark"] .sw2 i{left:19.5px;}
+.fseg{display:flex;background:var(--afield);border:1px solid var(--ahair);border-radius:9px;padding:2px;}
+.fseg button{border:0;background:transparent;color:var(--asub);font-weight:600;padding:4px 12px;border-radius:7px;cursor:pointer;font-family:inherit;}
+.fseg button.on{background:var(--acard);color:var(--aink);box-shadow:0 1px 2px rgba(0,0,0,.12);}
+.apane{width:100%;max-width:640px;background:var(--abg);border:1px solid var(--ahair);border-radius:16px;padding:18px;color:var(--aink);font-size:var(--afs);}
+.apane .ah{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.8em;}
+.apane .ah b{font-size:1.15em;font-weight:700;}
+.pill{background:var(--acard);border:1px solid var(--ahair);border-radius:99px;padding:.3em .9em;font-size:.85em;font-weight:600;}
+.pill.fill{background:var(--aacc);color:var(--aon);border-color:var(--aacc);}
+.acard{background:var(--acard);border:1px solid var(--ahair);border-radius:12px;padding:.9em 1em;}
+.acard + .acard{margin-top:.7em;}
+.acard .k{font-size:.8em;color:var(--asub);font-weight:600;}
+.acard .v{font-size:1.5em;font-weight:700;margin-top:.1em;}
+.acard .v small{font-size:.55em;color:var(--asub);font-weight:500;}
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.7em;}
+.bar{height:5px;border-radius:3px;background:var(--ahair);margin-top:.5em;}
+.bar i{display:block;height:100%;width:31%;background:var(--aink);border-radius:3px;}
+.atable{width:100%;table-layout:fixed;font-size:.88em;border-collapse:collapse;}
+.atable td{padding:.5em .3em;border-bottom:1px solid var(--ahair);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.atable tr.hd td{color:var(--asub);font-size:.9em;font-weight:600;}
+.cellbox{background:var(--afield);border:1px solid var(--ahair);border-radius:8px;padding:.3em .55em;font-size:.95em;}
+.arow{display:flex;gap:.7em;align-items:baseline;padding:.5em 0;border-top:1px solid var(--ahair);font-size:.9em;}
+.arow:first-of-type{border-top:0;}
+.arow b{font-weight:600;white-space:nowrap;}
+.arow span{color:var(--asub);font-size:.92em;}
+.abtn{border:1px solid var(--ahair);background:var(--acard);border-radius:9px;padding:.5em 1.1em;font-size:.88em;font-weight:600;display:inline-flex;align-items:center;gap:.4em;}
+.abtn.fill{background:var(--aacc);color:var(--aon);border-color:var(--aacc);}
+.anote{font-size:.8em;color:var(--asub);margin-top:.7em;}
+.lgin{max-width:330px;margin:0 auto;text-align:center;}
+.lgin .mark{width:44px;height:44px;border-radius:12px;background:var(--acard);border:1px solid var(--ahair);display:flex;align-items:center;justify-content:center;margin:0 auto .7em;font-size:1.4em;}
+.lgin h4{font-size:1.15em;font-weight:700;}
+.lgin p{font-size:.82em;color:var(--asub);margin-top:.2em;}
+.lgbtn{display:block;border:1px solid var(--ahair);background:var(--acard);border-radius:10px;padding:.65em 0;font-size:.92em;font-weight:600;margin-top:.8em;}
+.lgbtn.fill{background:var(--aacc);color:var(--aon);border-color:var(--aacc);}
+.or{display:flex;align-items:center;gap:.7em;color:var(--asub);font-size:.72em;margin:1em 0 .2em;}
+.or i{flex:1;height:1px;background:var(--ahair);}
+.lgfld{text-align:left;margin-top:.7em;}
+.lgfld label{font-size:.75em;font-weight:600;color:var(--asub);}
+.lgfld .in{margin-top:.3em;background:var(--afield);border:1px solid var(--ahair);border-radius:9px;padding:.55em .7em;font-size:.9em;color:var(--asub);}
+.sub-h{font-size:14px;font-weight:600;margin-top:26px;color:var(--aink);}
+.aapp{display:flex;width:100%;max-width:660px;background:var(--acard);border:1px solid var(--ahair);border-radius:14px;overflow:hidden;min-height:410px;font-size:var(--afs);color:var(--aink);}
+.aside{width:168px;flex:none;border-right:1px solid var(--ahair);padding:1em .6em;background:var(--acard);}
+.aside .lg{font-size:.92em;font-weight:700;padding:0 .6em .9em;display:flex;align-items:center;gap:.4em;}
+.ai{display:flex;align-items:center;gap:.5em;padding:.5em .6em;border-radius:8px;font-size:.85em;color:var(--asub);font-weight:500;}
+.ai.on{background:var(--afield);color:var(--aink);font-weight:600;}
+.amain{flex:1;min-width:0;padding:1.1em 1.2em;background:var(--abg);}
+.mscreen{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--abg);color:var(--aink);font-size:var(--afs);}
+.mhead{display:flex;align-items:center;gap:.6em;padding:.7em .9em;border-bottom:1px solid var(--ahair);background:var(--acard);font-weight:700;font-size:1.02em;flex:none;}
+.mhead .sp{margin-left:auto;display:flex;gap:.8em;color:var(--asub);}
+.mbody{flex:1;overflow:hidden;padding:.7em .8em;display:flex;flex-direction:column;gap:.55em;}
+.mfee{display:grid;grid-template-columns:repeat(4,1fr);gap:.45em;}
+.mfee div{background:var(--acard);border:1px solid var(--ahair);border-radius:9px;text-align:center;padding:.45em 0;font-size:.82em;color:var(--asub);}
+.mfee b{display:block;font-size:1.05em;color:var(--aink);}
+.foot{margin-top:40px;font-size:12px;color:var(--sub);border-top:1px solid var(--hair);padding-top:14px;}
+</style>
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6.2 9.6V20h11.6V9.6"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/></symbol>
+<symbol id="i-yen" viewBox="0 0 24 24"><rect x="3" y="6.2" width="18" height="11.6" rx="2.2"/><circle cx="12" cy="12" r="2.6"/></symbol>
+<symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.6 19c0-3 2.4-4.8 5.4-4.8s5.4 1.8 5.4 4.8"/><circle cx="16.8" cy="9.6" r="2.2"/><path d="M16.2 14.6c2.5.3 4.2 1.8 4.2 4.1"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M20 4L10.8 13.2M20 4l-5.2 16-3.4-6.6L4 10.2 20 4z"/></symbol>
+<symbol id="i-chevl" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></symbol>
+<symbol id="i-chevr" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 2"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.4-5.4-6.4-10a6.4 6.4 0 1112.8 0C18.4 15.6 12 21 12 21z"/><circle cx="12" cy="10.6" r="2.1"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4.5h11L19 7.5V19.5H5z"/><path d="M8.5 10h7M8.5 13.5h7"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.2 16v-5.2a5.8 5.8 0 0111.6 0V16l1.5 2.4H4.7L6.2 16z"/><path d="M10 21a2 2 0 004 0"/></symbol>
+<symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8M3.6 12h16.8M5.9 6.2a11.4 11.4 0 0012.2 0M5.9 17.8a11.4 11.4 0 0112.2 0"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 13.6A8.2 8.2 0 1110.3 4a6.6 6.6 0 009.7 9.6z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.6"/><path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.7 5.7l1.6 1.6M16.7 16.7l1.6 1.6M18.3 5.7l-1.6 1.6M7.3 16.7l-1.6 1.6"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4.5 7.5l7.5 5.6 7.5-5.6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="11" width="13" height="9" rx="2"/><path d="M8.5 11V8.4a3.5 3.5 0 017 0V11"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+<symbol id="i-line" viewBox="0 0 24 24"><path d="M12 4C6.9 4 2.8 7.3 2.8 11.4c0 3.6 3.2 6.6 7.5 7.2.9.2.8.5.6 1.7-.1.5.4.7.9.4 3.6-2 7.4-4.6 8.9-7 .9-1.2 1.5-2.5 1.5-2.3 0-4.1-4.1-7.4-9.2-7.4z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.4 4.4L19 7.4"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<div class="wrap">
+  <h1 class="page-h">hoopo(フーポ)— ワイヤーフレーム v6(完全版)</h1>
+  <p class="page-sub">保護者向け15画面と、管理者向けのPC版8画面(左サイドバー)+モバイル版9画面(ハンバーガーメニュー)を収録。矢印か横スワイプで1画面ずつ確認できます。提出画面のリスト⇄カレンダー同期、管理側のダークモード・文字サイズ切替は実際に動作します。</p>
+
+  <!-- ============ parent ============ -->
+  <section class="sec">
+    <h2 class="sec-h">保護者向けアプリ(全15画面) <span class="tag">薄いオレンジ / iOSネイティブ調</span></h2>
+    <div class="stage">
+      <div class="rail" id="rail-p">
+
+        <!-- 1 login -->
+        <div class="slide"><p class="slide-cap"><b>1. ログイン</b> — LIFF起動時はスキップして自動ログイン</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-body" style="justify-content:center;align-items:center;gap:12px;">
+              <div style="width:56px;height:56px;border-radius:50%;background:var(--tint);display:flex;align-items:center;justify-content:center;"><svg class="ic" style="font-size:26px;color:var(--accent);"><use href="#i-ball"/></svg></div>
+              <div style="font-size:21px;font-weight:700;color:var(--accent);letter-spacing:.04em;">hoopo</div><div style="font-size:11px;font-weight:600;color:var(--sub);margin-top:-6px;">ミニバスれんらくポータル</div>
+              <div style="font-size:11px;color:var(--faint);text-align:center;">練習日程・出欠・月謝を<br>ひとつのアプリで</div>
+              <div class="linebtn" style="width:200px;"><svg class="ic" style="font-size:16px;"><use href="#i-line"/></svg>LINEでログイン</div>
+              <div style="font-size:10.5px;color:var(--faint);text-align:center;">LINEグループのリンクから開いた場合は<br>この画面は表示されません</div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <!-- 2 reg1 -->
+        <div class="slide"><p class="slide-cap"><b>2. お子さんの登録(1/2)</b> — 名前・呼び名(ひらがな)・学年・性別</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">お子さんの登録 <span style="font-size:12px;color:var(--faint);font-weight:600;">1/2</span></div></div>
+            <div class="sc-body" style="gap:8px;">
+              <div class="fld2"><label>お名前</label><div class="inbox">山田 太郎</div></div>
+              <div class="fld2"><label>呼び名(ひらがな)</label><div class="inbox">たろう</div></div>
+              <div class="fld2"><label>学年</label><div class="inbox" style="display:flex;justify-content:space-between;align-items:center;">4年生<svg class="ic" style="color:var(--faint);"><use href="#i-chevr"/></svg></div></div>
+              <div class="fld2"><label>性別</label><div class="seg2"><span class="on">男子</span><span>女子</span></div></div>
+              <span class="addlink"><svg class="ic"><use href="#i-plus"/></svg>兄弟・姉妹を追加</span>
+              <div class="cta">次へ</div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <!-- 3 reg2 -->
+        <div class="slide"><p class="slide-cap"><b>3. 参加について(2/2)</b> — 参加可能曜日・時間帯・伝達事項</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">参加について <span style="font-size:12px;color:var(--faint);font-weight:600;">2/2</span></div></div>
+            <div class="sc-body" style="gap:8px;">
+              <div class="fld2"><label>参加可能な曜日(複数選択)</label>
+                <div class="days7"><span class="on">日</span><span>月</span><span>火</span><span class="on">水</span><span>木</span><span>金</span><span class="on">土</span></div></div>
+              <div class="fld2"><label>参加可能な時間帯</label><div class="inbox">9:00 〜 17:00</div></div>
+              <div class="fld2"><label>コーチへの伝達事項(任意)</label><div class="inbox ph" style="height:70px;">例: ぜん息があるため、長時間の連続走は配慮をお願いします</div></div>
+              <div class="cta">登録を完了する</div>
+              <p class="sync">登録後すぐに利用を開始できます(コーチにも通知されます)</p>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <!-- 4 home -->
+        <div class="slide"><p class="slide-cap"><b>4. ホーム</b> — チームヘッダー(SKC粉浜・北粉浜が主役)+次回練習+LINE連絡ボタン+powered by hoopo</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div style="display:flex;align-items:center;gap:9px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;flex:none;">SKC</div><div style="font-size:13px;font-weight:800;line-height:1.25;">SKC粉浜・北粉浜<br>ミニバスケットボール</div><span class="avatar" style="margin-left:auto;">太</span></div></div>
+            <div class="sc-body" style="gap:9px;">
+              <div class="card hero">
+                <div class="kicker">次回の練習</div>
+                <div class="big">8/2 (日) 9:00–12:00</div>
+                <div class="kv" style="margin-top:5px;"><svg class="ic"><use href="#i-pin"/></svg>△△小学校 体育館</div>
+              </div>
+              <div class="notice"><svg class="ic"><use href="#i-bell"/></svg>8月分の参加予定が未提出です<span class="go">提出へ →</span></div>
+              <div class="linebtn"><svg class="ic" style="font-size:16px;"><use href="#i-line"/></svg>コーチにLINEで連絡する</div>
+              <div class="label">お知らせ</div>
+              <div class="news">
+                <div class="row">8月の予定表を発行しました<time>7/28</time></div>
+                <div class="row">体育館の駐車場について<time>7/21</time></div>
+              </div>
+              <div style="text-align:center;font-size:9.5px;color:var(--faint);font-weight:600;">powered by <b style="color:var(--accent);font-weight:800;">hoopo</b></div>
+            </div>
+            <nav class="tabbar" data-active="home"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 5 sched list -->
+        <div class="slide"><p class="slide-cap"><b>5. 練習日程(リスト)</b> — 右上トグルでカレンダーと切替</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">練習日程<span class="seg"><span class="on">リスト</span><span>カレンダー</span></span></div></div>
+            <div class="sc-body">
+              <div class="month-nav"><svg class="ic"><use href="#i-chevl"/></svg>2026年8月<svg class="ic"><use href="#i-chevr"/></svg></div>
+              <div class="sched">
+                <div class="sr"><div class="d"><b>2</b><span>日</span></div><div><div class="t">9:00–12:00</div><div class="p">△△小学校 体育館</div></div></div>
+                <div class="sr"><div class="d"><b>9</b><span>日</span></div><div><div class="t">9:00–12:00</div><div class="p">△△小学校 体育館</div></div></div>
+                <div class="sr"><div class="d"><b>16</b><span>日</span></div><div><div class="t">13:00–17:00</div><div class="p">□□中学校 体育館</div></div><span class="badge">練習試合</span></div>
+                <div class="sr"><div class="d"><b>23</b><span>日</span></div><div><div class="t">9:00–12:00</div><div class="p">△△小学校 体育館</div></div></div>
+              </div>
+              <p class="sync">日付をタップすると詳細ページを開きます</p>
+            </div>
+            <nav class="tabbar" data-active="cal"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 6 sched cal -->
+        <div class="slide"><p class="slide-cap"><b>6. 練習日程(カレンダー)</b> — 日曜始まり。練習日のみアクティブ、タップで下の詳細が更新</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">練習日程<span class="seg"><span>リスト</span><span class="on">カレンダー</span></span></div></div>
+            <div class="sc-body">
+              <div class="month-nav"><svg class="ic"><use href="#i-chevl"/></svg>2026年8月<svg class="ic"><use href="#i-chevr"/></svg></div>
+              <div class="cal" id="cal-view"></div>
+              <div class="card" id="view-detail" style="padding:10px 14px;"></div>
+            </div>
+            <nav class="tabbar" data-active="cal"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 7 detail -->
+        <div class="slide"><p class="slide-cap"><b>7. 練習の詳細(ページ)</b> — 備考・練習メニュー・出場メンバーへの導線</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title"><span class="back"><svg class="ic"><use href="#i-chevl"/></svg></span>練習の詳細</div></div>
+            <div class="sc-body">
+              <div class="card">
+                <div style="font-size:11px;font-weight:600;color:var(--deep);">8/16 (日) <span style="background:var(--tint);border-radius:99px;padding:2px 8px;margin-left:4px;">練習試合</span></div>
+                <div style="font-size:22px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;">13:00–17:00</div>
+                <div class="kv" style="margin-top:6px;"><svg class="ic"><use href="#i-pin"/></svg>□□中学校 体育館</div>
+                <div class="kv"><svg class="ic"><use href="#i-note"/></svg>お弁当・水筒を持参してください</div>
+              </div>
+              <div class="card">
+                <div class="label" style="margin-bottom:5px;">練習メニュー</div>
+                <div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--hair);font-size:13px;"><b style="font-size:12px;color:var(--deep);width:44px;flex:none;">15分</b>アップ・体幹トレーニング</div>
+                <div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--hair);font-size:13px;"><b style="font-size:12px;color:var(--deep);width:44px;flex:none;">30分</b>ドリブル&amp;パス基礎</div>
+                <div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--hair);font-size:13px;"><b style="font-size:12px;color:var(--deep);width:44px;flex:none;">45分</b>ゲーム形式(5対5)</div>
+              </div>
+              <div class="cta sec2">出場メンバーはこちら →</div>
+              <div class="cta" style="margin-top:0;">この日の参加予定を変更する</div>
+            </div>
+            <nav class="tabbar" data-active="cal"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 8 lineup 2D -->
+        <div class="slide"><p class="slide-cap"><b>8. 出場メンバー(2D)</b> — リングを下に反転。PG/SG=3P外側の手前、SF/PF=Cよりセンターサークル寄り、C=リング横</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title"><span class="back"><svg class="ic"><use href="#i-chevl"/></svg></span>出場メンバー<span class="seg"><span class="on">2D</span><span>3D</span></span></div></div>
+            <div class="sc-body">
+              <div style="font-size:11px;font-weight:600;color:var(--sub);">8/16 練習試合 — スターティングメンバー</div>
+              <div class="court-wrap">
+                <svg viewBox="0 0 300 316" style="transform:rotate(180deg);" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <rect x="6" y="0" width="288" height="310" fill="none" stroke="#DCA878" stroke-width="2"/>
+                  <path d="M32 0 V46 Q32 176 150 176 Q268 176 268 46 V0" fill="none" stroke="#DCA878" stroke-width="2"/>
+                  <rect x="108" y="0" width="84" height="106" fill="#F4E0C8" stroke="#DCA878" stroke-width="2"/>
+                  <circle cx="150" cy="106" r="32" fill="none" stroke="#DCA878" stroke-width="2"/>
+                  <path d="M124 10 h52" stroke="#C98F5C" stroke-width="3"/>
+                  <circle cx="150" cy="22" r="7" fill="none" stroke="#C98F5C" stroke-width="2.5"/>
+                  <path d="M108 310 a42 42 0 0 1 84 0" fill="none" stroke="#DCA878" stroke-width="2"/>
+                </svg>
+                <div class="pl" style="left:26%;top:27%;"><div class="face">山<span class="pos">PG</span></div><div class="nm">山田 太郎</div></div>
+                <div class="pl" style="left:74%;top:27%;"><div class="face">田<span class="pos">SG</span></div><div class="nm">田中 蓮</div></div>
+                <div class="pl" style="left:12%;top:52%;"><div class="face">佐<span class="pos">SF</span></div><div class="nm">佐藤 花子</div></div>
+                <div class="pl" style="left:88%;top:52%;"><div class="face">高<span class="pos">PF</span></div><div class="nm">高橋 大和</div></div>
+                <div class="pl" style="left:64%;top:70%;"><div class="face">鈴<span class="pos">C</span></div><div class="nm">鈴木 一郎</div></div>
+              </div>
+              <div class="bench">
+                <div class="bh">ベンチメンバー</div>
+                <div class="bl">
+                  <div class="bp"><div class="face">伊</div><div class="nm">伊藤</div></div>
+                  <div class="bp"><div class="face">渡</div><div class="nm">渡辺</div></div>
+                  <div class="bp"><div class="face">中</div><div class="nm">中村</div></div>
+                  <div class="bp"><div class="face">小</div><div class="nm">小林</div></div>
+                  <div class="bp"><div class="face">加</div><div class="nm">加藤</div></div>
+                </div>
+              </div>
+            </div>
+            <nav class="tabbar" data-active="cal"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 9 lineup 3D -->
+        <div class="slide"><p class="slide-cap"><b>9. 出場メンバー(3D)</b> — 横から見たコートにピンを立て、上に顔写真(モックは頭文字)</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title"><span class="back"><svg class="ic"><use href="#i-chevl"/></svg></span>出場メンバー<span class="seg"><span>2D</span><span class="on">3D</span></span></div></div>
+            <div class="sc-body">
+              <div style="font-size:11px;font-weight:600;color:var(--sub);">8/16 練習試合 — スターティングメンバー</div>
+              <div style="background:#FDFBF7;border-radius:16px;border:1px solid rgba(58,42,22,.06);overflow:hidden;">
+                <svg viewBox="0 0 300 330" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;" aria-hidden="true">
+                  <polygon points="70,120 230,120 292,300 8,300" fill="#F8ECDD" stroke="#DCA878" stroke-width="2"/>
+                  <polygon points="122,120 178,120 190,192 110,192" fill="#F4E0C8" stroke="#DCA878" stroke-width="2"/>
+                  <ellipse cx="150" cy="192" rx="36" ry="11" fill="none" stroke="#DCA878" stroke-width="2"/>
+                  <path d="M48 150 Q150 262 252 150" fill="none" stroke="#DCA878" stroke-width="2"/>
+                  <path d="M106 300 A44 12 0 0 1 194 300" fill="none" stroke="#DCA878" stroke-width="2"/>
+                  <line x1="150" y1="118" x2="150" y2="58" stroke="#8A6B4C" stroke-width="3" stroke-linecap="round"/>
+                  <rect x="126" y="42" width="48" height="32" rx="3" fill="#FFFFFF" stroke="#C98F5C" stroke-width="2"/>
+                  <rect x="140" y="52" width="20" height="14" fill="none" stroke="#DCA878" stroke-width="1.5"/>
+                  <ellipse cx="150" cy="78" rx="13" ry="4.5" fill="none" stroke="#C98F5C" stroke-width="2.5"/>
+                  <path d="M141 80 L146 92 M150 82 L150 94 M159 80 L154 92" stroke="#D8B48C" stroke-width="1" fill="none"/>
+                  <g><ellipse cx="192" cy="150" rx="11" ry="3.5" fill="rgba(90,60,30,.18)"/><line x1="192" y1="150" x2="192" y2="128" stroke="#B98A5E" stroke-width="2"/><circle cx="192" cy="114" r="14" fill="#FFF" stroke="#EF8432" stroke-width="2.5"/><text x="192" y="114" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="#9C4E0E">鈴</text><text x="192" y="163" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5A48">鈴木</text></g>
+                  <g><ellipse cx="58" cy="178" rx="11" ry="3.5" fill="rgba(90,60,30,.18)"/><line x1="58" y1="178" x2="58" y2="156" stroke="#B98A5E" stroke-width="2"/><circle cx="58" cy="142" r="14" fill="#FFF" stroke="#EF8432" stroke-width="2.5"/><text x="58" y="142" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="#9C4E0E">佐</text><text x="58" y="191" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5A48">佐藤</text></g>
+                  <g><ellipse cx="242" cy="178" rx="11" ry="3.5" fill="rgba(90,60,30,.18)"/><line x1="242" y1="178" x2="242" y2="156" stroke="#B98A5E" stroke-width="2"/><circle cx="242" cy="142" r="14" fill="#FFF" stroke="#EF8432" stroke-width="2.5"/><text x="242" y="142" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="#9C4E0E">高</text><text x="242" y="191" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5A48">高橋</text></g>
+                  <g><ellipse cx="98" cy="252" rx="11" ry="3.5" fill="rgba(90,60,30,.18)"/><line x1="98" y1="252" x2="98" y2="230" stroke="#B98A5E" stroke-width="2"/><circle cx="98" cy="216" r="14" fill="#FFF" stroke="#EF8432" stroke-width="2.5"/><text x="98" y="216" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="#9C4E0E">山</text><text x="98" y="265" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5A48">山田</text></g>
+                  <g><ellipse cx="202" cy="252" rx="11" ry="3.5" fill="rgba(90,60,30,.18)"/><line x1="202" y1="252" x2="202" y2="230" stroke="#B98A5E" stroke-width="2"/><circle cx="202" cy="216" r="14" fill="#FFF" stroke="#EF8432" stroke-width="2.5"/><text x="202" y="216" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="#9C4E0E">田</text><text x="202" y="265" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5A48">田中</text></g>
+                </svg>
+              </div>
+              <p class="sync">写真登録済みのメンバーはピンの丸に顔写真が入ります</p>
+            </div>
+            <nav class="tabbar" data-active="cal"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 10 submit list -->
+        <div class="slide"><p class="slide-cap"><b>10. 参加予定の提出(リスト)</b> — プルダウンで参加/途中/不参加。「途中参加・早退」でコメント欄が開きます(操作可)</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">参加予定の提出</div></div>
+            <div class="sc-body">
+              <div class="chip-row"><span class="chip" onclick="bulk('full')">すべて「参加」にする</span><span class="chip ghost" onclick="bulk('none')">未回答に戻す</span></div>
+              <div class="sub-list" id="sub-list"></div>
+              <p class="sync">カレンダー表示とも選択状態が同期します</p>
+              <div class="cta">この内容で提出する<small id="cnt-a"></small></div>
+            </div>
+            <nav class="tabbar" data-active="send"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 11 submit cal -->
+        <div class="slide"><p class="slide-cap"><b>11. 参加予定の提出(カレンダー)</b> — 練習日のみタップ可。タップで 参加→途中→不参加→未回答(リストと同期)</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">参加予定の提出</div></div>
+            <div class="sc-body">
+              <div class="month-nav"><svg class="ic"><use href="#i-chevl"/></svg>2026年8月<svg class="ic"><use href="#i-chevr"/></svg></div>
+              <div class="cal" id="cal-submit"></div>
+              <div class="legend">
+                <em><span class="sw" style="background:var(--accent);"></span>参加</em>
+                <em><span class="sw" style="background:var(--tint);border:1.5px solid var(--accent);"></span>途中参加・早退</em>
+                <em><span class="sw" style="background:#E7E1D8;"></span>不参加</em>
+                <em><span class="sw" style="border:1.5px solid var(--accent);"></span>未回答</em>
+              </div>
+              <div class="cta">この内容で提出する<small id="cnt-b"></small></div>
+            </div>
+            <nav class="tabbar" data-active="send"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 12 team roster -->
+        <div class="slide"><p class="slide-cap"><b>12. チーム(初期表示)</b> — 全メンバー一覧。学年・フルネーム・呼び名(ひらがな)</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">チーム <span style="font-size:12px;font-weight:600;color:var(--sub);margin-left:auto;">15人</span></div></div>
+            <div class="sc-body">
+              <div class="roster">
+                <div class="rr"><div class="face">鈴</div><div><div class="nm">鈴木 一郎 <span class="yb">いち</span></div></div><span class="gr">6年</span></div>
+                <div class="rr"><div class="face">渡</div><div><div class="nm">渡辺 湊 <span class="yb">みなと</span></div></div><span class="gr">5年</span></div>
+                <div class="rr"><div class="face">佐</div><div><div class="nm">佐藤 花子 <span class="yb">はな</span></div></div><span class="gr">5年</span></div>
+                <div class="rr"><div class="face">山</div><div><div class="nm">山田 太郎 <span class="yb">たろう</span></div></div><span class="gr">4年</span></div>
+                <div class="rr"><div class="face">中</div><div><div class="nm">中村 陽菜 <span class="yb">ひな</span></div></div><span class="gr">4年</span></div>
+                <div class="rr"><div class="face">田</div><div><div class="nm">田中 蓮 <span class="yb">れん</span></div></div><span class="gr">4年</span></div>
+                <div class="rr"><div class="face">高</div><div><div class="nm">高橋 次郎 <span class="yb">じろう</span></div></div><span class="gr">3年</span></div>
+                <div class="rr"><div class="face">伊</div><div><div class="nm">伊藤 結衣 <span class="yb">ゆい</span></div></div><span class="gr">2年</span></div>
+              </div>
+              <p class="sync">公式戦・練習試合の出場メンバーは日程の詳細ページから確認できます</p>
+            </div>
+            <nav class="tabbar" data-active="team"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 13 fee -->
+        <div class="slide"><p class="slide-cap"><b>13. 月謝確認</b> — 封筒の「済」ハンコ運用をそのまま再現</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">月謝確認 <span style="font-size:13px;font-weight:600;color:var(--sub);margin-left:auto;">2026年</span></div></div>
+            <div class="sc-body">
+              <div class="fee-grid">
+                <div class="fee paid"><div class="m">1月</div><div class="st">済</div></div>
+                <div class="fee paid"><div class="m">2月</div><div class="st">済</div></div>
+                <div class="fee paid"><div class="m">3月</div><div class="st">済</div></div>
+                <div class="fee paid"><div class="m">4月</div><div class="st">済</div></div>
+                <div class="fee paid"><div class="m">5月</div><div class="st">済</div></div>
+                <div class="fee paid"><div class="m">6月</div><div class="st">済</div></div>
+                <div class="fee paid"><div class="m">7月</div><div class="st">済</div></div>
+                <div class="fee due"><div class="m">8月</div><div class="st">未</div></div>
+                <div class="fee later"><div class="m">9月</div><div class="st">–</div></div>
+                <div class="fee later"><div class="m">10月</div><div class="st">–</div></div>
+                <div class="fee later"><div class="m">11月</div><div class="st">–</div></div>
+                <div class="fee later"><div class="m">12月</div><div class="st">–</div></div>
+              </div>
+              <div class="card" style="padding:10px 14px;font-size:12px;color:var(--sub);">月謝 3,000円。練習時に封筒でご提出ください。コーチの受領後に「済」が付きます。</div>
+            </div>
+            <nav class="tabbar" data-active="yen"></nav><div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 14 family -->
+        <div class="slide"><p class="slide-cap"><b>14. 家族の設定(招待する側)</b> — 招待コードの共有と連携状況</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title"><span class="back"><svg class="ic"><use href="#i-chevl"/></svg></span>家族の設定</div></div>
+            <div class="sc-body">
+              <div class="card">
+                <div class="label">山田 太郎さんの招待コード</div>
+                <div style="font-size:19px;font-weight:700;letter-spacing:2px;margin-top:4px;font-family:ui-monospace,monospace;">MH7K-42QD</div>
+                <span class="addlink" style="margin-top:8px;border:1px solid var(--hair);border-radius:10px;padding:6px 12px;">コードをコピー</span>
+              </div>
+              <p style="font-size:11px;color:var(--sub);">このコードをご家族に共有すると、同じお子さんの日程・出欠・月謝を確認できます(連携するとコーチにも通知されます)</p>
+              <div class="label">連携済みの家族</div>
+              <div class="news">
+                <div class="row">あなた(父)</div>
+                <div class="row">母 <span style="color:var(--accent);font-size:11px;font-weight:600;">連携済み</span></div>
+              </div>
+            </div>
+            <div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+        <!-- 15 invite -->
+        <div class="slide"><p class="slide-cap"><b>15. 招待コードで参加(招待される側)</b> — LINEログイン後の分岐</p>
+          <div class="phone"><div class="statusbar"></div><div class="screen">
+            <div class="sc-head"><div class="sc-title">はじめての方</div></div>
+            <div class="sc-body">
+              <p style="font-size:11px;color:var(--sub);">LINEログインが完了しました。登録方法を選んでください</p>
+              <div class="card">
+                <div style="font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;"><svg class="ic" style="color:var(--accent);"><use href="#i-team"/></svg>家族から招待を受けた方</div>
+                <div class="inbox ph" style="margin-top:8px;font-family:ui-monospace,monospace;letter-spacing:2px;">MH7K-42QD</div>
+                <div class="cta" style="margin-top:8px;padding:11px 0;">コードで連携する</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:1px;background:var(--hair);"></div><span style="font-size:11px;color:var(--faint);">または</span><div style="flex:1;height:1px;background:var(--hair);"></div></div>
+              <div class="card" style="text-align:center;font-size:12.5px;">お子さんを新しく登録する<div style="font-size:11px;color:var(--faint);margin-top:2px;">登録画面(1/2)へ進みます</div></div>
+            </div>
+            <div class="homebar"><i></i></div>
+          </div></div>
+        </div>
+
+      </div>
+      <div class="nav-row">
+        <div class="arrow" onclick="go('rail-p',-1)"><svg class="ic"><use href="#i-chevl"/></svg></div>
+        <div class="dots" id="dots-p"></div>
+        <div class="arrow" onclick="go('rail-p',1)"><svg class="ic"><use href="#i-chevr"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- admin -->
+  <section class="sec" id="admin2" data-theme="light" data-fs="m">
+    <h2 class="sec-h" style="color:var(--ink);">管理者向けアプリ <span class="tag" style="background:#E7E6E2;color:#3A3A38;">モノトーン / PC・モバイル2レイアウト</span></h2>
+    <div class="toolbar">
+      <span class="tl">表示設定(PC・モバイル共通)</span>
+      <span class="tgl" onclick="toggleTheme()"><svg class="ic" id="theme-ic"><use href="#i-moon"/></svg>ダークモード<span class="sw2"><i></i></span></span>
+      <span class="fseg">
+        <button data-fs="s" onclick="setFs('s')" style="font-size:11px;">小</button>
+        <button data-fs="m" onclick="setFs('m')" class="on" style="font-size:13px;">中</button>
+        <button data-fs="l" onclick="setFs('l')" style="font-size:15px;">大</button>
+      </span>
+    </div>
+
+    <h3 class="sub-h">PC版(全8画面)— 左サイドバーで機能を選択</h3>
+    <div class="stage">
+      <div class="rail" id="rail-pc">
+
+        <div class="slide"><p class="slide-cap"><b>PC-1. ログイン</b> — LINE または メール+パスワード</p>
+          <div class="apane" style="max-width:660px;"><div class="acard lgin">
+            <div class="mark"><svg class="ic"><use href="#i-ball"/></svg></div>
+            <h4>hoopo 管理コンソール</h4><p>コーチ・スタッフ専用の画面です</p>
+            <span class="lgbtn">LINEでログイン</span>
+            <div class="or"><i></i>または<i></i></div>
+            <div class="lgfld"><label>メールアドレス</label><div class="in">coach@example.com</div></div>
+            <div class="lgfld"><label>パスワード</label><div class="in">••••••••</div></div>
+            <span class="lgbtn fill">ログイン</span>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-2. ダッシュボード</b> — 次回参加・提出率・月謝・通数・承認待ち</p>
+          <div class="aapp"><nav class="aside" data-active="dash"></nav><div class="amain">
+            <div class="ah"><b>ダッシュボード</b><span class="pill">承認待ちの申請 2件 →</span></div>
+            <div class="agrid">
+              <div class="acard"><div class="k">次回 8/2(日) 参加予定</div><div class="v">11人 <small>+途中2人</small></div></div>
+              <div class="acard"><div class="k">8月の提出率</div><div class="v">12<small> / 15人</small></div></div>
+              <div class="acard"><div class="k">月謝 未提出</div><div class="v">3人</div></div>
+              <div class="acard"><div class="k">LINE通数(8月)</div><div class="v">62<small> / 200</small></div><div class="bar"><i></i></div></div>
+            </div>
+            <div class="acard" style="margin-top:.7em;"><div class="k">未提出の保護者(8月)</div>
+              <div class="arow"><b>高橋 次郎(3年)</b></div><div class="arow"><b>伊藤 結衣(2年)</b></div><div class="arow"><b>渡辺 湊(5年)</b></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-3. 出欠管理</b> — ○全参加/△途中/×不参加/−未回答</p>
+          <div class="aapp"><nav class="aside" data-active="att"></nav><div class="amain">
+            <div class="ah"><b>出欠管理</b><span class="pill">2026年8月 ▾</span></div>
+            <div class="acard">
+              <table class="atable">
+                <tr class="hd"><td style="width:34%;">部員</td><td style="text-align:center;">8/2</td><td style="text-align:center;">8/9</td><td style="text-align:center;">8/16</td><td style="text-align:center;">8/23</td></tr>
+                <tr><td>山田 太郎(4年)</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">△</td><td style="text-align:center;color:var(--asub);">×</td><td style="text-align:center;font-weight:700;">○</td></tr>
+                <tr><td>佐藤 花子(5年)</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;color:var(--asub);">×</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">○</td></tr>
+                <tr><td>鈴木 一郎(6年)</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">○</td></tr>
+                <tr><td style="color:var(--asub);">高橋 次郎(3年)</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td></tr>
+              </table>
+              <div class="anote">○ 全参加 / △ 途中参加・早退(タップでコメント) / × 不参加 / − 未回答。列=当日一覧、行=個人詳細</div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-4. 欠席者管理</b> — その日来ない・途中の子だけを理由つきで確認</p>
+          <div class="aapp"><nav class="aside" data-active="abs"></nav><div class="amain">
+            <div class="ah"><b>欠席者管理</b><span style="display:flex;gap:.4em;"><span class="pill fill">8/2(日)</span><span class="pill">8/9</span><span class="pill">8/16</span></span></div>
+            <div class="acard"><div class="k">不参加 — 2人</div>
+              <div class="arow"><b>伊藤 結衣(2年)</b><span>家族の予定のため</span></div>
+              <div class="arow"><b>渡辺 湊(5年)</b><span>(コメントなし)</span></div>
+            </div>
+            <div class="acard"><div class="k">途中参加・早退 — 2人</div>
+              <div class="arow"><b>山田 太郎(4年)</b><span>11:00ごろ早退します(通院のため)</span></div>
+              <div class="arow"><b>中村 陽菜(4年)</b><span>10:00から参加します</span></div>
+            </div>
+            <div class="acard"><div class="k">未回答 — 1人</div>
+              <div class="arow"><b>高橋 次郎(3年)</b><span class="abtn" style="margin-left:auto;">リマインド対象に含める</span></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-5. 認定管理</b> — 自動認定+事後確認(即時有効・必要時のみ無効化)</p>
+          <div class="aapp"><nav class="aside" data-active="cert"></nav><div class="amain">
+            <div class="ah"><b>認定管理</b><span style="font-size:.8em;color:var(--asub);">登録は即時有効。心当たりのない登録のみ無効化してください</span></div>
+            <div class="acard">
+              <div style="font-weight:700;">山本 悠真(3年・男) <span style="font-size:.8em;color:var(--asub);font-weight:500;">よび名: ゆうま</span></div>
+              <div style="font-size:.82em;color:var(--asub);margin-top:.2em;">新規登録 / 登録用URL経由 / 8/1 19:24 に自動認定</div>
+              <div style="display:flex;gap:.6em;justify-content:flex-end;align-items:center;margin-top:.6em;"><span class="pill">認定済(自動)</span><span class="abtn">無効化</span></div>
+            </div>
+            <div class="acard">
+              <div style="font-weight:700;">山田 太郎(4年)への家族連携</div>
+              <div style="font-size:.82em;color:var(--asub);margin-top:.2em;">招待コード MH7K-42QD 経由 / 続柄: 母 / 8/2 08:10 に自動認定</div>
+              <div style="display:flex;gap:.6em;justify-content:flex-end;align-items:center;margin-top:.6em;"><span class="pill">認定済(自動)</span><span class="abtn">無効化</span></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-6. 日程管理</b> — 入力・練習メニュー登録・予定表発行(LINE送信)・通数</p>
+          <div class="aapp"><nav class="aside" data-active="sched"></nav><div class="amain">
+            <div class="ah"><b>日程管理</b><span class="pill">2026年8月 ▾</span></div>
+            <div class="acard">
+              <table class="atable">
+                <tr class="hd"><td style="width:4.6em;">日付</td><td style="width:4em;">開始</td><td style="width:4em;">終了</td><td>場所</td><td style="width:4.6em;">メニュー</td></tr>
+                <tr><td><span class="cellbox">2 (日)</span></td><td><span class="cellbox">9:00</span></td><td><span class="cellbox">12:00</span></td><td><span class="cellbox">△△小学校 体育館</span></td><td style="text-decoration:underline;text-underline-offset:3px;font-weight:600;">編集</td></tr>
+                <tr><td><span class="cellbox">16 (日)</span></td><td><span class="cellbox">13:00</span></td><td><span class="cellbox">17:00</span></td><td><span class="cellbox">□□中学校 体育館</span></td><td style="text-decoration:underline;text-underline-offset:3px;font-weight:600;">編集</td></tr>
+              </table>
+              <span class="abtn" style="margin-top:.6em;"><svg class="ic"><use href="#i-plus"/></svg>行を追加</span>
+            </div>
+            <div class="acard"><div class="k">8/16 の練習メニュー(保護者アプリに表示)</div>
+              <div class="arow"><b style="width:3.2em;color:var(--asub);">15分</b><span style="color:var(--aink);">アップ・体幹トレーニング</span></div>
+              <div class="arow"><b style="width:3.2em;color:var(--asub);">45分</b><span style="color:var(--aink);">ゲーム形式(5対5)</span></div>
+            </div>
+            <div style="display:flex;gap:.6em;margin-top:.7em;flex-wrap:wrap;"><span class="abtn">下書き保存</span><span class="abtn fill"><svg class="ic"><use href="#i-send"/></svg>予定表を発行してLINEへ送信</span></div>
+            <div class="acard" style="margin-top:.7em;"><div class="k">今月のLINE通数</div><div class="v">62 <small>/ 200通(無料枠)</small></div><div class="bar"><i></i></div><div class="anote">1回の送信でグループ人数分を消費します</div></div>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-7. 月謝管理</b> — 封筒の済ハンコと同じ運用(セルクリックで済⇄未)</p>
+          <div class="aapp"><nav class="aside" data-active="fee"></nav><div class="amain">
+            <div class="ah"><b>月謝管理</b><span class="pill">2026年 ▾</span></div>
+            <div class="acard">
+              <table class="atable">
+                <tr class="hd"><td style="width:26%;">部員</td><td style="text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">3</td><td style="text-align:center;">4</td><td style="text-align:center;">5</td><td style="text-align:center;">6</td><td style="text-align:center;">7</td><td style="text-align:center;">8</td><td style="text-align:center;">9</td><td style="text-align:center;">10</td><td style="text-align:center;">11</td><td style="text-align:center;">12</td></tr>
+                <tr><td>山田 太郎</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td></tr>
+                <tr><td>佐藤 花子</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td></tr>
+                <tr><td>鈴木 一郎</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;font-weight:700;">済</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td></tr>
+              </table>
+              <div class="anote">現金の受領時にセルをクリックして「済」を付けます(保護者側の月謝画面に即反映)</div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>PC-8. 部員管理</b> — 呼び名つき名簿と年度更新</p>
+          <div class="aapp"><nav class="aside" data-active="mem"></nav><div class="amain">
+            <div class="ah"><b>部員管理 <span style="font-size:.75em;color:var(--asub);font-weight:500;">15人</span></b><span class="abtn">年度更新を実行</span></div>
+            <div class="acard">
+              <table class="atable">
+                <tr class="hd"><td style="width:27%;">名前</td><td style="width:17%;">呼び名</td><td>学年</td><td>性別</td><td>保護者</td><td style="width:17%;">伝達事項</td></tr>
+                <tr><td>山田 太郎</td><td style="color:var(--asub);">たろう</td><td>4年</td><td>男</td><td>2人</td><td style="font-weight:600;">あり</td></tr>
+                <tr><td>佐藤 花子</td><td style="color:var(--asub);">はな</td><td>5年</td><td>女</td><td>1人</td><td style="color:var(--asub);">−</td></tr>
+                <tr><td>鈴木 一郎</td><td style="color:var(--asub);">いち</td><td>6年</td><td>男</td><td>2人</td><td style="color:var(--asub);">−</td></tr>
+              </table>
+              <div class="anote">行タップで詳細(伝達事項全文・参加可能曜日/時間・招待コード)。年度更新は学年+1と6年生の卒団アーカイブを確認ダイアログ+取り消し猶予つきで実行</div>
+            </div>
+          </div></div>
+        </div>
+
+      </div>
+      <div class="nav-row">
+        <div class="arrow" onclick="go('rail-pc',-1)"><svg class="ic"><use href="#i-chevl"/></svg></div>
+        <div class="dots" id="dots-pc"></div>
+        <div class="arrow" onclick="go('rail-pc',1)"><svg class="ic"><use href="#i-chevr"/></svg></div>
+      </div>
+    </div>
+
+    <h3 class="sub-h">モバイル版(全9画面)— ハンバーガーメニューで表示</h3>
+    <div class="stage">
+      <div class="rail" id="rail-sp">
+
+        <div class="slide"><p class="slide-cap"><b>SP-1. ログイン</b> — PC版と同一機能をモバイル幅で</p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mbody" style="justify-content:center;">
+              <div class="acard lgin" style="max-width:none;">
+                <div class="mark"><svg class="ic"><use href="#i-ball"/></svg></div>
+                <h4>hoopo 管理コンソール</h4><p>コーチ・スタッフ専用の画面です</p>
+                <span class="lgbtn">LINEでログイン</span>
+                <div class="or"><i></i>または<i></i></div>
+                <div class="lgfld"><label>メールアドレス</label><div class="in">coach@example.com</div></div>
+                <div class="lgfld"><label>パスワード</label><div class="in">••••••••</div></div>
+                <span class="lgbtn fill">ログイン</span>
+              </div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-2. メニュー(ドロワー)</b> — ハンバーガータップで左からスライドイン</p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>ダッシュボード<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div style="flex:1;display:flex;overflow:hidden;">
+              <nav class="aside" data-active="dash" style="border-right:1px solid var(--ahair);"></nav>
+              <div style="flex:1;background:rgba(0,0,0,.38);"></div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-3. ダッシュボード</b></p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>ダッシュボード<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <span class="pill" style="align-self:flex-start;">承認待ちの申請 2件 →</span>
+              <div class="agrid" style="grid-template-columns:repeat(2,1fr);">
+                <div class="acard"><div class="k">8/2 参加予定</div><div class="v">11人 <small>+途中2</small></div></div>
+                <div class="acard"><div class="k">8月の提出率</div><div class="v">12<small>/15</small></div></div>
+                <div class="acard"><div class="k">月謝 未提出</div><div class="v">3人</div></div>
+                <div class="acard"><div class="k">LINE通数</div><div class="v">62<small>/200</small></div><div class="bar"><i></i></div></div>
+              </div>
+              <div class="acard"><div class="k">未提出の保護者(8月)</div>
+                <div class="arow"><b>高橋 次郎(3年)</b></div><div class="arow"><b>伊藤 結衣(2年)</b></div><div class="arow"><b>渡辺 湊(5年)</b></div>
+              </div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-4. 出欠管理</b> — 直近3回を表示、左右スクロールで全日程</p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>出欠管理<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <span class="pill" style="align-self:flex-start;">2026年8月 ▾</span>
+              <div class="acard">
+                <table class="atable">
+                  <tr class="hd"><td style="width:44%;">部員</td><td style="text-align:center;">8/2</td><td style="text-align:center;">8/9</td><td style="text-align:center;">8/16</td></tr>
+                  <tr><td>山田 太郎</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">△</td><td style="text-align:center;color:var(--asub);">×</td></tr>
+                  <tr><td>佐藤 花子</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;color:var(--asub);">×</td><td style="text-align:center;font-weight:700;">○</td></tr>
+                  <tr><td>鈴木 一郎</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">○</td><td style="text-align:center;font-weight:700;">○</td></tr>
+                  <tr><td style="color:var(--asub);">高橋 次郎</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td><td style="text-align:center;color:var(--asub);">−</td></tr>
+                </table>
+                <div class="anote">○全参加 / △途中 / ×不参加 / −未回答。表は横スクロール可</div>
+              </div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-5. 欠席者管理</b></p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>欠席者管理<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <div style="display:flex;gap:.4em;"><span class="pill fill">8/2(日)</span><span class="pill">8/9</span><span class="pill">8/16</span></div>
+              <div class="acard"><div class="k">不参加 — 2人</div>
+                <div class="arow"><b>伊藤 結衣</b><span>家族の予定のため</span></div>
+                <div class="arow"><b>渡辺 湊</b><span>(コメントなし)</span></div>
+              </div>
+              <div class="acard"><div class="k">途中参加・早退 — 2人</div>
+                <div class="arow"><b>山田 太郎</b><span>11:00ごろ早退(通院)</span></div>
+                <div class="arow"><b>中村 陽菜</b><span>10:00から参加</span></div>
+              </div>
+              <div class="acard"><div class="k">未回答 — 1人</div>
+                <div class="arow"><b>高橋 次郎</b><span class="abtn" style="margin-left:auto;">リマインド対象</span></div>
+              </div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-6. 認定管理</b> — 自動認定の履歴確認と無効化</p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>認定管理<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <div class="anote" style="margin-top:0;">登録は即時有効。心当たりのない登録のみ無効化してください</div>
+              <div class="acard">
+                <div style="font-weight:700;">山本 悠真(3年・男)</div>
+                <div style="font-size:.82em;color:var(--asub);margin-top:.2em;">新規登録 / 8/1 19:24 に自動認定</div>
+                <div style="display:flex;gap:.6em;justify-content:flex-end;align-items:center;margin-top:.6em;"><span class="pill">認定済(自動)</span><span class="abtn">無効化</span></div>
+              </div>
+              <div class="acard">
+                <div style="font-weight:700;">山田 太郎への家族連携(母)</div>
+                <div style="font-size:.82em;color:var(--asub);margin-top:.2em;">招待コード経由 / 8/2 08:10 に自動認定</div>
+                <div style="display:flex;gap:.6em;justify-content:flex-end;align-items:center;margin-top:.6em;"><span class="pill">認定済(自動)</span><span class="abtn">無効化</span></div>
+              </div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-7. 日程管理</b> — 行入力は縦カード、発行ボタンは常に手元に</p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>日程管理<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <span class="pill" style="align-self:flex-start;">2026年8月 ▾</span>
+              <div class="acard">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;"><b>2 (日) 9:00–12:00</b><span style="font-size:.85em;font-weight:600;text-decoration:underline;text-underline-offset:3px;">メニュー編集</span></div>
+                <div style="font-size:.85em;color:var(--asub);margin-top:.15em;">△△小学校 体育館</div>
+              </div>
+              <div class="acard">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;"><b>16 (日) 13:00–17:00</b><span style="font-size:.85em;font-weight:600;text-decoration:underline;text-underline-offset:3px;">メニュー編集</span></div>
+                <div style="font-size:.85em;color:var(--asub);margin-top:.15em;">□□中学校 体育館 / 備考: 練習試合</div>
+              </div>
+              <span class="abtn"><svg class="ic"><use href="#i-plus"/></svg>行を追加</span>
+              <span class="abtn fill" style="justify-content:center;"><svg class="ic"><use href="#i-send"/></svg>予定表を発行してLINEへ送信</span>
+              <div class="acard"><div class="k">今月のLINE通数</div><div class="v">62 <small>/ 200通</small></div><div class="bar"><i></i></div></div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-8. 月謝管理</b> — 部員を選んで封筒グリッドを操作</p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>月謝管理<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <div style="display:flex;gap:.4em;align-items:center;"><span class="pill">山田 太郎 ▾</span><span class="pill">2026年 ▾</span></div>
+              <div class="mfee">
+                <div>1月<b>済</b></div><div>2月<b>済</b></div><div>3月<b>済</b></div><div>4月<b>済</b></div>
+                <div>5月<b>済</b></div><div>6月<b>済</b></div><div>7月<b>済</b></div><div>8月<b style="color:var(--asub);">−</b></div>
+                <div>9月<b style="color:var(--asub);">−</b></div><div>10月<b style="color:var(--asub);">−</b></div><div>11月<b style="color:var(--asub);">−</b></div><div>12月<b style="color:var(--asub);">−</b></div>
+              </div>
+              <div class="anote">セルをタップして済⇄未を切替(保護者側に即反映)。全部員の一覧表示はPC版を推奨</div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+        <div class="slide"><p class="slide-cap"><b>SP-9. 部員管理</b></p>
+          <div class="phone"><div class="statusbar"></div><div class="mscreen">
+            <div class="mhead"><svg class="ic"><use href="#i-menu"/></svg>部員管理<span class="sp"><svg class="ic"><use href="#i-moon"/></svg></span></div>
+            <div class="mbody">
+              <span class="abtn" style="align-self:flex-end;">年度更新を実行</span>
+              <div class="acard">
+                <div class="arow"><b>山田 太郎 <span style="font-weight:500;color:var(--asub);font-size:.85em;">たろう</span></b><span style="margin-left:auto;">4年・男</span></div>
+                <div class="arow"><b>佐藤 花子 <span style="font-weight:500;color:var(--asub);font-size:.85em;">はな</span></b><span style="margin-left:auto;">5年・女</span></div>
+                <div class="arow"><b>鈴木 一郎 <span style="font-weight:500;color:var(--asub);font-size:.85em;">いち</span></b><span style="margin-left:auto;">6年・男</span></div>
+                <div class="arow"><b>高橋 次郎 <span style="font-weight:500;color:var(--asub);font-size:.85em;">じろう</span></b><span style="margin-left:auto;">3年・男</span></div>
+              </div>
+              <div class="anote">行タップで詳細(伝達事項・参加可能曜日/時間・招待コード)</div>
+            </div>
+          <div class="homebar"><i></i></div></div></div>
+        </div>
+
+      </div>
+      <div class="nav-row">
+        <div class="arrow" onclick="go('rail-sp',-1)"><svg class="ic"><use href="#i-chevl"/></svg></div>
+        <div class="dots" id="dots-sp"></div>
+        <div class="arrow" onclick="go('rail-sp',1)"><svg class="ic"><use href="#i-chevr"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">提出画面(10⇄11)の回答・コメントは実際に同期し、管理側のダークモード・文字サイズ切替はPC版・モバイル版の両方に反映されます。その他のボタンは見た目のみです。ホームの「コーチにLINEで連絡する」は、コーチ個別LINEのトークURLへ遷移する想定です。</p>
+</div>
+
+<script>
+(function(){
+  var W=["日","月","火","水","木","金","土"];
+  document.querySelectorAll(".statusbar").forEach(function(sb){
+    sb.innerHTML='<span>9:41</span><span style="display:flex;gap:5px;align-items:center;">'+
+      '<svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect x="0" y="6" width="2.6" height="5" rx="1"/><rect x="4" y="4" width="2.6" height="7" rx="1"/><rect x="8" y="2" width="2.6" height="9" rx="1"/><rect x="12" y="0" width="2.6" height="11" rx="1" opacity=".35"/></svg>'+
+      '<svg width="23" height="11" viewBox="0 0 23 11" fill="none" stroke="currentColor"><rect x="1" y="1" width="18" height="9" rx="2.6"/><rect x="3" y="3" width="12" height="5" rx="1.2" fill="currentColor" stroke="none"/><path d="M21 3.8v3.4" stroke-linecap="round"/></svg></span>';
+  });
+  var tabs=[["home","ホーム","i-home"],["yen","月謝","i-yen"],["cal","日程","i-cal"],["team","チーム","i-team"],["send","提出","i-send"]];
+  document.querySelectorAll(".tabbar").forEach(function(bar){
+    var act=bar.getAttribute("data-active");
+    bar.innerHTML=tabs.map(function(t){
+      var on=t[0]===act?" on":"";
+      if(t[0]==="cal"){return '<div class="tb center'+on+'"><div class="orb"><svg class="ic"><use href="#'+t[2]+'"/></svg></div><span>'+t[1]+'</span></div>';}
+      return '<div class="tb'+on+'"><svg class="ic"><use href="#'+t[2]+'"/></svg>'+t[1]+'</div>';
+    }).join("");
+  });
+
+  var DAYS=[2,9,16,23];
+  var TIME={2:"9:00–12:00 △△小",9:"9:00–12:00 △△小",16:"13:00–17:00 □□中",23:"9:00–12:00 △△小"};
+  var PLACE={2:"△△小学校 体育館",9:"△△小学校 体育館",16:"□□中学校 体育館",23:"△△小学校 体育館"};
+
+  /* schedule calendar (view) */
+  var viewSel=2;
+  function cellsAug(){var c=[];for(var j=26;j<=31;j++)c.push({d:j,out:true});for(var d=1;d<=31;d++)c.push({d:d,out:false});for(var k=1;k<=5;k++)c.push({d:k,out:true});return c;}
+  function buildView(){
+    var el=document.getElementById("cal-view"); if(!el)return;
+    var html='<div class="wk">'+W.map(function(w){return "<div>"+w+"</div>";}).join("")+'</div><div class="days">';
+    cellsAug().forEach(function(c){
+      var cls="cell",tap="";
+      if(c.out)cls+=" mute";
+      else if(DAYS.indexOf(c.d)>=0){cls+=" pr prac"+(c.d===viewSel?" sel":"");tap=' onclick="pick('+c.d+')"';}
+      else cls+=" off";
+      html+='<div class="'+cls+'"'+tap+'><i>'+c.d+"</i></div>";
+    });
+    el.innerHTML=html+"</div>";
+    var dt=document.getElementById("view-detail");
+    dt.innerHTML='<div style="font-size:13px;font-weight:700;">8/'+viewSel+' (日) '+TIME[viewSel].split(" ")[0]+'</div>'+
+      '<div class="kv" style="margin-top:4px;"><svg class="ic"><use href="#i-pin"/></svg>'+PLACE[viewSel]+'<span style="margin-left:auto;font-size:11px;font-weight:600;color:var(--deep);">詳細ページへ →</span></div>';
+  }
+  window.pick=function(d){viewSel=d;buildView();};
+
+  /* submit state */
+  var ST={2:"full",9:"partial",16:"absent",23:"none"};
+  var CM={9:"11:00ごろ早退します(通院のため)"};
+  var ORDER=["none","full","partial","absent"];
+  var LBL={none:"未回答",full:"参加(全時間)",partial:"途中参加・早退",absent:"不参加"};
+  function answered(){var n=0;DAYS.forEach(function(d){if(ST[d]!=="none")n++;});return n;}
+  function renderList(){
+    var el=document.getElementById("sub-list"); if(!el)return;
+    el.innerHTML=DAYS.map(function(d){
+      var opts=Object.keys(LBL).map(function(k){return '<option value="'+k+'"'+(ST[d]===k?" selected":"")+'>'+LBL[k]+"</option>";}).join("");
+      var cmt=ST[d]==="partial"?'<input placeholder="例: 11:00ごろ早退します" value="'+(CM[d]||"")+'" oninput="cmSet('+d+',this.value)">':"";
+      return '<div class="sbr"><div class="top"><div><div class="d">8/'+d+' (日)</div><div class="p">'+TIME[d]+'</div></div><select onchange="stSet('+d+',this.value)">'+opts+'</select></div>'+cmt+'</div>';
+    }).join("");
+  }
+  function buildSubmit(){
+    var el=document.getElementById("cal-submit"); if(!el)return;
+    var html='<div class="wk">'+W.map(function(w){return "<div>"+w+"</div>";}).join("")+'</div><div class="days">';
+    cellsAug().forEach(function(c){
+      var cls="cell",tap="";
+      if(c.out)cls+=" mute";
+      else if(DAYS.indexOf(c.d)>=0){cls+=" pr s-"+({full:"full",partial:"part",absent:"abs",none:"none"})[ST[c.d]];tap=' onclick="cyc('+c.d+')"';}
+      else cls+=" off";
+      html+='<div class="'+cls+'"'+tap+'><i>'+c.d+"</i></div>";
+    });
+    el.innerHTML=html+"</div>";
+  }
+  function refresh(){
+    renderList();buildSubmit();
+    var t="( 回答 "+answered()+" / "+DAYS.length+" 件 )";
+    var a=document.getElementById("cnt-a"),b=document.getElementById("cnt-b");
+    if(a)a.textContent=t;if(b)b.textContent=t;
+  }
+  window.stSet=function(d,v){ST[d]=v;refresh();};
+  window.cmSet=function(d,v){CM[d]=v;};
+  window.cyc=function(d){var i=ORDER.indexOf(ST[d]);ST[d]=ORDER[(i+1)%ORDER.length];refresh();};
+  window.bulk=function(v){DAYS.forEach(function(d){ST[d]=v;});refresh();};
+  buildView();refresh();
+
+  var sbItems=[["dash","ダッシュボード","i-home"],["att","出欠管理","i-check"],["abs","欠席者管理","i-note"],["cert","認定管理","i-lock"],["sched","日程管理","i-cal"],["fee","月謝管理","i-yen"],["mem","部員管理","i-team"]];
+  document.querySelectorAll(".aside").forEach(function(sb){
+    var act=sb.getAttribute("data-active");
+    sb.innerHTML='<div class="lg"><svg class="ic"><use href="#i-ball"/></svg>hoopo 管理</div>'+sbItems.map(function(t){
+      return '<div class="ai'+(t[0]===act?" on":"")+'"><svg class="ic"><use href="#'+t[2]+'"/></svg>'+t[1]+'</div>';
+    }).join("");
+  });
+  function setupRail(railId,dotsId){
+    var rail=document.getElementById(railId),dots=document.getElementById(dotsId);
+    var n=rail.children.length;
+    for(var i=0;i<n;i++){var s=document.createElement("span");s.className="dot"+(i===0?" on":"");dots.appendChild(s);}
+    rail.addEventListener("scroll",function(){
+      var idx=Math.round(rail.scrollLeft/rail.clientWidth);
+      dots.querySelectorAll(".dot").forEach(function(dd,i){dd.classList.toggle("on",i===idx);});
+    },{passive:true});
+  }
+  setupRail("rail-p","dots-p");setupRail("rail-pc","dots-pc");setupRail("rail-sp","dots-sp");
+  window.go=function(id,dir){var r=document.getElementById(id);r.scrollBy({left:dir*r.clientWidth,behavior:"smooth"});};
+
+  window.toggleTheme=function(){
+    var a=document.getElementById("admin2");
+    var dark=a.getAttribute("data-theme")==="dark";
+    a.setAttribute("data-theme",dark?"light":"dark");
+    document.getElementById("theme-ic").innerHTML='<use href="#'+(dark?"i-moon":"i-sun")+'"/>';
+  };
+  window.setFs=function(v){
+    document.getElementById("admin2").setAttribute("data-fs",v);
+    document.querySelectorAll(".fseg button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-fs")===v);});
+  };
+})();
+</script>
+</body>
+</html>
