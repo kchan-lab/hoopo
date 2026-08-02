@@ -1,0 +1,25 @@
+{
+  "name": "@hoopo/admin",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 8001",
+    "build": "next build",
+    "start": "next start -p 8001",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hoopo/api": "workspace:*",
+    "@hoopo/db": "workspace:*",
+    "@hoopo/line": "workspace:*",
+    "@hoopo/ui": "workspace:*",
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^7.0.2"
+  }
+}
