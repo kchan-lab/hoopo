@@ -10,8 +10,10 @@ hoopo のブランチ戦略に合わせて移植し、`.claude/skills/` の運�
 
 ## 方針
 
-3 Skill + README を `.claude/skills/` に置く。テンプレート本体は `.github/` を正とし、
-Skill 側は参照+哲学(読み手の言葉で書く・承認制)のみ持つ。
+5 Skill(issue-plan / new-branch / commit / push / create-pr)+ README を `.claude/skills/` に置く。
+テンプレート本体は `.github/` を正とし、Skill 側は参照+哲学(読み手の言葉で書く・承認制)のみ持つ。
+Git 操作は **コミット → push → PR 作成 → マージ** の4段階すべて承認制
+(各段階で案を提示して止まり、承認者が選択するまで実行しない)。
 
 ### 設計判断
 

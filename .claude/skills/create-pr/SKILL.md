@@ -23,10 +23,10 @@ feat/xxx ──PR──▶ development(=stg) ──リリースPR──▶ main(
 ## フロー
 
 1. **ブランチ**: 最新 development から Issue ごとに切る。名前の付け方は **new-branch Skill** 参照
-2. **コミット**: Conventional Commits(`feat:` / `fix:` / `docs:` / `ci:` / `chore:` など)。
-   意味のある単位で切る
-3. **PR 作成**: **承認者(ユーザー)の指示があってから** `gh pr create --base development` する。
-   AI はコミット・push まで済ませたら、PR タイトル・本文の案を提示して止まる
+2. **コミット**: **commit Skill** の承認フローに従う(案の提示 → 承認 → 実行。承認なしにコミットしない)
+3. **push**: **push Skill** の承認フローに従う(コミット承認とは別に、push もあらためて承認を取る)
+4. **PR 作成**: **承認者(ユーザー)の承認があってから** `gh pr create --base development` する。
+   AI は PR タイトル・本文の案を提示して止まる(push 承認 ≠ PR 作成承認)
    - タイトル = squash コミットの件名になる形式 **「<type>: <作業名>」**(Conventional Commits 準拠):
 
      | type | 用途 |
@@ -44,14 +44,17 @@ feat/xxx ──PR──▶ development(=stg) ──リリースPR──▶ main(
      「ひとことで言うと」は必須。書き方は下の **「読み手の言葉で書く」** に従う
    - Issue 作業の PR は本文に plan.md へのリンク・テスト結果・`Closes #N` を必ず含める
      (development がデフォルトブランチのため、マージで Issue が自動クローズされる)
-4. **承認待ち**: PR 作成後、AI(Claude)は CI の結果とマージ条件(CI グリーン + task.md 全消化 +
+5. **承認待ち**: PR 作成後、AI(Claude)は CI の結果とマージ条件(CI グリーン + task.md 全消化 +
    Vercel プレビュー確認)が揃ったかを報告して**止まる**。マージ判断は必ず**承認者(ユーザー)**が行う
-5. **マージ**: 承認者の指示があってから
+6. **マージ**: 承認者の指示があってから
    `gh pr merge --squash --delete-branch` でマージし、ローカル development を `git pull --ff-only` で追従
-6. **Issue 不要の軽微な変更**(docs・運用ファイル・typo 等)も PR は必須。
+7. **Issue 不要の軽微な変更**(docs・運用ファイル・typo 等)も PR は必須。
    `<type>:` prefix は付け、`Closes #N` は不要
-7. **リリース**(development → main)は リリースPR + release-please の運用
+8. **リリース**(development → main)は リリースPR + release-please の運用
    (docs/DEVELOPMENT.md 参照)。保護者向けお知らせは `release-notes` Skill(将来)で別途作る
+
+> 承認の粒度: **コミット(commit Skill)→ push(push Skill)→ PR 作成 → マージ**の
+> 4 段階それぞれで承認を取る。前段の承認は次の段の承認を意味しない。
 
 ## 読み手の言葉で書く(分かりやすさの原則)
 
