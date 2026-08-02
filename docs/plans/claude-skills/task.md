@@ -7,4 +7,5 @@ Issue: [#5](https://github.com/kchan-lab/hoopo/issues/5) / Plan: [plan.md](plan.
 - [x] create-pr Skill を squash マージ+リリース PR 前提に書き換えて移植
 - [x] `.claude/skills/README.md` に運用方針を記載
 - [x] commit / push Skill を追加し、Git 操作を4段階承認制(コミット→push→PR作成→マージ)に
+- [x] PR に優先度ラベル p1〜p3 を必須化(リポジトリにラベル作成済み)
 - [ ] PR 作成 → CI グリーン → development へ squash マージ(`Closes #5`)
