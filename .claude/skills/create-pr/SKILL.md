@@ -53,17 +53,31 @@ feat/xxx ──PR──▶ development(=stg) ──リリースPR──▶ main(
      ボードの Priority フィールドとの対応は p1=High / p2=Medium / p3=Low
    - Issue 作業の PR は本文に plan.md へのリンク・テスト結果・`Closes #N` を必ず含める
      (development がデフォルトブランチのため、マージで Issue が自動クローズされる)
-5. **承認待ち**: PR 作成後、AI(Claude)は CI の結果とマージ条件(CI グリーン + task.md 全消化 +
+5. **ボード更新**: PR 作成直後、`Closes #N` / `Refs #N` の対象 Issue を **In Review** に移す:
+
+   ```bash
+   ITEM=$(gh project item-list 13 --owner kchan-lab --format json --limit 200 \
+     --jq '.items[] | select(.content.number==<Issue番号>) | .id')
+   gh project item-edit --project-id PVT_kwDODn58Jc4BfKhd --id "$ITEM" \
+     --field-id PVTSSF_lADODn58Jc4BfKhdzhZfWC0 --single-select-option-id 123aa790
+   ```
+
+   (ID 一覧と auto-add 漏れ時の対処は issue-plan Skill 参照。マージ後の Done は
+   Projects 組み込みワークフローが自動で行うので何もしない)
+6. **承認待ち**: PR 作成後、AI(Claude)は CI の結果とマージ条件(CI グリーン + task.md 全消化 +
    Vercel プレビュー確認)が揃ったかを報告して**止まる**。マージ判断は必ず**承認者(ユーザー)**が行う
-6. **マージ**: 承認者の指示があってから
+7. **マージ**: 承認者の指示があってから
    `gh pr merge --squash --delete-branch` でマージし、ローカル development を `git pull --ff-only` で追従
-7. **Issue 不要の軽微な変更**(docs・運用ファイル・typo 等)も PR は必須。
+8. **Issue 不要の軽微な変更**(docs・運用ファイル・typo 等)も PR は必須。
    `<type>:` prefix は付け、`Closes #N` は不要
-8. **リリース**(development → main)は リリースPR + release-please の運用
+9. **リリース**(development → main)は リリースPR + release-please の運用
    (docs/DEVELOPMENT.md 参照)。保護者向けお知らせは `release-notes` Skill(将来)で別途作る
 
 > 承認の粒度: **コミット(commit Skill)→ push(push Skill)→ PR 作成 → マージ**の
 > 4 段階それぞれで承認を取る。前段の承認は次の段の承認を意味しない。
+> どの段階でも、承認の質問(ダイアログ)を出す**前に**判断材料(確認した内容・判断理由・
+> 案・推奨)を必ずテキストでターミナルに出力する。レビュー指摘への対応判断など
+> 進捗の節目も同様に、まずテキストで報告してから質問する。
 
 ## 読み手の言葉で書く(分かりやすさの原則)
 
