@@ -1,0 +1,22 @@
+# PR を開いた人を自動で Assignee に入れる(Bot の PR と fork からの PR は対象外)
+# fork 由来の pull_request イベントはトークンが read-only になり assignee 設定が失敗するため、
+# 同一リポジトリのブランチからの PR に限定する
+name: PR Auto Assign
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  assign:
+    if: ${{ !endsWith(github.event.pull_request.user.login, '[bot]') &&
+            github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - run: gh pr edit "$PR_URL" --add-assignee "$AUTHOR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}

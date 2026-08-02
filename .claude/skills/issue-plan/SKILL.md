@@ -32,6 +32,27 @@ description: Issue ドリブン開発でプランを書くときに必ず読む�
   (`id` は issue 番号ではなくデータベースID。`gh api repos/kchan-lab/hoopo/issues/<番号> -q .id` で取得)
 - 実装 PR には対象層のテスト(Unit / Integration / E2E)を必ず含める(docs/DEVELOPMENT.md テスト戦略)
 
+## 着手時のボード操作(In Progress へ)
+
+plan.md を作るタイミングで、対象 Issue の Status を **In Progress** に移す:
+
+```bash
+ITEM=$(gh project item-list 13 --owner kchan-lab --format json --limit 200 \
+  --jq '.items[] | select(.content.number==<Issue番号>) | .id')
+gh project item-edit --project-id PVT_kwDODn58Jc4BfKhd --id "$ITEM" \
+  --field-id PVTSSF_lADODn58Jc4BfKhdzhZfWC0 --single-select-option-id 47fc9ee4
+```
+
+- `ITEM` が空の場合は auto-add が拾っていないので、先に
+  `gh project item-add 13 --owner kchan-lab --url <IssueのURL>` で追加する
+- Status オプション ID: Todo=`f75ad846` / In Progress=`47fc9ee4` / In Review=`123aa790` / Done=`98236657`
+  (Priority フィールドは `PVTSSF_lADODn58Jc4BfKhdzhZfWX0`、High=`4609778d` / Medium=`01a0d828` / Low=`eb604991`)
+- これらの ID は **Project の再作成・フィールド構成の変更で失効する**。`ITEM` が空になる以外に
+  「field-id / option-id が無効」というエラーでも失敗し得るので、その場合は
+  `gh project view 13 --owner kchan-lab --format json --jq .id` と
+  `gh project field-list 13 --owner kchan-lab --format json` で ID を取り直してこの一覧を更新する
+- PR 作成時の In Review 遷移は create-pr Skill、クローズ時の Done は Projects 組み込みワークフローが自動で行う
+
 ## PR フロー
 
 ブランチ作成〜マージの手順は **`create-pr` Skill** を参照(development / main 直 push 禁止)。
