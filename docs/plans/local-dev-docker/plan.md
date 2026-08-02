@@ -11,12 +11,15 @@ Issue: [#2](https://github.com/kchan-lab/hoopo/issues/2)
 ## 方針
 
 - **開発用コンテナは1イメージ**(`docker/dev.Dockerfile`: node:24-slim + pnpm)を portal / admin で共用。
-  リポジトリ全体を bind mount し、コンテナ内で `pnpm install` → `pnpm dev` を実行
+  リポジトリ全体を bind mount し、コンテナ内で `pnpm install` → `pnpm dev` を実行。
+  compose ファイル名は公式が第一推奨とする `compose.yaml`(`docker-compose.yml` は後方互換の旧名)
 - node_modules は named volume でコンテナ側に分離(ホストの実行環境と混ざらないように)
 - **Supabase はアプリの compose に含めない**。Supabase CLI 自体が専用の Docker スタック
   (Postgres:54322 / API:54321 / Studio:54323)を管理するため、`supabase start` に任せる
 - 接続情報は `.env.example` に集約(SUPABASE_URL / DATABASE_URL 等)。アプリからの実接続は
   Drizzle を入れる Issue #6 のスコープで、本 Issue は起動と接続情報の配線まで
+- 入口は `make up`(対話で起動対象を選択 → `make dev` を実行)。実処理は `scripts/dev.sh` に置き、
+  Makefile は薄いラッパーにする
 
 ### 設計判断
 
@@ -27,6 +30,12 @@ Issue: [#2](https://github.com/kchan-lab/hoopo/issues/2)
    同梱が廃止される流れのため、イメージ内で明示インストールする方が将来安定
 3. **本番用 Dockerfile は作らない**: 本番ビルドは Vercel が行うため、Docker はローカル開発専用
    (CLAUDE.md の想定どおり)
+4. **ペイン分割は環境で使い分ける**: 想定は Windows=WSL2 / Mac=Ghostty(Ghostty に Windows 版が無いため)。
+   ターミナル自体の分割を外部プロセスから指示する手段は無いので、**WSL2 は tmux で自動分割**、
+   **Mac は Ghostty のキーバインドで分割して各ペインで `make logs SERVICES=…`** を正とし、
+   後者の手順は起動時に画面へ出す(`SPLIT=auto` / `SPLIT=tmux` / `SPLIT=0` で切替可)
+5. **ロジックは `scripts/dev.sh`、Makefile は薄く**: Make の各行が別シェルで動く制約を避け、
+   対話・待機・整形をシェルスクリプトに集約する。make 未導入環境でも直接実行できる利点もある
 
 ## 完了条件
 
