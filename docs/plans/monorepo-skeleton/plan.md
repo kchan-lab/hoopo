@@ -21,8 +21,11 @@ apps/portal・apps/admin・packages/{api,db,ui,line} のモノレポ骨格を作
 1. **packages はビルドせず TS ソースを直接 export**(`exports` → `./src/index.ts`、
    apps 側 `transpilePackages` で取り込み): 骨格段階で dist 生成の tsconfig 二重管理を避ける。
    退けた案は各パッケージで dist を emit する構成。packages/api を SDK として配布する段階で切り替える
-2. **TypeScript は 5.9 系に固定**(`~5.9.3`): npm の latest は 7.x だが、後続で入れる
-   Drizzle / Hono 等の peerDependencies が ^5 前提の間は 5 系が安全。7 系への更新は Renovate で判断
+2. **TypeScript は 7 系(ネイティブコンパイラ)を採用**(`^7.0.2`): 脆弱性対応と今後の
+   バージョンアップを見据え極力最新版を使う方針(承認者の指示)。Next.js 16 は TS7 の
+   コンパイラ API に未対応のため `experimental.useTypeScriptCli` を有効化して TS CLI 経由で
+   型チェックする(実測で build/typecheck/lint 全グリーン、型チェックは約6倍高速)。
+   後続で入れる Drizzle / Hono 等で peerDeps 競合が出た場合はその時点で相談
 3. **Next.js 16 / React 19 / Biome 2 は現行最新のメジャーを採用**: 新規リポジトリのため
    旧メジャーを選ぶ理由がない
 
