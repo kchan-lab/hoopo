@@ -1,0 +1,52 @@
+# PR を開くと Claude が自動でレビューコメントを付ける(マージ判断はしない・承認とマージは人間が行う)
+# 再レビューは push ごとには走らせず、PR コメントで @claude を呼ぶ(claude.yml)
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            この PR を日本語でレビューしてください。マージ可否の判断はしないこと(承認・マージは人間が行う)。
+            指摘は重要度順に並べ、コードの該当箇所にはインラインコメントを付けること。
+            問題がない観点は「問題なし」と一行で済ませてよい。
+            レビュー前に CLAUDE.md を必ず読むこと。
+
+            レビュー観点:
+            1. バグ・正しさ: ロジック誤り・エッジケース・例外処理の漏れ。日付・曜日が Asia/Tokyo 固定で扱われているか
+            2. テストの担保: 実装 PR に対象層(Unit / Integration / E2E)のテストが含まれているか(docs/DEVELOPMENT.md テスト戦略)
+            3. CLAUDE.md 絶対原則の準拠:
+               - 無料枠内で動く設計か(有料化が必要な変更・常時課金インフラの追加がないか)
+               - LINE 通知が「グループ宛て1通」原則を守っているか(個別 push・broadcast の新設は違反)
+               - 個人情報の最小保持(LINE 表示名・画像・電話番号等を保存していないか、トークンを永続化していないか)
+               - 新規テーブルに team_id と RLS があるか
+               - 保護者 UI と管理 UI の分離(管理画面にオレンジを持ち込んでいないか)
+               - 決済機能・キャッシュレス連携を実装していないか
+            4. 運用ルール準拠: PR 本文が .github/PULL_REQUEST_TEMPLATE.md の5要素に従っているか。
+               Issue 作業なら docs/plans/<slug>/ の plan.md / task.md が更新されているか
+            5. ドキュメント整合: docs/REQUIREMENTS.md・docs/DESIGN_GUIDELINES.md と実装の乖離がないか
+            6. 責務の分離: apps/portal・apps/admin・packages/{api,db,ui,line} の役割逸脱がないか
+               (LINE 署名検証・通数計算は packages/line、DB スキーマは packages/db 等)
+            7. N+1・非効率: ループ内の逐次 DB/API 呼び出し、無料枠を圧迫する無駄な処理がないか
+            8. 認証・認可: セッション(httpOnly Cookie)の扱い、RLS の team_id 境界越え、LINE Webhook の署名検証漏れがないか
+            9. センシティブデータ漏洩: チャネルシークレット・トークン・環境変数の値がコミット・クライアント側コード・ログ出力に混入していないか
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
