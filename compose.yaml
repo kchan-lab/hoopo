@@ -1,0 +1,38 @@
+# ローカル開発環境(portal=8000 / admin=8001)。手順は docs/LOCAL_DEV.md
+# DB は Supabase CLI のローカルスタックを使う: pnpm exec supabase start(このファイルには含めない)
+name: hoopo
+
+# portal / admin 共通の開発コンテナ設定(Compose Spec の extension フィールド + YAML アンカー)
+x-app-base: &app-base
+  build:
+    context: .
+    dockerfile: docker/dev.Dockerfile
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+    - pnpm_store:/app/.pnpm-store
+  environment:
+    NEXT_TELEMETRY_DISABLED: "1"
+  env_file:
+    - path: .env
+      required: false
+  # コンテナ内から Supabase ローカルスタック(ホスト側ポート)へ届くように
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+services:
+  portal:
+    <<: *app-base
+    command: sh -c "pnpm install --frozen-lockfile && pnpm --filter @hoopo/portal dev"
+    ports:
+      - "8000:8000"
+
+  admin:
+    <<: *app-base
+    command: sh -c "pnpm install --frozen-lockfile && pnpm --filter @hoopo/admin dev"
+    ports:
+      - "8001:8001"
+
+volumes:
+  node_modules:
+  pnpm_store:
