@@ -48,8 +48,8 @@ docs/              … 要件定義・設計・開発ガイド
 | ツール | 必須? | 備考 |
 |---|---|---|
 | Docker | 必須 | docker compose (V2) が使えること。Mac / WSL2 は Docker Desktop |
-| Node.js + pnpm | 必須 | バージョンは [package.json](package.json) の `engines` / `packageManager` が正。**Volta利用時は `volta install pnpm` で実体を入れる**(shimだけだと `pnpm exec` が実行時に失敗する)。Supabase CLI は devDependency で入るためホスト導入は不要 |
-| make | 必須 | Mac: Xcode Command Line Tools に同梱 / WSL2: `sudo apt-get install -y make`(無くても `bash scripts/dev.sh` で代替可) |
+| Node.js + pnpm | Supabase利用時必須 | ローカルDBスタック(`pnpm exec supabase`)の実行に使う(portal / admin のコンテナ実行だけなら不要)。バージョンは [package.json](package.json) の `engines` / `packageManager` が正。**Volta利用時は `volta install pnpm` で実体を入れる**(shimだけだと `pnpm exec` が実行時に失敗する)。Supabase CLI は devDependency で入るためホスト導入は不要 |
+| make | 推奨 | `make up` / `make dev` の入口に使う(無くても `bash scripts/dev.sh` で代替可)。Mac: Xcode Command Line Tools に同梱 / WSL2: `sudo apt-get install -y make` |
 | curl | 必須 | 起動確認(HTTP応答待ち)に使用。Mac / WSL2 (Ubuntu) は通常同梱 |
 | gh (GitHub CLI) | 開発運用 | Issue / PR / GitHub Projects の運用(`.claude/skills/`)に使用。アプリの起動だけなら不要 |
 | tmux | 任意 | ログのペイン分割(`make dev SPLIT=tmux`)に使う |
