@@ -126,3 +126,6 @@ sudo dpkg -i /tmp/cloudflared.deb
 - **コンテナ内の node_modules がおかしい**: `docker compose down -v` で named volume ごと作り直す
 - **Supabase が起動しない**: `pnpm exec supabase stop --no-backup` してから再度 `start`
 - **`make: command not found`**: `sudo apt-get install -y make`(または `bash scripts/dev.sh select`)
+- **`Volta error: Could not find executable "pnpm"`**: Volta は pnpm の shim(入口)だけを先に置くため、
+  事前チェックは通るのに実行時に失敗する。`volta install pnpm` で実体を入れる(バージョンは
+  package.json の `packageManager` に合わせる)
