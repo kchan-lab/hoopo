@@ -43,7 +43,24 @@ docs/              … 要件定義・設計・開発ガイド
 
 ## クイックスタート
 
-ローカル開発はDockerに統一している。前提や詳細は [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) を参照。
+### 前提(ホスト環境に入れておくもの)
+
+| ツール | 必須? | 備考 |
+|---|---|---|
+| Docker | 必須 | docker compose (V2) が使えること。Mac / WSL2 は Docker Desktop |
+| Node.js + pnpm | 必須 | バージョンは [package.json](package.json) の `engines` / `packageManager` が正。**Volta利用時は `volta install pnpm` で実体を入れる**(shimだけだと `pnpm exec` が実行時に失敗する)。Supabase CLI は devDependency で入るためホスト導入は不要 |
+| make | 必須 | Mac: Xcode Command Line Tools に同梱 / WSL2: `sudo apt-get install -y make`(無くても `bash scripts/dev.sh` で代替可) |
+| curl | 必須 | 起動確認(HTTP応答待ち)に使用。Mac / WSL2 (Ubuntu) は通常同梱 |
+| gh (GitHub CLI) | 開発運用 | Issue / PR / GitHub Projects の運用(`.claude/skills/`)に使用。アプリの起動だけなら不要 |
+| tmux | 任意 | ログのペイン分割(`make dev SPLIT=tmux`)に使う |
+| cloudflared | 任意 | LIFF のスマホ実機確認用トンネル(手順は [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md)) |
+
+導入手順の詳細・トラブルシュートは [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) を参照。
+`make up` は起動前に必要コマンドを確認し、足りなければ環境別の導入コマンドを表示して止まる。
+
+### 起動
+
+ローカル開発はDockerに統一している。詳細は [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) を参照。
 
 ```bash
 make up
