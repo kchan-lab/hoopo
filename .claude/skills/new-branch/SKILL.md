@@ -16,7 +16,7 @@ description: 作業ブランチ作成のルール。最新 development から Is
 
 2. **ブランチ名**(英語ケバブケース):
    - 基本は **`feat/<スラグ>`**。スラグは **プランのスラグと同名**(例: `feat/liff-login`)。
-     `docs/plans/<スラグ>/` と対応させ、ブランチ名からプランへ辿れるようにする(プランは issue-plan Skill 参照)
+     `.claude/plans/<スラグ>/` と対応させ、ブランチ名からプランへ辿れるようにする(プランは issue-plan Skill 参照)
    - Issue 不要の軽微な変更: 内容が分かる短い名前(例: `feat/fix-typo-readme`)
    - 本番の緊急修正のみ `hotfix/<スラグ>`(main へ直接 PR。マージ後 development へ back-merge)
 3. **1 ブランチ = 1 関心事**。複数 Issue の作業を同居させない

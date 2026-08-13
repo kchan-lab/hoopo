@@ -41,7 +41,7 @@ jobs:
                - 保護者 UI と管理 UI の分離(管理画面にオレンジを持ち込んでいないか)
                - 決済機能・キャッシュレス連携を実装していないか
             4. 運用ルール準拠: PR 本文が .github/PULL_REQUEST_TEMPLATE.md の5要素に従っているか。
-               Issue 作業なら docs/plans/<slug>/ の plan.md / task.md が更新されているか
+               Issue 作業なら .claude/plans/<slug>/ の plan.md / task.md が更新されているか
             5. ドキュメント整合: docs/REQUIREMENTS.md・docs/DESIGN_GUIDELINES.md と実装の乖離がないか
             6. 責務の分離: apps/portal・apps/admin・packages/{api,db,ui,line} の役割逸脱がないか
                (LINE 署名検証・通数計算は packages/line、DB スキーマは packages/db 等)

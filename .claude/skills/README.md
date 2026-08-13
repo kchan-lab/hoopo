@@ -7,7 +7,7 @@ Claude Code が定型作業で参照する Skill 置き場。**同じ作業を2�
 
 | Skill | 役割 |
 |---|---|
-| [issue-plan](issue-plan/SKILL.md) | Issue 着手時のプラン運用(docs/plans/<slug>/ に plan.md / task.md) |
+| [issue-plan](issue-plan/SKILL.md) | Issue 着手時のプラン運用(.claude/plans/<slug>/ に plan.md / task.md) |
 | [new-branch](new-branch/SKILL.md) | 作業ブランチの切り方・命名 |
 | [e2e-check](e2e-check/SKILL.md) | コミット前のローカル動作検証(FE=Playwright E2E必須 / BE=Docker実動作確認必須) |
 | [commit](commit/SKILL.md) | コミットの承認フロー(動作検証 → 案の提示 → 承認 → 実行) |
