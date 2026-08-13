@@ -1,6 +1,6 @@
 ---
 name: issue-plan
-description: Issue ドリブン開発でプランを書くときに必ず読む哲学とテンプレート。Issue 着手時に docs/plans/<slug>/plan.md と task.md を作成する運用を定める(PR の出し方は create-pr Skill)。「Issueに着手」「プラン作成」「plan.md」「task.md」で発動。
+description: Issue ドリブン開発でプランを書くときに必ず読む哲学とテンプレート。Issue 着手時に .claude/plans/<slug>/plan.md と task.md を作成する運用を定める(PR の出し方は create-pr Skill)。「Issueに着手」「プラン作成」「plan.md」「task.md」で発動。
 ---
 
 # issue-plan: Issue ドリブン開発のプラン運用
@@ -23,8 +23,9 @@ description: Issue ドリブン開発でプランを書くときに必ず読む�
 
 ## 運用ルール
 
-- 置き場所: `docs/plans/<英語スラグ>/`(スラグは作業名のみ。例: `monorepo-skeleton`, `liff-login`)
-  ※ palworld-status-bot の `.claude/plans/` と異なり、hoopo は docs/DEVELOPMENT.md の定めに従い `docs/plans/` に置く
+- 置き場所: `.claude/plans/<英語スラグ>/`(スラグは作業名のみ。例: `monorepo-skeleton`, `liff-login`)
+  ※ プランは仕様書ではなく AI との作業ドキュメント。`docs/` は仕様の正(REQUIREMENTS / DESIGN_GUIDELINES / DEVELOPMENT)に限定し、
+  プランは Skill と同じ `.claude/` 配下に置く(palworld-status-bot と同じ構成)
 - 各ディレクトリに `plan.md`(実装方針)と `task.md`(チェックリスト)の2ファイル
 - task.md は作業の進捗に合わせてチェックを更新し、実装と同じブランチにコミットする
 - 縦切り実装(フェーズ2)は親 Issue(縦切りN)の **Sub-issue** 単位で着手する。新たに紐付ける場合:
