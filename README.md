@@ -21,7 +21,7 @@
 | [docs/DESIGN_GUIDELINES.md](docs/DESIGN_GUIDELINES.md) | UIデザイン規範(トークン・コンポーネント規約) |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 開発プロセス・テスト戦略・ブランチ戦略 |
 | [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) | ローカル開発環境のセットアップ・起動手順 |
-| [docs/plans/](docs/plans/) | Issueごとの実装プラン(plan.md / task.md) |
+| [.claude/plans/](.claude/plans/) | Issueごとの実装プラン(plan.md / task.md) |
 
 ## 技術スタック
 
@@ -79,6 +79,6 @@ make up
 - ブランチ: `feat/xxx` → `development`(=stg、squashマージ)→ `main`(=prod、リリースPR)
 - コミットは Conventional Commits。PRは小さく、CIグリーンが必須
 - テストは Unit / Vitest・Integration / ローカルSupabase・E2E / Playwright の3層
-- タスク管理は [GitHub Projects](https://github.com/orgs/kchan-lab/projects/13)。Issueドリブンで `docs/plans/` にプランを残す
+- タスク管理は [GitHub Projects](https://github.com/orgs/kchan-lab/projects/13)。Issueドリブンで `.claude/plans/` にプランを残す
 
 詳細は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) を参照。

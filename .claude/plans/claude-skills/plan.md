@@ -19,6 +19,8 @@ Git 操作は **コミット → push → PR 作成 → マージ** の4段階�
 
 1. **プラン置き場は `docs/plans/`**: palworld は `.claude/plans/` だったが、
    hoopo は docs/DEVELOPMENT.md が「計画は docs/plans/ に残す」と定めているためそちらに統一
+   → **後に撤回**。`docs/` は仕様の正(REQUIREMENTS / DESIGN_GUIDELINES / DEVELOPMENT)に限定し、
+   AI 作業ドキュメントであるプランは Skill と同じ `.claude/plans/` へ移動した(palworld と同構成)
 2. **feat→development は squash マージ**: PR タイトル(Conventional Commits)がそのまま
    コミット件名になり、release-please のバージョン計算が 1 PR = 1 コミットで安定するため。
    development→main のリリース PR は個々のコミットを残す merge commit(リポジトリ設定は Issue #4)
