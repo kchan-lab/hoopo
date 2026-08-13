@@ -122,7 +122,7 @@ hotfix/xxx ───────────────────────
 ## Claude Code の回し方のコツ
 
 - 指示には**ドキュメント参照を明示**する: 「`docs/REQUIREMENTS.md` §4.2-6 を読んでから Issue #12 を実装して」(CLAUDE.md は自動で読まれる)
-- 大きめのタスクは Plan モードで計画→承認→実装。計画は `docs/plans/` に残すと後から追える
+- 大きめのタスクは Plan モードで計画→承認→実装。計画は `.claude/plans/<スラグ>/` に plan.md / task.md として残すと後から追える(運用は `.claude/skills/issue-plan/SKILL.md`)
 - **同じ作業を2回やったらSkill化**: マイグレーション作成、画面追加、LINE送信テストなどを skill-creator で `.claude/skills/` に作成しコミット
 - PRレビューは Claude Code GitHub Action で自動化。指摘の採否は自分で判断
 - 仕様に迷いが出たら、実装前に REQUIREMENTS.md を更新 → その差分をIssueに貼ってから実装させる。この順序だけ崩さなければドメイン知識はブレない
