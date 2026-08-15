@@ -11,6 +11,11 @@ next-env.d.ts
 dist/
 *.tsbuildinfo
 
+# test outputs
+test-results/
+playwright-report/
+coverage/
+
 # env
 .env
 .env.*
