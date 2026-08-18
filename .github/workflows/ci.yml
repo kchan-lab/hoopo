@@ -1,0 +1,58 @@
+# PR ごとの自動チェック(lint / typecheck / test)。
+# 失敗箇所が PR のチェック一覧で一目で分かるよう、また Issue #4 のブランチ保護で
+# 「必須チェック」を個別に指定できるよう、1ジョブにまとめず3ジョブを並列に置く。
+# E2E(Playwright)はここに含めない — フル E2E はリリース PR と nightly で実行する
+# (docs/DEVELOPMENT.md テスト戦略)。
+name: CI
+
+on:
+  pull_request:
+    branches: [development, main]
+
+# 同一 PR へ再 push したら古い実行を止める(public リポジトリで Actions 分数は無料だが、
+# 結果が出るまでの待ち時間を短くする)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # pnpm のセットアップは setup-node より前に置く。
+      # 逆にすると setup-node の cache: pnpm が pnpm を見つけられず失敗する。
+      # バージョンは指定しない — root package.json の packageManager から解決される
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # next build は挟まない。next-env.d.ts / .next/types が無い状態でも
+      # tsc --noEmit が通ることを確認済み(.claude/plans/ci-foundation/plan.md 設計判断9)
+      - run: pnpm typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
