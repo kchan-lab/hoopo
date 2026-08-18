@@ -29,7 +29,8 @@
         "required_status_checks": [
           { "context": "lint" },
           { "context": "typecheck" },
-          { "context": "test" }
+          { "context": "test" },
+          { "context": "e2e" }
         ]
       }
     }
