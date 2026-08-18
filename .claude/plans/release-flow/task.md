@@ -13,8 +13,9 @@ Issue: [#4](https://github.com/kchan-lab/hoopo/issues/4) / Plan: [plan.md](plan.
 
 ## ルールセット(ブランチ保護)
 
-- [x] `.github/rulesets/branches.json` を作成(main / development 対象、PR 必須・
-      必須チェック lint / typecheck / test・force push 禁止・削除禁止)
+- [x] `.github/rulesets/main.json` / `development.json` を作成(PR 必須・必須チェック
+      lint / typecheck / test・force push 禁止・削除禁止。AI レビュー指摘を受けて2本に分割し、
+      main のマージ方法を merge commit のみに制限)
 - [x] リポジトリのマージ設定を確認・変更(squash / merge commit とも許可済みで変更不要だった)
 - [ ] PR マージ後、`gh api` でルールセットを適用する
 

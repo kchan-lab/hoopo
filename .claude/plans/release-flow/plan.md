@@ -23,9 +23,11 @@ feat/xxx ──squash PR──▶ development ──リリースPR(merge commit)
 
 対象は3つ:
 
-1. **ルールセット**: main / development を対象に「PR 必須・必須チェック(lint / typecheck / test)・
-   force push 禁止・削除禁止」を1本のルールセットで適用。適用は `gh api` で行い、
-   設定 JSON を `.github/rulesets/branches.json` としてリポジトリに記録する(再現・監査用)
+1. **ルールセット**: main / development に「PR 必須・必須チェック(lint / typecheck / test)・
+   force push 禁止・削除禁止」を適用。マージ方法の制限が異なるため main 用と development 用の
+   2本に分割する(main = merge commit のみ / development = squash + merge commit)。
+   適用は `gh api` で行い、設定 JSON を `.github/rulesets/main.json` / `development.json` として
+   リポジトリに記録する(再現・監査用)
 2. **release-please**: `.github/workflows/release-please.yml`(main への push で起動)+
    `release-please-config.json` / `.release-please-manifest.json`
 3. **リポジトリのマージ設定**: squash(feat→development 用)と merge commit(development→main 用)の
@@ -44,7 +46,10 @@ feat/xxx ──squash PR──▶ development ──リリースPR(merge commit)
    クロスブランチ PR をサポートしないため不可
 4. **development→main は merge commit、feat→development は squash**: dev→main を squash すると
    個々の `feat:` / `fix:` コミットが main の履歴から消え、release-please のバージョン計算が
-   壊れる(1コミット分しか読まれない)うえ、履歴が分岐して次回のリリース PR が競合する
+   壊れる(1コミット分しか読まれない)うえ、履歴が分岐して次回のリリース PR が競合する。
+   これを運用頼みにしないため、ルールセットで main のマージ方法を merge commit のみに制限する
+   (PR #45 の AI レビュー指摘を受けて反映)。development は feat PR の squash に加え、
+   リリース後の back-merge(main→dev)が merge commit のため両方を許可する
 5. **release-type は `simple`(ルート単位・version.txt + CHANGELOG.md)**: npm に publish する
    パッケージが無いため per-package バージョニング(node / manifest 分割)は不要。
    バージョンは「アプリ全体の版」として1本で扱う
