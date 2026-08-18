@@ -93,7 +93,7 @@ docs/REQUIREMENTS.md §4.2-6 / docs/DESIGN_GUIDELINES.md §1.3(提出行・カ�
 | E2E | Playwright | docker compose起動済みの portal(:8000)/admin(:8001) に対して主要導線を通す: 登録→自動認定通知、日程入力→発行(LINE送信はスタブ)→保護者で確認、提出3値→出欠/欠席者反映、月謝の済⇄未。スマホ(iPhoneビューポート)とPCの両方。LIFF認証はテスト用セッションCookie注入でバイパス |
 
 - 実行: `pnpm test`(unit)/ `pnpm test:int`(integration)/ `pnpm test:e2e`(E2E)
-- CI: **PRごとに Unit + Integration のみ**を実行(E2EはPRのCIに含めない)
+- CI: **PRごとに Unit + Integration のみ**を実行(E2EはPRのCIに含めない)。**ただしIntegrationは検証対象のRLS・スキーマがIssue #6で実装されるまで暫定的にCIジョブ自体を作らない**(空のIntegrationジョブは作らない方針)。Issue #6でスキーマ・RLSが揃い次第 `ci.yml` にIntegrationジョブを追加する
 - E2E: フロント系の実装をしたら、**コミット前にローカルでE2Eを回して確認する専用Skill(`e2e-check`)**で担保する(docker compose起動→対象導線のPlaywright実行→結果要約までをSkill化)。フルE2Eは **dev→mainのリリースPR** と nightly のCIで実行
 - カバレッジ方針: `packages/api` `packages/db` のロジックは80%を目安に計測。UIは数値を追わず、主要導線がE2Eで通ることを基準にする
 - 新機能の縦切り1本 = Unit(ロジック)+ Integration(API+RLS)+ E2E(導線1本)をセットでIssueの受入条件に含める
@@ -105,7 +105,7 @@ feat/xxx ──PR──▶ dev(=ステージング) ──リリースPR──�
 hotfix/xxx ─────────────────────────────────────────▶ main(緊急時のみ。devへback-merge)
 ```
 
-- **feat/xxx**: Issue単位で作成し dev へPR。CIは Unit + Integration、Vercelの使い捨てプレビューURLで確認
+- **feat/xxx**: Issue単位で作成し dev へPR。CIは Unit + Integration(Integrationのジョブ追加はIssue #6以降)、Vercelの使い捨てプレビューURLで確認
 - **dev(ステージング)**: マージで固定のstgドメインへ自動デプロイ。DBは**2つ目のSupabase Freeプロジェクト(stg用)**を使い本番と完全分離(無料枠内)。`e2e-check` Skill・家族テストはここに対して実施
 - **main(本番)**: リリースしたいタイミングで dev→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーンでマージ → 本番Supabaseへマイグレーション適用 → Vercel本番デプロイ
 - **タグ・リリースノート(release-please)**: Conventional Commits(`feat:`=minor / `fix:`=patch / `BREAKING CHANGE`=major)からバージョンを自動計算し、CHANGELOG込みの「release: vX.Y.Z」PRを常時維持。マージした瞬間にタグ打ち+GitHub Release発行+CHANGELOG更新が完了する。**タグはデプロイのトリガーではなく版の記録とロールバックの目印**(ロールバック自体はVercelの過去デプロイ再昇格で即時)
