@@ -56,7 +56,11 @@ feat/xxx ──squash PR──▶ development ──リリースPR(merge commit)
 6. **release-please には fine-grained PAT(`RELEASE_PLEASE_TOKEN`)を使う**: デフォルトの
    `GITHUB_TOKEN` が作る PR では CI が起動せず(GitHub の仕様)、必須チェックが永遠に
    完了しないためマージ不能になる。GitHub App 方式は1人開発にはセットアップ過剰
-7. **リリース後の main→development back-merge は当面手動(PR)**: CHANGELOG / version.txt の
+7. **必須チェックは strict(ベースブランチ最新化をマージ条件にする)**: PR 単体では green でも
+   ベースの最新と組み合わせると壊れる「意味的コンフリクト」を防ぐ。この CI は15〜20秒で終わり、
+   Renovate は strict 必須時にブランチを自動 rebase するため、有効化のコストはほぼない
+   (PR #45 の AI レビュー指摘と、複数人開発の可能性を踏まえて有効化)
+8. **リリース後の main→development back-merge は当面手動(PR)**: CHANGELOG / version.txt の
    コミットが main にしか無い状態を放置すると次回リリース PR が競合する。リリース頻度が
    上がったら Actions で自動起票に切り替える
 
