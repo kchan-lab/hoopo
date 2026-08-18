@@ -1,0 +1,28 @@
+# CodeQL によるコード走査。GitHub UI の default setup ではなくワークフローファイルで管理する
+# (設定が差分としてレビューでき、再現性がある)。public リポジトリなので無料。
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [development, main]
+  push:
+    branches: [development, main]
+  schedule:
+    # 週次でフルスキャン(月曜 04:00 JST = 日曜 19:00 UTC)。
+    # PR 単位の走査だけだと、クエリ側の更新で新たに検出されるようになった問題を拾えない
+    - cron: "0 19 * * 0"
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: github/codeql-action/init@v4
+        with:
+          # TypeScript は javascript-typescript として一括で解析される
+          languages: javascript-typescript
+      # ビルド不要の言語なので autobuild は挟まない
+      - uses: github/codeql-action/analyze@v4

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["* 0-7 * * 1"],
+  "prConcurrentLimit": 3,
+  "packageRules": [
+    {
+      "description": "devDependencies の minor/patch はまとめて1本の PR にする(レビュー回数を減らす)",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "devDependencies (minor/patch)"
+    },
+    {
+      "description": "GitHub Actions もまとめる",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    }
+  ],
+  "lockFileMaintenance": {
+    "description": "lockfile の推移的依存を週次で更新する",
+    "enabled": true,
+    "schedule": ["* 0-7 * * 1"]
+  },
+  "vulnerabilityAlerts": {
+    "description": "脆弱性由来の更新はスケジュールを無視して即座に PR を出す",
+    "schedule": ["at any time"]
+  }
+}
