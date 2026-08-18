@@ -1,0 +1,20 @@
+# main への push(= development→main リリース PR のマージ)を検知して
+# 「release: vX.Y.Z」PR を起票・更新する。その PR をマージするとタグ + GitHub Release +
+# CHANGELOG 更新が行われる(設計は .claude/plans/release-flow/plan.md)。
+# デフォルトの GITHUB_TOKEN が作る PR では CI が起動しない(GitHub の仕様)ため、
+# fine-grained PAT(secret: RELEASE_PLEASE_TOKEN)を使う。
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
