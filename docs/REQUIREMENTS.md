@@ -97,18 +97,34 @@
 
 ## 7. データモデル(全テーブルに team_id / RLS必須)
 
-- teams(id, name, short_name, logo_path, team_color, line_group_id)
-- coaches(id, team_id, email, auth方式)
-- guardians(id, team_id, line_user_id[暗号化])
-- guardian_children(guardian_id, child_id, relation, status[active/revoked・自動認定])
-- children(id, team_id, name, nickname_kana[呼び名], grade, gender, coach_note, invite_code, photo_path[任意], status[active/revoked・自動認定], archived)
-- child_availabilities(id, team_id, child_id, weekday[0=日], start_time, end_time)
-- practices(id, team_id, held_on, start_time, end_time, location, note, published_at)
+共通事項:
+
+- id は uuid。**teams 以外の全テーブルに team_id**(teams は id 自身がテナント境界のため列を持たない)
+- 全テーブルに created_at、更新のある表は updated_at(§5.2 認定管理の登録履歴表示に使用)
+- 練習日は「日付+曜日」で保持: held_on(date)から曜日(0=日)を導出した生成列を持つ
+
+テーブル定義:
+
+- teams(id, name, short_name, logo_path, team_color, line_group_id[一意])
+- coaches(id, team_id, email[一意], auth_type[line/email])
+  ※ password_hash・パスワードリセット関連は §10 未決のため縦切り1b で追加
+- guardians(id, team_id, line_user_id[暗号文], line_user_id_lookup[検索用HMAC・team内一意])
+  ※ 平文の LINE userId 形式は CHECK 制約で拒否。暗号化・HMAC の実装は packages/line の責務
+- guardian_children(team_id, guardian_id, child_id, relation[father/mother/grandparent/other], status[active/revoked・自動認定]) — 複合主キー (guardian_id, child_id)
+- children(id, team_id, name, nickname_kana[呼び名], grade[1..6], gender[male/female], coach_note, invite_code[全体一意・推測困難], photo_path[任意], status[active/revoked・自動認定], archived, archived_at)
+  ※ 卒団は archived=true(grade は据え置き)。archived_at は年度更新の取り消し猶予に使用
+- child_availabilities(id, team_id, child_id, weekday[0=日], start_time, end_time) — (child_id, weekday, start_time) 一意
+- practices(id, team_id, held_on, weekday[生成列・0=日], start_time, end_time, location, note, published_at)
 - practice_menus(id, team_id, practice_id, duration_min, content, sort)
-- attendances(id, team_id, child_id, practice_id, status[full/partial/absent], comment[任意・途中参加/早退の詳細], submitted_at)
-- fee_records(id, team_id, child_id, year, month, status, received_at)
+- attendances(id, team_id, child_id, practice_id, status[full/partial/absent], comment[任意・途中参加/早退の詳細。partial 時のみ], submitted_at) — (practice_id, child_id) 一意
+- fee_records(id, team_id, child_id, year, month[1..12], status[paid/unpaid], received_at) — (child_id, year, month) 一意。「未来」はアプリが year/month から導出
 - announcements(id, team_id, title, body, notify_line, published_at)
-- lineups(id, team_id, practice_id, child_id, role[starter/bench], position[PG..C]) — チーム編成用
+- lineups(id, team_id, practice_id, child_id, role[starter/bench], position[PG..C・任意]) — チーム編成用。(practice_id, child_id) 一意
+
+整合性の方針: 子テーブルは複合外部キー(xxx_id, team_id)で親を参照し、他チームの行を参照する
+不整合(例: A チームの出欠が B チームの練習を指す)を DB レベルで防ぐ。
+LINE 送信ログ・通数カウンター・破壊的操作の実行ログ用テーブルは未定義であり、
+該当機能の実装 Issue で本節を更新してから追加する。
 
 
 ### ER図(概念)
@@ -156,4 +172,5 @@ erDiagram
 - 顔写真機能のチーム内合意(§9)
 - 予定表画像の細部デザイン(現行スクリーンショットの共有待ち)
 - 管理者メールログインのパスワードリセット手段(コスト0のメール送信手段の選定)
+- 出場メンバー配置の左右指定(C=リング横の左/右)を lineups にどう持つか(§4.2-7)
 - `hoopo` 表記の商標有無の確認(J-PlatPatで9・38・42類を検索)を、チーム外への公開・展開前に実施

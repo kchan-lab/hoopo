@@ -15,6 +15,12 @@
       "description": "GitHub Actions もまとめる",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions"
+    },
+    {
+      "description": "Supabase CLI はローカルスタック・CI を壊し得るため単独 PR に分離し、完全固定で更新する",
+      "matchPackageNames": ["supabase"],
+      "groupName": "supabase-cli",
+      "rangeStrategy": "pin"
     }
   ],
   "lockFileMaintenance": {
