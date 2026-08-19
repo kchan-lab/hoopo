@@ -1,0 +1,36 @@
+# main へ向かう PR(リリース PR / hotfix / release-please PR)で実行するフル E2E の品質ゲート。
+# 実行系はローカルの `pnpm test:e2e` と同一 — compose の e2e プロファイルが portal / admin を
+# ヘルスチェック付きで起動し、playwright コンテナから接続する(設計は
+# .claude/plans/release-pr-e2e/plan.md)。
+# nightly はデフォルトブランチ(development)で毎日実行し、E2E の腐りを検知する。
+# 必須チェック化は protect-main ルールセット側(.github/rulesets/main.json)で行う。
+name: E2E
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 18 * * *" # 03:00 JST(Asia/Tokyo)
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker compose --profile e2e run --rm playwright
+      # CI でしか再現しない失敗の調査用に、トレース類を失敗時のみ残す
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
