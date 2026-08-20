@@ -11,14 +11,16 @@ export const LOCAL_APP_DATABASE_URL = `postgresql://${LOCAL_APP_ROLE}:postgres@l
 export async function ensureLocalAppRole(
   ownerSql: postgres.Sql,
 ): Promise<void> {
-  await ownerSql`
+  // DO ブロック内は文字列リテラルのためバインドパラメータ化できず、
+  // LOCAL_APP_ROLE をそのまま埋め込む(定数なのでインジェクションの懸念なし)
+  await ownerSql.unsafe(`
     DO $$
     BEGIN
-      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'hoopo_app_local') THEN
-        CREATE ROLE hoopo_app_local LOGIN PASSWORD 'postgres'
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${LOCAL_APP_ROLE}') THEN
+        CREATE ROLE ${LOCAL_APP_ROLE} LOGIN PASSWORD 'postgres'
           NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB IN ROLE hoopo_app;
       END IF;
     END
     $$
-  `;
+  `);
 }
