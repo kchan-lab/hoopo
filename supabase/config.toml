@@ -42,7 +42,9 @@ health_timeout = "2m"
 major_version = 17
 
 [db.pooler]
-enabled = false
+# 本番/stg は Supavisor transaction mode(6543)経由が前提のため、ローカルでも
+# プーラを有効にして GUC 残留テスト(APP_POOLER_DATABASE_URL)を実行できるようにする
+enabled = true
 # Port to use for the local connection pooler.
 port = 54329
 # Specifies when a server connection can be reused by other clients.

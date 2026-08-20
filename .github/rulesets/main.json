@@ -30,6 +30,7 @@
           { "context": "lint" },
           { "context": "typecheck" },
           { "context": "test" },
+          { "context": "test-int" },
           { "context": "e2e" }
         ]
       }
