@@ -133,8 +133,10 @@ AI レビュー精度が落ちるため。PR-B は PR-A のスキーマに全面
     - 命名 `*.int.test.ts` で Unit と分離(現行 `vitest.config.ts` の include が
       `packages/db/test/*.test.ts` を拾って test ジョブが赤になるのを防ぐ)。専用 config +
       `fileParallelism: false`。接続文字列未設定時は fail-fast(空 DB 相手の全緑を防ぐ)
-    - リセットは**テストごとのトランザクション+ロールバック**(withTeam のトランザクション前提と
-      相性が良く高速)。テストクライアントは `max: 1`
+    - リセットは**beforeEach の TRUNCATE + フィクスチャ再作成**(当初はテストごとの
+      トランザクション+ロールバックを想定したが、withTeam が自前でトランザクションを張るため
+      不成立と判明し変更。直列実行(`fileParallelism: false`)+シャッフル耐性で同等の独立性を
+      担保)。テストクライアントは `max: 1`
     - テストフィクスチャは開発用シードと分離(シードは UI 確認用に増減するため依存させない)
     - **必須ケース**: ①越境 SELECT/INSERT/UPDATE/DELETE ②team_id 書き換え UPDATE(WITH CHECK)
       ③GUC 未設定で全テーブル 0 行/拒否 ④不正値(非 uuid)で拒否側に倒れる
