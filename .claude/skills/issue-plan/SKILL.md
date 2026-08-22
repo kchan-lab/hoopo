@@ -1,6 +1,6 @@
 ---
 name: issue-plan
-description: Issue ドリブン開発でプランを書くときに必ず読む哲学とテンプレート。Issue 着手時に .claude/plans/<slug>/plan.md と task.md を作成する運用を定める(PR の出し方は create-pr Skill)。「Issueに着手」「プラン作成」「plan.md」「task.md」で発動。
+description: Issue ドリブン開発でプランを書くときに必ず読む哲学とテンプレート。Issue の起票から、着手時の .claude/plans/<slug>/plan.md と task.md 作成までの運用を定める(PR の出し方は create-pr Skill)。「Issueを切って」「Issue作成」「Issueに着手」「プラン作成」「plan.md」「task.md」で発動。
 ---
 
 # issue-plan: Issue ドリブン開発のプラン運用
@@ -32,6 +32,48 @@ description: Issue ドリブン開発でプランを書くときに必ず読む�
   `gh api -X POST repos/kchan-lab/hoopo/issues/<親番号>/sub_issues -F sub_issue_id=<issueのid>`
   (`id` は issue 番号ではなくデータベースID。`gh api repos/kchan-lab/hoopo/issues/<番号> -q .id` で取得)
 - 実装 PR には対象層のテスト(Unit / Integration / E2E)を必ず含める(docs/DEVELOPMENT.md テスト戦略)
+
+## Issue の切り方(起票)
+
+新しい作業が見えたら、着手前にまず Issue を切る。本文の型は `.github/ISSUE_TEMPLATE/task.md` と
+同じ4節(目的/参照/作業内容/受入条件)。`gh issue create` は非対話実行だとテンプレートを
+適用しないので、本文で型を再現する:
+
+```bash
+gh issue create --repo kchan-lab/hoopo \
+  --title "<What がわかる短文(日本語)>" \
+  --assignee Keichan15 \
+  --body "$(cat <<'EOF'
+## 目的
+
+<何を達成するか・なぜ必要かを 1〜3 文。実装詳細(How)は書かない>
+
+## 参照
+
+<仕様の根拠を節番号つきで。例: docs/REQUIREMENTS.md §4.2-6 / docs/DEVELOPMENT.md テスト戦略>
+
+## 作業内容
+
+- [ ] <粗い分解でよい。着手時に plan.md / task.md へ展開する>
+
+## 受入条件
+
+- [ ] <完了を客観的に判定できる条件。縦切り実装は Unit / Integration / E2E を含める>
+EOF
+)"
+```
+
+- **1 Issue = 1 関心事。** 機能変更とリファクタリングが混ざるなら分けて切る
+- 起票後、ボード(project 13)に載ったか確認する。auto-add が拾うはずだが、
+  下記が空を返す場合は `gh project item-add 13 --owner kchan-lab --url <IssueのURL>` で追加:
+
+  ```bash
+  gh project item-list 13 --owner kchan-lab --format json --limit 200 \
+    --jq '.items[] | select(.content.number==<Issue番号>) | .id'
+  ```
+
+- Status は **Todo のまま**にする(In Progress への遷移は着手時=plan.md 作成時。次節)
+- 縦切りの子タスクは Sub-issue として親 Issue に紐付ける(運用ルールのコマンド参照)
 
 ## 着手時のボード操作(In Progress へ)
 
