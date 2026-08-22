@@ -29,27 +29,28 @@ PR は2本の Stacked PR(plan.md 方針。PR-B の base は PR-A ブランチ)�
 
 ## PR-B: RLS+Integration テスト+CI(`Closes #6`)
 
-- [ ] カスタムマイグレーション: `hoopo_app` ロール(NOLOGIN/NOBYPASSRLS)作成+テーブル単位 GRANT
+- [x] カスタムマイグレーション: `hoopo_app` ロール(NOLOGIN/NOBYPASSRLS)作成+テーブル単位 GRANT
       (teams は SELECT/UPDATE のみ)+ anon/authenticated REVOKE + 全テーブル FORCE RLS +
-      search_path 固定
-- [ ] pgPolicy: 全テーブル FOR ALL、USING/WITH CHECK 両方明示、
+      search_path 固定(drizzle/0001_app_role_and_rls.sql)
+- [x] pgPolicy: 全テーブル FOR ALL、USING/WITH CHECK 両方明示、
       `(select nullif(current_setting('app.team_id', true),'')::uuid)` 方式。teams は `id =` 条件
-- [ ] SECURITY DEFINER 関数2本(resolve_invite_code / resolve_guardian_by_lookup、
+- [x] SECURITY DEFINER 関数2本(resolve_invite_code / resolve_guardian_by_lookup、
       search_path 固定、EXECUTE は hoopo_app のみ)
-- [ ] client.ts: `withTeam(teamId, fn)` のみ公開(set_config は is_local=true・トランザクション内・
+- [x] client.ts: `withTeam(teamId, fn)` のみ公開(set_config は is_local=true・トランザクション内・
       バインドパラメータ・uuid 検証)。`APP_DATABASE_URL` のみ読む。Unit テスト(入力検証)
-- [ ] seed.ts を withTeam 経由に変更(RLS 配下で投入=WITH CHECK 検証を兼ねる)
-- [ ] `supabase/config.toml` の `[db.pooler]` を有効化(transaction mode)
-- [ ] Integration テスト基盤: `*.int.test.ts` + 専用 vitest config(`fileParallelism: false`、
-      接続未設定は fail-fast、トランザクションロールバックでリセット、フィクスチャはシードと分離)。
-      既存 vitest.config.ts の exclude に `**/*.int.test.ts` を追加
-- [ ] 必須ケース実装: ①越境 SELECT/INSERT/UPDATE/DELETE ②team_id 書き換え UPDATE
-      ③GUC 未設定で全遮断 ④非 uuid 値で拒否 ⑤プーラ経由の GUC 残留なし
-      ⑥平文 line_user_id 拒否 ⑦カタログメタテスト(RLS/FORCE/team_id/ポリシー/ロール属性/
-      GRANT/SECURITY DEFINER 一覧)
-- [ ] ci.yml に `test-int` ジョブ追加(postgres:17 サービスコンテナ、timeout-minutes 15、
-      `db:generate` 後の `git diff --exit-code drizzle/` + `drizzle-kit check` の生成漏れ検知つき)
-- [ ] `.github/rulesets/development.json` と `main.json` の必須チェックに `test-int` を追加
+- [x] seed.ts を withTeam 経由に変更(RLS 配下で投入=WITH CHECK 検証を兼ねる。
+      teams 行と TRUNCATE のみ所有者接続。ローカルログインロールは冪等に自動作成)
+- [x] `supabase/config.toml` の `[db.pooler]` を有効化(transaction mode)
+- [x] Integration テスト基盤: `*.int.test.ts` + 専用 vitest config(`fileParallelism: false`、
+      接続未設定は fail-fast)。リセットは beforeEach の TRUNCATE+フィクスチャ再作成
+      (withTeam が自前トランザクションを張るためロールバック方式は不成立と判明。
+      直列実行+シャッフル耐性で同等の独立性を担保)。vitest.config.ts の exclude に追加済み
+- [x] 必須ケース実装: ①越境 SELECT/INSERT/UPDATE/DELETE ②team_id 書き換え UPDATE
+      ③GUC 未設定で全遮断 ④非 uuid 値で拒否 ⑤接続再利用+プーラ経由の GUC 残留なし
+      ⑥平文 line_user_id 拒否 ⑦カタログメタテスト(計21ケース、シャッフル実行もグリーン)
+- [x] ci.yml に `test-int` ジョブ追加(postgres:17 サービスコンテナ、timeout-minutes 15、
+      `db:generate` 後の `git diff --exit-code` + `drizzle-kit check` の生成漏れ検知つき)
+- [x] `.github/rulesets/development.json` と `main.json` の必須チェックに `test-int` を追加
       (適用はマージ後)
 - [ ] PR-B 作成(base: PR-A ブランチ。A マージ後は base 自動付け替え →
       `git rebase --onto` で最新 development に載せ替え)→ CI グリーン
@@ -61,8 +62,10 @@ PR は2本の Stacked PR(plan.md 方針。PR-B の base は PR-A ブランチ)�
       リージョンは後から変更不可)
 - [ ] stg の Supavisor(transaction mode, 6543)接続文字列を `.env` 系ファイルに設定
       (直結 5432 は使わない。ローカル用と別ファイルに分離し、コミットしない)
-- [ ] stg にログインロール `hoopo_app_stg` を作成しパスワード設定(`GRANT hoopo_app TO ...`。
-      手順は PR-B のドキュメントに記載。prod はリリースフロー Issue で同手順)
+- [ ] stg にログインロール `hoopo_app_stg` を作成しパスワード設定(`GRANT hoopo_app TO ...` と
+      `ALTER ROLE hoopo_app_stg SET search_path = public, extensions, pg_temp` を併せて実行。
+      ロール別設定は GRANT では継承されないため。手順は PR-B のドキュメントに記載。
+      prod はリリースフロー Issue で同手順)
 
 ## マージ後・検証
 

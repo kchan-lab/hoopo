@@ -56,3 +56,41 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+
+  # Integration(実 Postgres + RLS 越境テスト)。DB は supabase start ではなく素の
+  # postgres コンテナを使う — RLS が Supabase 固有機能に依存しない設計のため Postgres だけで
+  # 検証でき、毎 PR 数分のイメージ pull と CLI 更新起因の破壊を避けられる
+  # (.claude/plans/db-schema-rls-seed/plan.md 設計判断10。バージョンは supabase/config.toml の
+  # major_version = 17 に合わせる)
+  test-int:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      APP_DATABASE_URL: postgresql://hoopo_app_local:postgres@localhost:54322/postgres
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # マイグレーション生成漏れの検知: スキーマ定義を変えたのに drizzle-kit generate を
+      # 忘れた PR をここで落とす(+ マイグレーション同士の衝突検出)
+      - run: pnpm db:generate && git diff --exit-code packages/db/drizzle
+      - run: pnpm db:check
+      - run: pnpm db:migrate
+      - run: pnpm test:int
