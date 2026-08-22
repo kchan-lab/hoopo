@@ -6,9 +6,21 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
+    "db:migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts local",
+    "db:migrate:stg": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts stg",
+    "db:seed": "node --env-file-if-exists=../../.env --import tsx src/seed.ts"
   },
   "devDependencies": {
+    "@types/node": "^24.13.3",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.12",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
   }
 }

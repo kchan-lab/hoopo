@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!docs/wireframes"]
+    "includes": ["**", "!docs/wireframes", "!packages/db/drizzle"]
   },
   "formatter": {
     "enabled": true,
