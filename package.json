@@ -12,13 +12,18 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
-    "test:e2e": "docker compose --profile e2e run --rm playwright"
+    "test:e2e": "docker compose --profile e2e run --rm playwright",
+    "db:generate": "pnpm --filter @hoopo/db db:generate",
+    "db:check": "pnpm --filter @hoopo/db db:check",
+    "db:migrate": "pnpm --filter @hoopo/db db:migrate",
+    "db:migrate:stg": "pnpm --filter @hoopo/db db:migrate:stg",
+    "db:seed": "pnpm --filter @hoopo/db db:seed"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
     "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
-    "supabase": "^2.111.0",
+    "supabase": "2.111.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
