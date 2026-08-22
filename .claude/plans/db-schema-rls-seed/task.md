@@ -62,8 +62,10 @@ PR は2本の Stacked PR(plan.md 方針。PR-B の base は PR-A ブランチ)�
       リージョンは後から変更不可)
 - [ ] stg の Supavisor(transaction mode, 6543)接続文字列を `.env` 系ファイルに設定
       (直結 5432 は使わない。ローカル用と別ファイルに分離し、コミットしない)
-- [ ] stg にログインロール `hoopo_app_stg` を作成しパスワード設定(`GRANT hoopo_app TO ...`。
-      手順は PR-B のドキュメントに記載。prod はリリースフロー Issue で同手順)
+- [ ] stg にログインロール `hoopo_app_stg` を作成しパスワード設定(`GRANT hoopo_app TO ...` と
+      `ALTER ROLE hoopo_app_stg SET search_path = public, extensions, pg_temp` を併せて実行。
+      ロール別設定は GRANT では継承されないため。手順は PR-B のドキュメントに記載。
+      prod はリリースフロー Issue で同手順)
 
 ## マージ後・検証
 

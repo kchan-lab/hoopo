@@ -75,9 +75,11 @@ AI レビュー精度が落ちるため。PR-B は PR-A のスキーマに全面
    - **(d) ロール設計**: 権限保持ロール `hoopo_app`(NOLOGIN/NOSUPERUSER/**NOBYPASSRLS**/NOCREATEROLE)を
      カスタムマイグレーションで作成し、**テーブル単位で GRANT**(`ALTER DEFAULT PRIVILEGES` は
      ポリシー未設定の新テーブルが自動で開くため使わない)。`anon`/`authenticated` からは REVOKE。
-     全テーブル **`FORCE ROW LEVEL SECURITY`**(所有者バイパスの封止)。search_path 固定。
+     全テーブル **`FORCE ROW LEVEL SECURITY`**(所有者バイパスの封止)。search_path は
+     `public, extensions, pg_temp` に固定(pg_temp 末尾明示で一時テーブルによる隠蔽を封止)。
      環境別ログインロール(`hoopo_app_local`/`_stg`/`_prod`)はパスワードを含むため手動作成し
-     `GRANT hoopo_app TO ...` で継承(ロール+GRANT=マイグレーション、パスワード設定のみ手動、が線引き)
+     `GRANT hoopo_app TO ...` で継承(ロール+GRANT=マイグレーション、パスワード設定のみ手動、が線引き)。
+     ロール別の設定値は GRANT では継承されないため、search_path は各ログインロール自身にも同じ値を設定する
    - **(e) env 分離**: `DATABASE_URL`(マイグレーション/シード用=所有者)と
      `APP_DATABASE_URL`(アプリ・Integration テスト用=hoopo_app 系)の2本。
      `client.ts` は `APP_DATABASE_URL` のみを読む
