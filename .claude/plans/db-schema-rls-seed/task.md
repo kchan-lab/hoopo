@@ -52,33 +52,36 @@ PR は2本の Stacked PR(plan.md 方針。PR-B の base は PR-A ブランチ)�
       `db:generate` 後の `git diff --exit-code` + `drizzle-kit check` の生成漏れ検知つき)
 - [x] `.github/rulesets/development.json` と `main.json` の必須チェックに `test-int` を追加
       (適用はマージ後)
-- [ ] PR-B 作成(base: PR-A ブランチ。A マージ後は base 自動付け替え →
+- [x] PR-B 作成(base: PR-A ブランチ。A マージ後は base 自動付け替え →
       `git rebase --onto` で最新 development に載せ替え)→ CI グリーン
       (PR 上で test-int の実動作を確認できる)→ squash マージ
+      (base 付け替えの都合で成果物は #52 として取り込み。レビューは #51。
+      レビュー指摘の search_path 対応は 915af45)
 
-## 外部設定(承認者のアクション)
+## 外部設定(承認者のアクション)→ #55 へ移管
 
 - [ ] Supabase Free プロジェクト `hoopo-stg` / `hoopo-prod` を作成(東京リージョン。
-      リージョンは後から変更不可)
+      リージョンは後から変更不可)→ #55
 - [ ] stg の Supavisor(transaction mode, 6543)接続文字列を `.env` 系ファイルに設定
-      (直結 5432 は使わない。ローカル用と別ファイルに分離し、コミットしない)
+      (直結 5432 は使わない。ローカル用と別ファイルに分離し、コミットしない)→ #55
 - [ ] stg にログインロール `hoopo_app_stg` を作成しパスワード設定(`GRANT hoopo_app TO ...` と
       `ALTER ROLE hoopo_app_stg SET search_path = public, extensions, pg_temp` を併せて実行。
       ロール別設定は GRANT では継承されないため。手順は PR-B のドキュメントに記載。
-      prod はリリースフロー Issue で同手順)
+      prod はリリースフロー Issue で同手順)→ #55
 
 ## マージ後・検証
 
-- [ ] `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm test:int` がローカルでグリーン
+- [x] `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm test:int` がローカルでグリーン
       (テスト順序シャッフルでもグリーン)
-- [ ] e2e-check(バックエンド節): supabase start → migrate → seed → アプリロールで実接続し
+- [x] e2e-check(バックエンド節): supabase start → migrate → seed → アプリロールで実接続し
       「他チーム 0 行・越境 INSERT 拒否」を実データ確認。Studio 目視は RLS 有効フラグの補助確認。
       結果は Skill のフォーマットで報告(`pnpm test:e2e` 回帰は任意)
-- [ ] PR-B マージ後: 両ルールセットを `gh api PUT` で再適用し `test-int` 必須化を確認
-      (e2e-check Skill の「CI 変更はマージ後に実行結果を確認」に従い、development への
-      次 PR で test-int が走ることも確認)
+- [x] PR-B マージ後: 両ルールセットを `gh api PUT` で再適用し `test-int` 必須化を確認
+      (development: lint / typecheck / test / test-int、main: 同+e2e を実測確認。
+      development への次 PR で test-int が走ることは本 task.md 更新 PR で確認)
 - [ ] stg へ `db:migrate:stg` で適用(適用前にダッシュボードで一時停止していないか確認。
-      適用済みの正は `__drizzle_migrations`)。prod へは適用しない(初回リリース PR で)
-- [ ] フォローアップ Issue を起票: ①リリース時の prod マイグレーション適用運用
-      ②Supabase 停止対策 ping の前倒し
-- [ ] Issue #6 の受入条件を見直してクローズ(ボードの Done は自動)
+      適用済みの正は `__drizzle_migrations`)。prod へは適用しない(初回リリース PR で)→ #55
+- [x] フォローアップ Issue を起票: #53(prod マイグレーション適用運用)
+      #54(Supabase 停止対策 ping の前倒し)#55(stg 接続整備。#6 未達分の移管先)
+- [x] Issue #6 の受入条件を見直してクローズ(未達の Supabase プロジェクト作成は #55 へ移管。
+      ボードの Done は自動)
