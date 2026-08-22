@@ -12,6 +12,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
+    "test:int": "vitest run -c vitest.int.config.ts",
     "test:e2e": "docker compose --profile e2e run --rm playwright",
     "db:generate": "pnpm --filter @hoopo/db db:generate",
     "db:check": "pnpm --filter @hoopo/db db:check",
