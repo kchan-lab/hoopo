@@ -23,4 +23,9 @@ export async function ensureLocalAppRole(
     END
     $$
   `);
+  // ロール別の search_path 設定は GRANT では継承されない(ログインロール自身に必要)ため、
+  // マイグレーションの hoopo_app と同じ値をここで設定する。既存ロールにも効かせるため IF の外で毎回実行する
+  await ownerSql.unsafe(
+    `ALTER ROLE ${LOCAL_APP_ROLE} SET search_path = public, extensions, pg_temp`,
+  );
 }

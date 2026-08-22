@@ -12,8 +12,11 @@ BEGIN
 END
 $$;--> statement-breakpoint
 
--- search_path 経由の関数すり替え防止(extensions は Supabase 環境のみ存在。無い環境では無視される)
-ALTER ROLE hoopo_app SET search_path = public, extensions;--> statement-breakpoint
+-- search_path 経由のオブジェクトすり替え防止(extensions は Supabase 環境のみ存在。無い環境では無視される)。
+-- pg_temp を末尾に明示する(明示しないと暗黙に先頭で検索され、一時テーブルが本物のテーブルを隠蔽できる)。
+-- ロール別設定はログイン時のロールにしか適用されず GRANT では継承されないため、
+-- 環境別ログインロール(hoopo_app_local / _stg / _prod)にも作成時に同じ設定を入れること
+ALTER ROLE hoopo_app SET search_path = public, extensions, pg_temp;--> statement-breakpoint
 
 GRANT USAGE ON SCHEMA public TO hoopo_app;--> statement-breakpoint
 
