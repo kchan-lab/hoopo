@@ -88,7 +88,7 @@ docs/REQUIREMENTS.md §4.2-6 / docs/DESIGN_GUIDELINES.md §1.3(提出行・カ�
 
 | 層 | ツール | このプロジェクトで担保すること |
 |---|---|---|
-| Unit | Vitest | 純ロジック: LINE通数計算、年度更新(学年+1/卒団)、日付・曜日処理(Asia/Tokyo)、提出3値のバリデーション、招待コード生成。DB不要で高速、各パッケージ隣接の `*.test.ts` |
+| Unit | Vitest | 純ロジック: LINE通数計算、年度更新(学年+1/卒団)、日付・曜日処理(Asia/Tokyo)、提出3値のバリデーション、招待コード生成。DB不要で高速、各パッケージ隣接の `*.test.ts`。CLI スクリプトの起動検証(子プロセス spawn)も、DB・外部サービスに依存せず高速(1秒未満/件)なものはここに含める(例: `db:migrate:prod` の確認プロンプト) |
 | Integration | Vitest + ローカルSupabase(Docker) | HonoのAPIを `app.request()` で直接叩き、実Postgresに対して検証。**RLSの越境テスト(他team_idのデータが見えない/書けないこと)を必須ケースにする**。LINE APIはモック。マイグレーション適用後、テストごとにDBをリセット |
 | E2E | Playwright | docker compose起動済みの portal(:8000)/admin(:8001) に対して主要導線を通す: 登録→自動認定通知、日程入力→発行(LINE送信はスタブ)→保護者で確認、提出3値→出欠/欠席者反映、月謝の済⇄未。スマホ(iPhoneビューポート)とPCの両方。LIFF認証はテスト用セッションCookie注入でバイパス |
 
