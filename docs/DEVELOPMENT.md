@@ -107,7 +107,7 @@ hotfix/xxx ───────────────────────
 
 - **feat/xxx**: Issue単位で作成し dev へPR。CIは Unit + Integration(Integrationのジョブ追加はIssue #6以降)、Vercelの使い捨てプレビューURLで確認
 - **dev(ステージング)**: マージで固定のstgドメインへ自動デプロイ。DBは**2つ目のSupabase Freeプロジェクト(stg用)**を使い本番と完全分離(無料枠内)。`e2e-check` Skill・家族テストはここに対して実施
-- **main(本番)**: リリースしたいタイミングで dev→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーンでマージ → 本番Supabaseへマイグレーション適用 → Vercel本番デプロイ
+- **main(本番)**: リリースしたいタイミングで dev→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーン確認 → 本番Supabaseへマイグレーション適用 → マージ(=Vercel本番デプロイ)。適用がマージより先(手順は「prod マイグレーション適用」)
 - **タグ・リリースノート(release-please)**: Conventional Commits(`feat:`=minor / `fix:`=patch / `BREAKING CHANGE`=major)からバージョンを自動計算し、CHANGELOG込みの「release: vX.Y.Z」PRを常時維持。マージした瞬間にタグ打ち+GitHub Release発行+CHANGELOG更新が完了する。**タグはデプロイのトリガーではなく版の記録とロールバックの目印**(ロールバック自体はVercelの過去デプロイ再昇格で即時)
 - **リリース手順の実際**: dev→main のリリースPRは **merge commit** でマージする(squash すると個々の `feat:` / `fix:` が main の履歴から消え、release-please のバージョン計算が壊れる)。マージ後に release-please が「release: vX.Y.Z」PR を起票するのでそれをマージ → タグ+Release+CHANGELOG が完了。直後に main→dev の back-merge PR を出して CHANGELOG / version.txt を dev へ同期する(feat→dev は従来どおり squash)
 - **保護者向けお知らせは別物**: GitHub Releaseは開発者向け文面。`release-notes` Skillが `git log 前タグ..HEAD` と関連Issueを読み、保護者向けお知らせの下書き(です・ます調・専門用語なし)まで生成 → コーチが確認して掲載
@@ -115,8 +115,10 @@ hotfix/xxx ───────────────────────
 
 ### prod マイグレーション適用(リリース手順)
 
-リリースPR(dev→main)をマージしたら、release: PR をマージする前に以下を実施する。
-Vercel の本番デプロイはマージで自動的に走るため、新コードが参照するスキーマを先に揃えること。
+リリースPR(dev→main)の CI がグリーンになったら、**マージする前に**以下を実施する。
+マージすると Vercel の本番デプロイが自動で走り、人間のマイグレーション実行より先に新コードが
+本番に出うるため、「スキーマが先」を運用の速さではなく手順の順序で保証する。マイグレーションは
+後方互換(additive)原則なので、先に適用しても旧コードは影響を受けない。
 
 1. `.env.prod`(コミット禁止)に `PROD_DATABASE_URL` を設定する(所有者ロール・
    Supavisor transaction mode 6543 経由。直結 5432 は使わない)
@@ -132,7 +134,8 @@ Vercel の本番デプロイはマージで自動的に走るため、新コー�
    ALTER ROLE hoopo_app_prod SET search_path = public, extensions, pg_temp;
    ```
 
-4. 適用結果(実行日時・適用したマイグレーション)をリリースPRのコメントに記録する(実行ログ)
+4. リリースPRをマージする(ここで Vercel の本番デプロイが走る)
+5. 適用結果(実行日時・適用したマイグレーション)をリリースPRのコメントに記録する(実行ログ)
 
 運用原則:
 
