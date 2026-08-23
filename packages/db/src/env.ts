@@ -34,7 +34,7 @@ export function resolveMigrateTarget(
   target: string,
   env: Record<string, string | undefined>,
 ): { url: string; requiresConfirmation: boolean } {
-  const require = (name: string): string => {
+  const readRequiredEnv = (name: string): string => {
     const value = env[name];
     if (!value) {
       throw new Error(
@@ -44,16 +44,22 @@ export function resolveMigrateTarget(
     return value;
   };
   if (target === "local") {
-    const url = toHostUrl(require("DATABASE_URL"));
+    const url = toHostUrl(readRequiredEnv("DATABASE_URL"));
     assertLocalDatabaseUrl(url);
     return { url, requiresConfirmation: false };
   }
   if (target === "stg") {
-    return { url: require("STG_DATABASE_URL"), requiresConfirmation: false };
+    return {
+      url: readRequiredEnv("STG_DATABASE_URL"),
+      requiresConfirmation: false,
+    };
   }
   if (target === "prod") {
     // prod のみ実行前の確認を要求する(CLAUDE.md 開発ルール: 破壊的操作は確認+実行ログ)
-    return { url: require("PROD_DATABASE_URL"), requiresConfirmation: true };
+    return {
+      url: readRequiredEnv("PROD_DATABASE_URL"),
+      requiresConfirmation: true,
+    };
   }
   throw new Error(`不明なターゲット: ${target}(local | stg | prod)`);
 }

@@ -16,11 +16,17 @@ const { url, requiresConfirmation } = resolveMigrateTarget(target, process.env);
 const host = new URL(url).hostname;
 
 if (requiresConfirmation) {
-  // 破壊的操作は確認を挟む(CLAUDE.md 開発ルール)。非対話環境では入力できず中断される
+  // 破壊的操作は確認を挟む(CLAUDE.md 開発ルール)。
+  // 非対話環境(CI 等)で stdin が閉じた場合は close を空回答として扱い、確認不成立で中断する
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await rl.question(
-    `本番 ${host} へマイグレーションを適用します。続行するには "prod" と入力: `,
-  );
+  const answer = await Promise.race([
+    rl
+      .question(
+        `本番 ${host} へマイグレーションを適用します。続行するには "prod" と入力: `,
+      )
+      .catch(() => ""),
+    new Promise<string>((resolve) => rl.once("close", () => resolve(""))),
+  ]);
   rl.close();
   if (answer.trim() !== "prod") {
     console.log("中断しました(何も適用されていません)");
