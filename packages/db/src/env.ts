@@ -26,3 +26,34 @@ export function assertLocalDatabaseUrl(databaseUrl: string): void {
     );
   }
 }
+
+// db:migrate 系スクリプトのターゲット→接続先の解決。
+// 誤爆防止ガード(local のローカル限定・prod の確認要求)の回帰を Unit テストで固定するため、
+// process.env に依存しない純関数にしている
+export function resolveMigrateTarget(
+  target: string,
+  env: Record<string, string | undefined>,
+): { url: string; requiresConfirmation: boolean } {
+  const require = (name: string): string => {
+    const value = env[name];
+    if (!value) {
+      throw new Error(
+        `環境変数 ${name} が設定されていません(接続先の .env 系ファイルを確認)`,
+      );
+    }
+    return value;
+  };
+  if (target === "local") {
+    const url = toHostUrl(require("DATABASE_URL"));
+    assertLocalDatabaseUrl(url);
+    return { url, requiresConfirmation: false };
+  }
+  if (target === "stg") {
+    return { url: require("STG_DATABASE_URL"), requiresConfirmation: false };
+  }
+  if (target === "prod") {
+    // prod のみ実行前の確認を要求する(CLAUDE.md 開発ルール: 破壊的操作は確認+実行ログ)
+    return { url: require("PROD_DATABASE_URL"), requiresConfirmation: true };
+  }
+  throw new Error(`不明なターゲット: ${target}(local | stg | prod)`);
+}

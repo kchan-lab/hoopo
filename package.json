@@ -18,6 +18,7 @@
     "db:check": "pnpm --filter @hoopo/db db:check",
     "db:migrate": "pnpm --filter @hoopo/db db:migrate",
     "db:migrate:stg": "pnpm --filter @hoopo/db db:migrate:stg",
+    "db:migrate:prod": "pnpm --filter @hoopo/db db:migrate:prod",
     "db:seed": "pnpm --filter @hoopo/db db:seed"
   },
   "devDependencies": {

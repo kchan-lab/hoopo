@@ -113,6 +113,34 @@ hotfix/xxx ───────────────────────
 - **保護者向けお知らせは別物**: GitHub Releaseは開発者向け文面。`release-notes` Skillが `git log 前タグ..HEAD` と関連Issueを読み、保護者向けお知らせの下書き(です・ます調・専門用語なし)まで生成 → コーチが確認して掲載
 - リリース完了・CI失敗は Discord へWebhook通知
 
+### prod マイグレーション適用(リリース手順)
+
+リリースPR(dev→main)をマージしたら、release: PR をマージする前に以下を実施する。
+Vercel の本番デプロイはマージで自動的に走るため、新コードが参照するスキーマを先に揃えること。
+
+1. `.env.prod`(コミット禁止)に `PROD_DATABASE_URL` を設定する(所有者ロール・
+   Supavisor transaction mode 6543 経由。直結 5432 は使わない)
+2. `pnpm db:migrate:prod` を実行する。接続先ホスト名が表示され、`prod` と手入力しないと
+   中断される(適用済みの正は `__drizzle_migrations` テーブル)
+3. **初回のみ**: アプリ用ログインロールを作成する(`hoopo_app` はマイグレーションが作るため、
+   必ずマイグレーション適用後に SQL Editor で実行。パスワードはコードに置かず、その場で生成して保管):
+
+   ```sql
+   CREATE ROLE hoopo_app_prod LOGIN PASSWORD '<生成したパスワード>'
+     NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB IN ROLE hoopo_app;
+   -- ロール別設定は GRANT では継承されないため、ログインロール自身にも設定する
+   ALTER ROLE hoopo_app_prod SET search_path = public, extensions, pg_temp;
+   ```
+
+4. 適用結果(実行日時・適用したマイグレーション)をリリースPRのコメントに記録する(実行ログ)
+
+運用原則:
+
+- マイグレーションは**後方互換(additive)を原則**とする。列の削除・リネーム等の非互換変更は
+  expand → migrate → contract に分割し、複数リリースに分けて適用する
+- **DB のロールバックはしない(forward-fix)**。障害時はアプリを Vercel の過去デプロイ再昇格で
+  戻し、DB は前方修正のマイグレーションで対処する(Free プランは PITR なし・down migration 非管理)
+
 ## フェーズ3: 実戦投入
 
 - [ ] ステージングを自分+家族のLINEアカウントで1〜2週運用
