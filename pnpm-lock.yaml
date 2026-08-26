@@ -41,6 +41,9 @@ importers:
       '@hoopo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      hono:
+        specifier: ^4.13.4
+        version: 4.13.4
       next:
         specifier: ^16.2.12
         version: 16.2.12(@playwright/test@1.62.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

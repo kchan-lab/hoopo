@@ -62,6 +62,10 @@ await withTeam(skcId, async (tx) => {
     teamId: skcId,
     email: "coach@example.com",
     authType: "email",
+    // ローカル開発用の固定パスワード「hoopo-dev-login」のハッシュ(packages/api/password.ts の
+    // pbkdf2:v1 形式は反復回数を自己記述するため、生成時パラメータが変わっても照合できる)
+    passwordHash:
+      "pbkdf2:v1:600000:hecUH6ZCjaWcaIZPQzkU0A:CV5j3ALpyV3PuwCBSlFShmLL8JjIrqpf81Hye8MWY6E",
   });
 
   const skcChildren = await tx

@@ -1,0 +1,355 @@
+/*
+ * 管理アプリのデザイントークンと基本クラス。
+ * 値は docs/wireframes/wireframes-v6.html の admin2 セクション(視覚の正)と
+ * docs/DESIGN_GUIDELINES.md §2 に一致させる。モノトーンのみでオレンジは
+ * 一切使わない(CLAUDE.md 絶対原則6)
+ */
+
+/* ---- カラートークン ----
+ * ライトを :root の既定にし、Cookie 未設定(data-theme なし)のときは
+ * prefers-color-scheme で OS 設定に追随させる。明示選択(data-theme)が常に勝つ */
+:root {
+  --abg: #f2f2f1;
+  --acard: #fff;
+  --aink: #1c1c1b;
+  --asub: #6f6e6a;
+  --ahair: #e3e2de;
+  --afield: #f6f6f5;
+  --aacc: #1c1c1b;
+  --aon: #fff;
+  /* 文字サイズの既定は「中」(data-fs 未設定時のフォールバック) */
+  --afs: 13.5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --abg: #151514;
+    --acard: #1f1f1e;
+    --aink: #f0efec;
+    --asub: #a2a19b;
+    --ahair: #33322f;
+    --afield: #262625;
+    --aacc: #f0efec;
+    --aon: #171716;
+  }
+}
+
+:root[data-theme="dark"] {
+  --abg: #151514;
+  --acard: #1f1f1e;
+  --aink: #f0efec;
+  --asub: #a2a19b;
+  --ahair: #33322f;
+  --afield: #262625;
+  --aacc: #f0efec;
+  --aon: #171716;
+}
+
+/* ---- 文字サイズ3段階(DESIGN_GUIDELINES §2.2) ----
+ * body に var(--afs) を当て、内部はすべて em 指定で全体を追随させる */
+:root[data-fs="s"] {
+  --afs: 12px;
+}
+:root[data-fs="m"] {
+  --afs: 13.5px;
+}
+:root[data-fs="l"] {
+  --afs: 16px;
+}
+
+/* ---- ベース ---- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--abg);
+  color: var(--aink);
+  font-size: var(--afs);
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* フォーカスリングは常に可視にする(キーボード操作・アクセシビリティ) */
+:focus-visible {
+  outline: 2px solid var(--aink);
+  outline-offset: 2px;
+}
+
+.ic {
+  width: 1.2em;
+  height: 1.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* ---- ヘッダー(表示設定を常設。DESIGN_GUIDELINES §2.1「切替ボタンをヘッダー常設」) ---- */
+.ahead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  flex-wrap: wrap;
+  padding: 0.4em 1.2em;
+  background: var(--acard);
+  border-bottom: 1px solid var(--ahair);
+}
+
+.ahead .lg {
+  font-size: 1.05em;
+  font-weight: 700;
+}
+
+.ahead .set {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+}
+
+/* テーマ切替トグル(ワイヤーフレーム .tgl/.sw2 準拠。タップ領域44px以上を確保) */
+.tgl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 44px;
+  padding: 0 0.2em;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.sw2 {
+  width: 40px;
+  height: 23px;
+  border-radius: 99px;
+  background: var(--ahair);
+  position: relative;
+  transition: 0.2s;
+}
+
+.sw2 i {
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--acard);
+  transition: 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* ノブ位置は html 属性ではなくボタンの状態(aria-pressed)で駆動する。
+ * OS 追随時は data-theme が無いため、属性セレクタでは表現できない */
+.tgl[aria-pressed="true"] .sw2 {
+  background: #4a4a46;
+}
+.tgl[aria-pressed="true"] .sw2 i {
+  left: 19.5px;
+}
+
+/* 文字サイズセグメント(ワイヤーフレーム .fseg 準拠。fieldset の既定スタイルを打ち消す) */
+.fseg {
+  display: flex;
+  margin: 0;
+  min-width: 0;
+  background: var(--afield);
+  border: 1px solid var(--ahair);
+  border-radius: 9px;
+  padding: 2px;
+}
+
+.fseg button {
+  border: 0;
+  background: transparent;
+  color: var(--asub);
+  font-weight: 600;
+  min-height: 40px;
+  min-width: 44px;
+  padding: 0 0.9em;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.fseg button.on {
+  background: var(--acard);
+  color: var(--aink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* ---- カード・ボタン(ワイヤーフレーム .acard/.abtn 準拠) ---- */
+.acard {
+  background: var(--acard);
+  border: 1px solid var(--ahair);
+  border-radius: 12px;
+  padding: 0.9em 1em;
+}
+
+.abtn {
+  border: 1px solid var(--ahair);
+  background: var(--acard);
+  border-radius: 9px;
+  min-height: 44px;
+  padding: 0.5em 1.1em;
+  font-size: 0.88em;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  cursor: pointer;
+}
+
+.abtn.fill {
+  background: var(--aacc);
+  color: var(--aon);
+  border-color: var(--aacc);
+}
+
+.abtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---- ログインカード(ワイヤーフレーム PC-1 / SP-1 準拠) ---- */
+.lgwrap {
+  min-height: calc(100dvh - 56px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2em;
+}
+
+.lgin {
+  width: 100%;
+  max-width: 330px;
+  text-align: center;
+}
+
+.lgin .mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--acard);
+  border: 1px solid var(--ahair);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.7em;
+  font-size: 1.4em;
+}
+
+.lgin h1 {
+  margin: 0;
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+.lgin .cap {
+  margin: 0.2em 0 0;
+  font-size: 0.82em;
+  color: var(--asub);
+}
+
+.lgbtn {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--ahair);
+  background: var(--acard);
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 0.65em 0;
+  font-size: 0.92em;
+  font-weight: 600;
+  margin-top: 0.8em;
+  cursor: pointer;
+}
+
+.lgbtn.fill {
+  background: var(--aacc);
+  color: var(--aon);
+  border-color: var(--aacc);
+  /* パスワード欄と近すぎるため、送信ボタンだけ間隔を広めに取る(承認者フィードバック) */
+  margin-top: 1.6em;
+}
+
+.lgbtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lgbtn small {
+  font-weight: 500;
+  margin-left: 0.3em;
+}
+
+.or {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  color: var(--asub);
+  font-size: 0.72em;
+  margin: 1em 0 0.2em;
+}
+
+.or i {
+  flex: 1;
+  height: 1px;
+  background: var(--ahair);
+}
+
+.lgfld {
+  text-align: left;
+  margin-top: 0.7em;
+}
+
+.lgfld label {
+  display: block;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--asub);
+}
+
+.lgfld input {
+  display: block;
+  width: 100%;
+  margin-top: 0.3em;
+  background: var(--afield);
+  border: 1px solid var(--ahair);
+  border-radius: 9px;
+  min-height: 44px;
+  padding: 0.55em 0.7em;
+  font-size: 0.9em;
+  color: var(--aink);
+}
+
+/* エラーもモノトーンで表現する(色に頼らず枠+太字。絶対原則6) */
+.lgerr {
+  margin: 0.8em 0 0;
+  padding: 0.6em 0.7em;
+  background: var(--afield);
+  border: 1px solid var(--aink);
+  border-radius: 9px;
+  font-size: 0.82em;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* ---- ホーム(1b はプレースホルダのみ) ---- */
+.amain-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5em 1.2em;
+}

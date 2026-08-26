@@ -80,7 +80,8 @@ export function createApi(deps: ApiDeps) {
 
     const token = await createSessionToken(
       {
-        guardianId: guardian.id,
+        sub: guardian.id,
+        role: "guardian",
         teamId: deps.teamId,
         exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
       },
@@ -100,14 +101,16 @@ export function createApi(deps: ApiDeps) {
   app.get("/me", async (c) => {
     const token = getCookie(c, SESSION_COOKIE_NAME);
     const session = token
-      ? await verifySessionToken(token, deps.sessionSecret)
+      ? await verifySessionToken(token, deps.sessionSecret, {
+          expectedRole: "guardian",
+        })
       : null;
     if (!session || session.teamId !== deps.teamId) {
       return c.json({ error: "未ログインです" }, 401);
     }
     const guardian = await withTeam(session.teamId, (tx) =>
       tx.query.guardians.findFirst({
-        where: eq(guardians.id, session.guardianId),
+        where: eq(guardians.id, session.sub),
         columns: { id: true, createdAt: true },
       }),
     );
