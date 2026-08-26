@@ -100,6 +100,19 @@ describe("POST /auth/line", () => {
     expect(countRow?.count).toBe(1);
   });
 
+  it("同時ログイン(タップ連打)でも guardian は1件だけ作られ、全リクエストが成功する", async () => {
+    const app = api();
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => login(app)),
+    );
+    for (const res of results) {
+      expect(res.status).toBe(200);
+    }
+    const [countRow] =
+      await owner`SELECT count(*)::int AS count FROM guardians`;
+    expect(countRow?.count).toBe(1);
+  });
+
   it("不正なトークンは 401 で guardian を作らない", async () => {
     const app = api();
     for (const idToken of ["fake:invalid", USER_ID, ""]) {

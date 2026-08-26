@@ -68,8 +68,12 @@ describe("createFakeIdTokenVerifier", () => {
     expect((await verify("fake:invalid")).ok).toBe(false);
   });
 
-  it("本番(VERCEL_ENV=production)では生成時に拒否する", () => {
-    vi.stubEnv("VERCEL_ENV", "production");
-    expect(() => createFakeIdTokenVerifier()).toThrow(/本番では使用できません/);
+  it("Vercel 上(production / preview)では生成時に拒否する", () => {
+    for (const env of ["production", "preview"]) {
+      vi.stubEnv("VERCEL_ENV", env);
+      expect(() => createFakeIdTokenVerifier()).toThrow(
+        /Vercel 環境では使用できません/,
+      );
+    }
   });
 });

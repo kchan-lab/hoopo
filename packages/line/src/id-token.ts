@@ -43,9 +43,10 @@ export function createLineIdTokenVerifier(
 // ローカル/E2E 用フェイク(plan.md 設計判断6)。`fake:<LINE userId>` 形式のみ受理する。
 // 実チャネル(#9)なしで導線を貫通させるための開発専用実装
 export function createFakeIdTokenVerifier(): IdTokenVerifier {
-  if (process.env.VERCEL_ENV === "production") {
-    // 本番でフェイク認証が有効になる設定事故を起動時に止める
-    throw new Error("フェイク認証(AUTH_FAKE)は本番では使用できません");
+  if (process.env.VERCEL_ENV) {
+    // Vercel 上(production / preview / development のいずれも)でフェイク認証が
+    // 有効になる設定事故を起動時に止める。preview も公開 URL のため素通りさせない
+    throw new Error("フェイク認証(AUTH_FAKE)は Vercel 環境では使用できません");
   }
   return async (idToken) => {
     const userId = idToken.startsWith("fake:") ? idToken.slice(5) : "";

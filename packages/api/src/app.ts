@@ -55,7 +55,9 @@ export function createApi(deps: ApiDeps) {
         columns: { id: true },
       });
       if (existing) return { id: existing.id, isNew: false };
-      // 初回ログインで作成(plan.md 設計判断3)。子ども連携(#12)までは何も閲覧できない
+      // 初回ログインで作成(plan.md 設計判断3)。子ども連携(#12)までは何も閲覧できない。
+      // タップ連打等の同時リクエストで両方が「未検出」と判定しうるため、
+      // 一意制約(team_id, lookup)との衝突は握りつぶして既存行を引き直す
       const [created] = await tx
         .insert(guardians)
         .values({
@@ -63,9 +65,17 @@ export function createApi(deps: ApiDeps) {
           lineUserId: encrypted,
           lineUserIdLookup: lookup,
         })
+        .onConflictDoNothing({
+          target: [guardians.teamId, guardians.lineUserIdLookup],
+        })
         .returning({ id: guardians.id });
-      if (!created) throw new Error("guardian の作成に失敗しました");
-      return { id: created.id, isNew: true };
+      if (created) return { id: created.id, isNew: true };
+      const raced = await tx.query.guardians.findFirst({
+        where: eq(guardians.lineUserIdLookup, lookup),
+        columns: { id: true },
+      });
+      if (!raced) throw new Error("guardian の作成に失敗しました");
+      return { id: raced.id, isNew: false };
     });
 
     const token = await createSessionToken(
