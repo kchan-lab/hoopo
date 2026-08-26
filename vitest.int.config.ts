@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
 //   リセットは各テストの beforeEach(TRUNCATE + フィクスチャ再作成)が行う
 export default defineConfig({
   test: {
-    include: ["packages/db/test/**/*.int.test.ts"],
+    include: ["packages/{db,api}/test/**/*.int.test.ts"],
     exclude: ["**/node_modules/**"],
     globalSetup: ["./packages/db/test/global-setup.ts"],
     fileParallelism: false,
