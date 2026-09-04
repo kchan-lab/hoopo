@@ -11,8 +11,9 @@ test("LIFF リンクを開くと自動ログインしてホームが表示され
   page,
 }) => {
   await page.goto(urls.portal);
-  // メール・パスワード入力なしでセッションが張られる(絶対原則2)
-  await expect(page.locator("main")).toContainText("ログインしました", {
+  // メール・パスワード入力なしでセッションが張られる(絶対原則2)。
+  // フェイクの固定ユーザーは子ども未連携のため、ログイン後は分岐画面(はじめての方)になる
+  await expect(page.locator("h1")).toContainText("はじめての方", {
     timeout: 15000,
   });
 
@@ -23,5 +24,5 @@ test("LIFF リンクを開くと自動ログインしてホームが表示され
 
   // リロードしてもログイン状態が維持される(Cookie セッション)
   await page.reload();
-  await expect(page.locator("main")).toContainText("ログインしました");
+  await expect(page.locator("h1")).toContainText("はじめての方");
 });
