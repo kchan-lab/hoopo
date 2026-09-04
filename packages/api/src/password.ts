@@ -12,6 +12,11 @@ const ITERATIONS = 600_000;
 const SALT_BYTES = 16;
 const HASH_BITS = 256;
 
+// 該当コーチが居ないときにも照合を1回行うためのダミー(admin-app の /auth/login)。
+// 反復回数を本物と同じ ITERATIONS に固定し、応答時間で email の存在を推測させない。
+// ソルト・ハッシュはランダム値で、どのパスワードとも一致しない
+export const DUMMY_PASSWORD_HASH = `${PREFIX}:${ITERATIONS}:yYDm24jBp5tBCQG9eBedQA:bh-RxYOjmSEa8_UwYgQ9uN-svs2vfbCSMivBNpRhHlY`;
+
 async function derive(
   password: string,
   salt: Uint8Array<ArrayBuffer>,
