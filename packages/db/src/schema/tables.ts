@@ -53,13 +53,20 @@ export const coaches = pgTable(
       .notNull()
       .references(() => teams.id),
     email: text("email").notNull().unique(),
-    // password_hash 等は §10 未決のため縦切り1b で追加(REQUIREMENTS.md §7)
     authType: text("auth_type").notNull(),
+    // PBKDF2 形式のハッシュのみ保存(生成・照合は packages/api/password.ts の責務)。
+    // auth_type='line' のコーチは NULL。リセットトークンは §10 未決のため未実装
+    passwordHash: text("password_hash"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     check("coaches_auth_type_check", sql`${t.authType} IN ('line', 'email')`),
+    // email 認証なのにハッシュ未設定というログイン不能データを DB で拒否する
+    check(
+      "coaches_email_auth_requires_password",
+      sql`${t.authType} <> 'email' OR ${t.passwordHash} IS NOT NULL`,
+    ),
     index("coaches_team_id_idx").on(t.teamId),
   ],
 );

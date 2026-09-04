@@ -12,6 +12,7 @@
     "@hoopo/db": "workspace:*",
     "@hoopo/line": "workspace:*",
     "@hoopo/ui": "workspace:*",
+    "hono": "^4.13.4",
     "next": "^16.2.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

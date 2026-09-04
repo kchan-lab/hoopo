@@ -10,7 +10,11 @@ async function hasSession(): Promise<boolean> {
   if (!secret) return false;
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return false;
-  return (await verifySessionToken(token, secret)) !== null;
+  return (
+    (await verifySessionToken(token, secret, {
+      expectedRole: "guardian",
+    })) !== null
+  );
 }
 
 export default async function Home() {
