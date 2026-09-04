@@ -4,6 +4,13 @@
 # .claude/plans/release-pr-e2e/plan.md)。
 # nightly はデフォルトブランチ(development)で毎日実行し、E2E の腐りを検知する。
 # 必須チェック化は protect-main ルールセット側(.github/rulesets/main.json)で行う。
+#
+# アプリの前提環境(DB・.env)はローカルと同じものを CI 側で用意する:
+# - DB は ci.yml の test-int と同じ素の postgres:17 をホストの 54322 で起動し、
+#   ランナー側から db:migrate / db:seed を流す(compose のコンテナからは
+#   host.docker.internal 経由で到達する = ローカルの Supabase スタックと同じ経路)
+# - .env は .env.example をそのまま使う。既定値がフェイク認証(AUTH_FAKE=1)と
+#   シード固定の TEAM_ID になっており、ログイン導線の E2E がそのまま通る
 name: E2E
 
 on:
@@ -21,9 +28,35 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # ローカルと同じ .env をそのまま使う(値はすべてローカル/E2E 専用のダミー)
+      - run: cp .env.example .env
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
       - run: docker compose --profile e2e run --rm playwright
+      # portal / admin が起動に失敗した場合(dependency failed to start)の原因を追えるよう、
+      # 失敗時はアプリコンテナのログを出す(2026-08-20/21 の nightly はこれが無く原因不明のまま)
+      - if: failure()
+        run: docker compose --profile e2e logs --no-color portal admin
       # CI でしか再現しない失敗の調査用に、トレース類を失敗時のみ残す
       - uses: actions/upload-artifact@v4
         if: failure()
