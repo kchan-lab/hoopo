@@ -1,3 +1,5 @@
+import { fromBase64Url, toBase64Url } from "./encoding";
+
 // 管理者パスワードのハッシュ(admin-login/plan.md 設計判断2)。
 // PBKDF2-HMAC-SHA256(Web Crypto)のみ使用 — bcrypt/argon2 の依存追加を避け、
 // 将来 Workers 等へ切り出しても動く(CLAUDE.md 技術スタック)。
@@ -9,23 +11,6 @@ const PREFIX = "pbkdf2:v1";
 const ITERATIONS = 600_000;
 const SALT_BYTES = 16;
 const HASH_BITS = 256;
-
-function toBase64Url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) {
-    bin += String.fromCharCode(b);
-  }
-  return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
-  const bin = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) {
-    bytes[i] = bin.charCodeAt(i);
-  }
-  return bytes;
-}
 
 async function derive(
   password: string,
