@@ -106,19 +106,10 @@ export function createApi(deps: ApiDeps) {
     return c.json({ guardianId: guardian.id, isNew: guardian.isNew });
   });
 
-  // セッション確認。guardian 行の存在まで確認する(無効化・削除済みを弾く)
-  app.get("/me", guardian, async (c) => {
+  // セッション確認(guardian 行の存在確認はミドルウェアが行う)
+  app.get("/me", guardian, (c) => {
     const session = c.get("session");
-    const row = await withTeam(session.teamId, (tx) =>
-      tx.query.guardians.findFirst({
-        where: eq(guardians.id, session.sub),
-        columns: { id: true, createdAt: true },
-      }),
-    );
-    if (!row) {
-      return c.json({ error: "未ログインです" }, 401);
-    }
-    return c.json({ guardianId: row.id, teamId: session.teamId });
+    return c.json({ guardianId: session.sub, teamId: session.teamId });
   });
 
   // ---- 子ども登録・家族連携(child-registration/plan.md。ロジックは registration.ts) ----

@@ -211,9 +211,29 @@ describe("家族連携(POST /family-links)と家族の設定(GET /family)", () =
       `${code.slice(0, 5)}-${code.slice(5)}`,
     );
     expect(family.children[0]?.guardians).toEqual([
-      { relation: "father", isMe: true, linkedAt: expect.any(String) },
-      { relation: "mother", isMe: false, linkedAt: expect.any(String) },
+      {
+        guardianId: expect.any(String),
+        relation: "father",
+        isMe: true,
+        linkedAt: expect.any(String),
+      },
+      {
+        guardianId: expect.any(String),
+        relation: "mother",
+        isMe: false,
+        linkedAt: expect.any(String),
+      },
     ]);
+
+    // 連携済みで別の続柄を入力すると続柄が更新される(修正導線の代替)
+    const fixed = await b("/family-links", "POST", {
+      code,
+      relation: "grandparent",
+    });
+    expect(fixed.status).toBe(200);
+    const relations = await owner`
+      SELECT relation FROM guardian_children WHERE child_id = ${created.children[0]?.id ?? ""} ORDER BY created_at`;
+    expect(relations.map((r) => r.relation)).toEqual(["father", "grandparent"]);
     expect(family.children[1]?.guardians).toHaveLength(1);
   });
 
