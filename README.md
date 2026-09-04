@@ -76,7 +76,7 @@ make up
 
 ## 開発フロー
 
-- ブランチ: `feat/xxx` → `development`(=stg、squashマージ)→ `main`(=prod、リリースPR)
+- ブランチ: `feat/xxx` → `development`(=stg)→ `main`(=prod、リリースPR)。マージはすべて merge commit(squash しない)
 - コミットは Conventional Commits。PRは小さく、CIグリーンが必須
 - テストは Unit / Vitest・Integration / ローカルSupabase・E2E / Playwright の3層
 - タスク管理は [GitHub Projects](https://github.com/orgs/kchan-lab/projects/13)。Issueドリブンで `.claude/plans/` にプランを残す

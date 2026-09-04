@@ -14,11 +14,12 @@ description: ブランチ作成から PR 作成・マージまでの運用ルー
 feat/xxx ──PR──▶ development(=stg) ──リリースPR──▶ main(=本番)
 ```
 
-- **feat/xxx → development**: **squash マージ**。PR タイトルがそのままコミット件名になるため、
-  タイトルは Conventional Commits 形式で書く(1 PR = 1 コミットとなり release-please が正しく拾う)
-- **development → main(リリースPR)**: **merge commit**。個々の `feat:`/`fix:` コミットを
-  main に残し、release-please がバージョン計算に使う
-- ブランチ保護・マージ方式のリポジトリ設定は Issue #4 で反映する
+- **マージ方式はすべて merge commit**(squash・rebase は使わない。リポジトリ設定で squash は無効化済み、
+  ルールセットも development / main ともに merge のみ許可)。feat ブランチの各コミットが
+  そのまま development → main の履歴に残り、release-please がそれを読んでバージョン計算と
+  CHANGELOG 生成を行う。**ブランチ上のコミット件名 = CHANGELOG の行**なので、
+  コミット件名は Conventional Commits で読み手に分かる日本語にする(commit Skill)
+- ブランチ保護・マージ方式の設定は `.github/rulesets/*.json` が正(変更は PR で行い、`gh api PUT` で再適用)
 
 ## フロー
 
@@ -27,7 +28,7 @@ feat/xxx ──PR──▶ development(=stg) ──リリースPR──▶ main(
 3. **push**: **push Skill** の承認フローに従う(コミット承認とは別に、push もあらためて承認を取る)
 4. **PR 作成**: **承認者(ユーザー)の承認があってから** `gh pr create --base development` する。
    AI は PR タイトル・本文の案を提示して止まる(push 承認 ≠ PR 作成承認)
-   - タイトル = squash コミットの件名になる形式 **「<type>: <作業名>」**(Conventional Commits 準拠):
+   - タイトル = merge commit の件名になる形式 **「<type>: <作業名>」**(Conventional Commits 準拠):
 
      | type | 用途 |
      |---|---|
@@ -67,7 +68,7 @@ feat/xxx ──PR──▶ development(=stg) ──リリースPR──▶ main(
 6. **承認待ち**: PR 作成後、AI(Claude)は CI の結果とマージ条件(CI グリーン + task.md 全消化 +
    Vercel プレビュー確認)が揃ったかを報告して**止まる**。マージ判断は必ず**承認者(ユーザー)**が行う
 7. **マージ**: 承認者の指示があってから
-   `gh pr merge --squash --delete-branch` でマージし、ローカル development を `git pull --ff-only` で追従
+   `gh pr merge --merge --delete-branch` でマージし、ローカル development を `git pull --ff-only` で追従
 8. **Issue 不要の軽微な変更**(docs・運用ファイル・typo 等)も PR は必須。
    `<type>:` prefix は付け、`Closes #N` は不要
 9. **リリース**(development → main)は リリースPR + release-please の運用
