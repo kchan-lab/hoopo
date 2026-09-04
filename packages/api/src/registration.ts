@@ -7,7 +7,7 @@ import {
   withInviteCodeRetry,
   withTeam,
 } from "@hoopo/db";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type {
   Gender,
   LinkInput,
@@ -55,7 +55,13 @@ export async function listChildrenForGuardian(
           eq(children.archived, false),
         ),
       )
-      .orderBy(asc(children.createdAt));
+      // 同時登録した兄弟は created_at が同一(now() はトランザクション開始時刻)なので
+      // 学年の高い順 → 名前で安定させる(上の子が先に並ぶ)
+      .orderBy(
+        asc(children.createdAt),
+        desc(children.grade),
+        asc(children.name),
+      );
     return rows.map((r) => ({ ...r, gender: r.gender as Gender }));
   });
 }
@@ -149,10 +155,22 @@ export async function linkChildByInviteCode(
         eq(guardianChildren.guardianId, guardianId),
         eq(guardianChildren.childId, child.id),
       ),
-      columns: { status: true },
+      columns: { status: true, relation: true },
     });
     if (existing?.status === "revoked") return { ok: false, reason: "revoked" };
     if (existing) {
+      // 連携済みならコードの再入力は「続柄の修正」として扱う(専用の編集導線が無いため)
+      if (existing.relation !== input.relation) {
+        await tx
+          .update(guardianChildren)
+          .set({ relation: input.relation, updatedAt: new Date() })
+          .where(
+            and(
+              eq(guardianChildren.guardianId, guardianId),
+              eq(guardianChildren.childId, child.id),
+            ),
+          );
+      }
       return {
         ok: true,
         child: { id: child.id, name: child.name },
@@ -178,7 +196,13 @@ export interface FamilyChild {
   name: string;
   /** 表示用(5-5 ハイフン区切り) */
   inviteCode: string;
-  guardians: { relation: Relation; isMe: boolean; linkedAt: string }[];
+  guardians: {
+    /** React key 等の識別用(表示名は保持しない) */
+    guardianId: string;
+    relation: Relation;
+    isMe: boolean;
+    linkedAt: string;
+  }[];
 }
 
 // 家族の設定(§4.2-9): 自分の子ごとの招待コードと、連携済み保護者(続柄のみ。名前は保持しない)
@@ -218,6 +242,7 @@ export async function getFamily(
       guardians: links
         .filter((l) => l.childId === c.id)
         .map((l) => ({
+          guardianId: l.guardianId,
           relation: l.relation as Relation,
           isMe: l.guardianId === guardianId,
           linkedAt: l.createdAt.toISOString(),

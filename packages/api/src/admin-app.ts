@@ -82,18 +82,10 @@ export function createAdminApi(deps: AdminApiDeps) {
     return c.body(null, 204);
   });
 
-  app.get("/me", coach, async (c) => {
+  // セッション確認(coach 行の存在確認はミドルウェアが行う)
+  app.get("/me", coach, (c) => {
     const session = c.get("session");
-    const row = await withTeam(session.teamId, (tx) =>
-      tx.query.coaches.findFirst({
-        where: eq(coaches.id, session.sub),
-        columns: { id: true },
-      }),
-    );
-    if (!row) {
-      return c.json({ error: "未ログインです" }, 401);
-    }
-    return c.json({ coachId: row.id, teamId: session.teamId });
+    return c.json({ coachId: session.sub, teamId: session.teamId });
   });
 
   return app;

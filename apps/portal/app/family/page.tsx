@@ -36,7 +36,7 @@ export default async function FamilyPage() {
               style={{ listStyle: "none", margin: 0, padding: 0 }}
             >
               {child.guardians.map((g) => (
-                <li key={`${g.relation}-${g.linkedAt}`} className="row">
+                <li key={g.guardianId} className="row">
                   <span>
                     {g.isMe
                       ? `あなた(${RELATION_LABELS[g.relation]})`
