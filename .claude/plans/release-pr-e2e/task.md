@@ -24,5 +24,5 @@ Issue: [#4](https://github.com/kchan-lab/hoopo/issues/4) / Plan: [plan.md](plan.
 
 - [x] 原因調査: #60 以降ログイン E2E が CI で常に失敗(CI に .env / DB が無い。plan.md 設計判断7)
 - [x] `e2e.yml` に postgres サービス + `.env.example` コピー + migrate/seed + 失敗時コンテナログを追加
-- [ ] workflow_dispatch でブランチ上の e2e.yml を手動実行し 6 tests passed を確認
+- [x] workflow_dispatch でブランチ上の e2e.yml を手動実行し 6 tests passed を確認(2026-09-04、run 33885271068)
 - [ ] PR → development へマージ後、翌日の nightly が成功することを確認
