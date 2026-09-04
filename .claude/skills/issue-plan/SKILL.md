@@ -134,5 +134,5 @@ Issue: [#N](<IssueのURL>) / Plan: [plan.md](plan.md)
 
 - [ ] <実装単位のタスク>
 - [ ] <検証タスク(テスト・動作確認)>
-- [ ] PR 作成 → CI グリーン → development へ squash マージ(`Closes #N`)
+- [ ] PR 作成 → CI グリーン → development へ merge commit でマージ(`Closes #N`)
 ```
