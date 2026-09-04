@@ -109,7 +109,8 @@ hotfix/xxx ───────────────────────
 - **dev(ステージング)**: マージで固定のstgドメインへ自動デプロイ。DBは**2つ目のSupabase Freeプロジェクト(stg用)**を使い本番と完全分離(無料枠内)。`e2e-check` Skill・家族テストはここに対して実施
 - **main(本番)**: リリースしたいタイミングで dev→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーン確認 → 本番Supabaseへマイグレーション適用 → マージ(=Vercel本番デプロイ)。適用がマージより先(手順は「prod マイグレーション適用」)
 - **タグ・リリースノート(release-please)**: Conventional Commits(`feat:`=minor / `fix:`=patch / `BREAKING CHANGE`=major)からバージョンを自動計算し、CHANGELOG込みの「release: vX.Y.Z」PRを常時維持。マージした瞬間にタグ打ち+GitHub Release発行+CHANGELOG更新が完了する。**タグはデプロイのトリガーではなく版の記録とロールバックの目印**(ロールバック自体はVercelの過去デプロイ再昇格で即時)
-- **リリース手順の実際**: dev→main のリリースPRは **merge commit** でマージする(squash すると個々の `feat:` / `fix:` が main の履歴から消え、release-please のバージョン計算が壊れる)。マージ後に release-please が「release: vX.Y.Z」PR を起票するのでそれをマージ → タグ+Release+CHANGELOG が完了。直後に main→dev の back-merge PR を出して CHANGELOG / version.txt を dev へ同期する(feat→dev は従来どおり squash)
+- **リリース手順の実際**: dev→main のリリースPRは **merge commit** でマージする(squash すると個々の `feat:` / `fix:` が main の履歴から消え、release-please のバージョン計算が壊れる)。マージ後に release-please が「release: vX.Y.Z」PR を起票するのでそれをマージ → タグ+Release+CHANGELOG が完了。直後に main→dev の back-merge PR を出して CHANGELOG / version.txt を dev へ同期する
+- **マージ方式は全 PR で merge commit に統一**(squash はリポジトリ設定で無効化、ルールセットでも不許可)。feat ブランチの各コミットがそのまま development / main の履歴に残り、release-please はその Conventional Commits を1件ずつ読んで CHANGELOG に載せる。したがって **ブランチ上のコミット件名がそのまま CHANGELOG の行になる**(`feat:` / `fix:` / `perf:` が載り、`docs:` / `chore:` / `ci:` / `refactor:` / `test:` は載らない)
 - **保護者向けお知らせは別物**: GitHub Releaseは開発者向け文面。`release-notes` Skillが `git log 前タグ..HEAD` と関連Issueを読み、保護者向けお知らせの下書き(です・ます調・専門用語なし)まで生成 → コーチが確認して掲載
 - リリース完了・CI失敗は Discord へWebhook通知
 
