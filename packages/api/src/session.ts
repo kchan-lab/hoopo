@@ -1,15 +1,24 @@
-// 保護者セッション(REQUIREMENTS.md §3、plan.md 設計判断2)。
+import { fromBase64Url, toBase64Url } from "./encoding";
+// セッション(REQUIREMENTS.md §3、liff-login/plan.md 設計判断2、admin-login/plan.md 設計判断5)。
 // ステートレスな HMAC-SHA256 署名トークンを httpOnly Cookie に載せる。
-// DB セッションにしないのは失効管理が現段階で不要なため(無効化要件が出たら移行)。
+// 保護者(guardian)と管理者(coach)で Cookie 名・有効期限を分離し、
+// ペイロードの role で相互流用を拒否する(絶対原則6: 保護者UIと管理UIは別世界)。
 // アクセストークン・ID トークンはここに含めない(絶対原則4: 永続化しない)
 
 export const SESSION_COOKIE_NAME = "hoopo_session";
-export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30日
+export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 保護者: 30日
+export const ADMIN_SESSION_COOKIE_NAME = "hoopo_admin_session";
+export const ADMIN_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 管理者: 7日(共有PCを想定して短め)
 
 const KEY_HEX_PATTERN = /^[0-9a-f]{64}$/i;
+const ROLES = ["guardian", "coach"] as const;
+
+export type SessionRole = (typeof ROLES)[number];
 
 export interface SessionPayload {
-  guardianId: string;
+  /** guardian.id または coach.id */
+  sub: string;
+  role: SessionRole;
   teamId: string;
   /** 失効日時(UNIX 秒) */
   exp: number;
@@ -34,23 +43,6 @@ async function importHmacKey(secretHex: string): Promise<CryptoKey> {
   );
 }
 
-function toBase64Url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) {
-    bin += String.fromCharCode(b);
-  }
-  return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
-  const bin = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) {
-    bytes[i] = bin.charCodeAt(i);
-  }
-  return bytes;
-}
-
 export async function createSessionToken(
   payload: SessionPayload,
   secretHex: string,
@@ -65,12 +57,14 @@ export async function createSessionToken(
   return `v1.${body}.${toBase64Url(new Uint8Array(sig))}`;
 }
 
-// 署名不一致・期限切れ・形式不正はすべて null(=未ログイン扱い)。呼び出し側で 401 にする
+// 署名不一致・期限切れ・形式不正・role 不一致はすべて null(=未ログイン扱い)。
+// expectedRole を渡すと、別世界のセッション(保護者⇔管理者)を確実に拒否する
 export async function verifySessionToken(
   token: string,
   secretHex: string,
-  now: Date = new Date(),
+  options: { expectedRole?: SessionRole; now?: Date } = {},
 ): Promise<SessionPayload | null> {
+  const now = options.now ?? new Date();
   const parts = token.split(".");
   if (parts.length !== 3 || parts[0] !== "v1") return null;
   const [, body, sig] = parts as [string, string, string];
@@ -87,11 +81,15 @@ export async function verifySessionToken(
       new TextDecoder().decode(fromBase64Url(body)),
     ) as SessionPayload;
     if (
-      typeof payload.guardianId !== "string" ||
+      typeof payload.sub !== "string" ||
       typeof payload.teamId !== "string" ||
+      !ROLES.includes(payload.role) ||
       typeof payload.exp !== "number" ||
       payload.exp * 1000 <= now.getTime()
     ) {
+      return null;
+    }
+    if (options.expectedRole && payload.role !== options.expectedRole) {
       return null;
     }
     return payload;
