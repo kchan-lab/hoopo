@@ -1,3 +1,4 @@
+import { fromBase64Url, toBase64Url } from "./encoding";
 // セッション(REQUIREMENTS.md §3、liff-login/plan.md 設計判断2、admin-login/plan.md 設計判断5)。
 // ステートレスな HMAC-SHA256 署名トークンを httpOnly Cookie に載せる。
 // 保護者(guardian)と管理者(coach)で Cookie 名・有効期限を分離し、
@@ -40,23 +41,6 @@ async function importHmacKey(secretHex: string): Promise<CryptoKey> {
     false,
     ["sign", "verify"],
   );
-}
-
-function toBase64Url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) {
-    bin += String.fromCharCode(b);
-  }
-  return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
-  const bin = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) {
-    bytes[i] = bin.charCodeAt(i);
-  }
-  return bytes;
 }
 
 export async function createSessionToken(
