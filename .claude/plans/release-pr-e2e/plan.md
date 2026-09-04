@@ -52,6 +52,15 @@ docker compose --profile e2e run --rm playwright
 6. **ルールセットへの `e2e` 追加はマージ後・実動作確認後に行う**: 動作未確認のチェックを
    必須化すると、万一動かなかった場合に main 向け PR が全部詰まるため、
    workflow_dispatch での成功を確認してから適用する
+7. **アプリの前提環境(DB・.env)は CI 側でローカルと同じものを用意する**(2026-09-04 追記):
+   縦切り1a(#60)でログイン導線の E2E が入った時点から nightly が毎回落ちていた。
+   原因は CI に `.env` が無く(`env_file` は `required: false`)、フェイク認証・`TEAM_ID`・
+   DB 接続のいずれも満たされないこと。修正は ci.yml の test-int と同じ postgres:17 サービスを
+   54322 で起動し、`cp .env.example .env` → `db:migrate` → `db:seed` を流してから compose を
+   起動する。`.env.example` の既定値がそのまま E2E 前提(AUTH_FAKE=1 / シード固定 TEAM_ID)に
+   なっているので、前提が増えたら `.env.example` を更新すれば CI にも同時に反映される。
+   あわせて失敗時に `docker compose logs portal admin` を出し、コンテナ起動失敗
+   (2026-08-20/21 の `dependency failed to start`)の原因を追えるようにした
 
 ## この Issue でやらないこと(意図的な非対象)
 
