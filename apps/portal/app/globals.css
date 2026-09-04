@@ -1,0 +1,423 @@
+/*
+ * 保護者アプリのデザイントークンと基本クラス。
+ * 値は docs/DESIGN_GUIDELINES.md §1 と docs/wireframes/wireframes-v6.html(parent セクション)に
+ * 一致させる。薄いオレンジ・iOS ネイティブ調(CLAUDE.md 絶対原則6)
+ */
+
+:root {
+  --bg: #f5f3ef;
+  --paper: #fff;
+  --ink: #1a1511;
+  --sub: #7d7368;
+  --faint: #b3a99e;
+  --hair: rgba(58, 42, 22, 0.12);
+  --card-hair: rgba(58, 42, 22, 0.06);
+  --field: #fbf8f3;
+  --accent: #ef8432;
+  --tint: #fcebda;
+  --deep: #9c4e0e;
+  --line-green: #06c755;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+  font-family:
+    -apple-system, "SF Pro Text", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- 画面骨格 ----
+ * LIFF(スマホ)が主。PC ではスマホ幅に収めて中央寄せする */
+.screen {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.sc-head {
+  padding: 14px 16px 8px;
+  flex: none;
+}
+.sc-title {
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.sc-title .step {
+  font-size: 12px;
+  color: var(--faint);
+  font-weight: 600;
+}
+.sc-title .back {
+  color: var(--accent);
+  font-size: 17px;
+  display: flex;
+  font-weight: 600;
+}
+.sc-body {
+  flex: 1;
+  padding: 2px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sc-body.tight {
+  gap: 8px;
+}
+
+/* ---- チームヘッダー(§1.3) ---- */
+.team-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.team-head .logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  flex: none;
+}
+.team-head .name {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--deep);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+
+/* ---- カード・リスト ---- */
+.card {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--card-hair);
+}
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.news {
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.news .row {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.news .row + .row {
+  border-top: 1px solid var(--hair);
+}
+.news time,
+.news .meta {
+  font-size: 11px;
+  color: var(--faint);
+  flex: none;
+}
+.pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--deep);
+  background: var(--tint);
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+.linked {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+.help {
+  font-size: 11px;
+  color: var(--sub);
+  margin: 0;
+}
+.sync {
+  font-size: 10.5px;
+  color: var(--faint);
+  text-align: center;
+  margin: 0;
+}
+.err {
+  font-size: 12px;
+  color: #b3261e;
+  background: #fdecea;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 0;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--faint);
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hair);
+}
+.powered {
+  text-align: center;
+  font-size: 9.5px;
+  color: var(--faint);
+  font-weight: 600;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.powered b {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* ---- フォーム(ワイヤー fld2 / inbox / seg2 / days7) ---- */
+.fld2 {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+}
+.fld2 > label,
+.fld2 > legend.lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sub);
+}
+/* legend は flex アイテムにならず gap が効かないため余白を直接持たせる */
+.fld2 > legend.lbl {
+  margin-bottom: 5px;
+}
+.inbox {
+  background: var(--field);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  width: 100%;
+  appearance: none;
+}
+.inbox::placeholder {
+  color: var(--faint);
+}
+textarea.inbox {
+  min-height: 70px;
+  resize: vertical;
+}
+.inbox.code {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.time-range .inbox {
+  flex: 1;
+}
+.seg2 {
+  display: flex;
+  background: #eae4da;
+  border-radius: 12px;
+  padding: 3px;
+}
+.seg2 button {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+}
+.seg2 button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.days7 {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.days7 button {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  background: var(--field);
+  border: 1px solid var(--hair);
+  color: var(--sub);
+}
+.days7 button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.child-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.child-block + .child-block {
+  border-top: 1px solid var(--hair);
+  padding-top: 10px;
+}
+.child-block .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.addlink {
+  font-size: 12px;
+  color: var(--deep);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.addlink.boxed {
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  padding: 6px 12px;
+  margin-top: 8px;
+}
+.invite-code {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  font-family: ui-monospace, monospace;
+}
+
+/* ---- CTA ---- */
+.cta {
+  margin-top: auto;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 15px;
+  padding: 13px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  border: 0;
+  width: 100%;
+  display: block;
+  cursor: pointer;
+}
+.cta.inline {
+  margin-top: 8px;
+  padding: 11px 0;
+}
+.cta.sec2 {
+  margin-top: 0;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--hair);
+}
+.cta:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.choice {
+  text-align: center;
+  font-size: 12.5px;
+  display: block;
+}
+.choice small {
+  display: block;
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+.card-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-title .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
