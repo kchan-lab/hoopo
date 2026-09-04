@@ -89,6 +89,11 @@ describe("POST /auth/login", () => {
     expect(setCookie).toContain("HttpOnly");
   });
 
+  it("メールの大文字・前後空白は正規化されてログインできる", async () => {
+    const res = await login(adminApi(), "  Coach@Example.COM ");
+    expect(res.status).toBe(200);
+  });
+
   it("誤ったパスワード・未知のメールは同一メッセージの 401", async () => {
     const app = adminApi();
     const wrongPass = await login(app, COACH_EMAIL, "wrong-password");

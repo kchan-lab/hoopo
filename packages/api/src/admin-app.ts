@@ -2,7 +2,7 @@ import { coaches, withTeam } from "@hoopo/db";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { verifyPassword } from "./password";
+import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,
@@ -36,14 +36,21 @@ export function createAdminApi(deps: AdminApiDeps) {
       return c.json({ error: "メールアドレスとパスワードが必要です" }, 400);
     }
 
+    // 大文字・前後空白はメールクライアントの自動補完で混入しがちなので正規化して照合する
+    // (登録側も小文字で保存する運用。seed・stg 作成手順も同様)
+    const normalizedEmail = email.trim().toLowerCase();
     const coach = await withTeam(deps.teamId, (tx) =>
       tx.query.coaches.findFirst({
-        where: and(eq(coaches.email, email), eq(coaches.authType, "email")),
+        where: and(
+          eq(coaches.email, normalizedEmail),
+          eq(coaches.authType, "email"),
+        ),
         columns: { id: true, passwordHash: true },
       }),
     );
     // コーチ不在でも必ずハッシュ照合を1回行い、応答時間で email の存在を推測させない
-    const stored = coach?.passwordHash ?? "pbkdf2:v1:1:AAAA:AAAA";
+    // (ダミーは本物と同じ反復回数。password.ts の DUMMY_PASSWORD_HASH)
+    const stored = coach?.passwordHash ?? DUMMY_PASSWORD_HASH;
     const ok = await verifyPassword(password, stored);
     if (!coach?.passwordHash || !ok) {
       return c.json({ error: LOGIN_FAILED }, 401);

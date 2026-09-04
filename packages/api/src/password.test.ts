@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword } from "./password";
+import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from "./password";
 
 // PBKDF2 60万回は1回あたり百ms級のため、ケースは絞って往復を検証する
 
@@ -9,6 +9,15 @@ describe("hashPassword / verifyPassword", () => {
     expect(hash).toMatch(/^pbkdf2:v1:\d+:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/);
     expect(await verifyPassword("correct-horse-battery", hash)).toBe(true);
     expect(await verifyPassword("wrong-password", hash)).toBe(false);
+  });
+
+  it("ダミーハッシュは本物と同じ反復回数で、どのパスワードにも一致しない", async () => {
+    // 反復回数が本物とズレると、コーチ不在時の応答時間差から email の存在が推測できてしまう
+    const real = await hashPassword("any-password-1");
+    expect(DUMMY_PASSWORD_HASH.split(":")[2]).toBe(real.split(":")[2]);
+    expect(await verifyPassword("any-password-1", DUMMY_PASSWORD_HASH)).toBe(
+      false,
+    );
   });
 
   it("同じパスワードでもソルトにより毎回異なるハッシュになる", async () => {
