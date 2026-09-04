@@ -7,12 +7,13 @@ export const INVITE_CODE_LENGTH = 10;
 // 32^10 ≒ 1.1e15 通り。総当たりに対する推測困難性は桁数で担保する(§9)。
 // 一意性は children.invite_code の UNIQUE 制約が最終防衛線(衝突時は再生成してリトライ)
 // Web Crypto のみ使用(Node / ブラウザ / Workers で同じコード。CLAUDE.md 技術スタック)。
-// 256 は 32 で割り切れるため byte % 32 に偏りはない
+// 1 バイトの上位 5 ビット(0..31)をそのまま添字にする。剰余ではないので偏りが生じない
+// (CodeQL js/biased-cryptographic-random 対策。32 文字 = 2^5 なので切り捨ても不要)
 export function generateInviteCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(INVITE_CODE_LENGTH));
   let code = "";
   for (const b of bytes) {
-    code += ALPHABET[b % ALPHABET.length];
+    code += ALPHABET[b >>> 3];
   }
   return code;
 }
