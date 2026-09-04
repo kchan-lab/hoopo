@@ -64,3 +64,18 @@ export async function closeAppDb(): Promise<void> {
     appDb = undefined;
   }
 }
+
+// ---- 招待コードの解決(child-registration/plan.md 設計判断7) ----
+// resolve_invite_code は SECURITY DEFINER 関数(0001)で、team コンテキストなしに
+// 「コード → child_id / team_id」だけを返す(他チームのコードでも解決できるが、
+// 呼び出し側でセッションの teamId と突き合わせて拒否する)。
+// 生 db を export しない方針のまま、この関数呼び出しだけを escape hatch として公開する
+export async function resolveInviteCode(
+  inviteCode: string,
+): Promise<{ childId: string; teamId: string } | null> {
+  const rows = await getAppDb().execute<{ child_id: string; team_id: string }>(
+    sql`select child_id, team_id from resolve_invite_code(${inviteCode})`,
+  );
+  const row = rows[0];
+  return row ? { childId: row.child_id, teamId: row.team_id } : null;
+}

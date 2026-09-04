@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./shared": "./src/registration-shared.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
