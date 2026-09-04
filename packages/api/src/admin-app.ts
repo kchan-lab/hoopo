@@ -1,13 +1,13 @@
 import { coaches, withTeam } from "@hoopo/db";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
+import { type AuthEnv, requireCoach } from "./guard";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,
   createSessionToken,
-  verifySessionToken,
 } from "./session";
 
 // 管理者(コーチ)認証 API(admin-login/plan.md)。
@@ -25,7 +25,8 @@ export interface AdminApiDeps {
 const LOGIN_FAILED = "メールアドレスまたはパスワードが違います";
 
 export function createAdminApi(deps: AdminApiDeps) {
-  const app = new Hono();
+  const app = new Hono<AuthEnv>();
+  const coach = requireCoach(deps);
 
   app.post("/auth/login", async (c) => {
     const body = await c.req.json().catch(() => null);
@@ -81,26 +82,18 @@ export function createAdminApi(deps: AdminApiDeps) {
     return c.body(null, 204);
   });
 
-  app.get("/me", async (c) => {
-    const token = getCookie(c, ADMIN_SESSION_COOKIE_NAME);
-    const session = token
-      ? await verifySessionToken(token, deps.sessionSecret, {
-          expectedRole: "coach",
-        })
-      : null;
-    if (!session || session.teamId !== deps.teamId) {
-      return c.json({ error: "未ログインです" }, 401);
-    }
-    const coach = await withTeam(session.teamId, (tx) =>
+  app.get("/me", coach, async (c) => {
+    const session = c.get("session");
+    const row = await withTeam(session.teamId, (tx) =>
       tx.query.coaches.findFirst({
         where: eq(coaches.id, session.sub),
         columns: { id: true },
       }),
     );
-    if (!coach) {
+    if (!row) {
       return c.json({ error: "未ログインです" }, 401);
     }
-    return c.json({ coachId: coach.id, teamId: session.teamId });
+    return c.json({ coachId: row.id, teamId: session.teamId });
   });
 
   return app;

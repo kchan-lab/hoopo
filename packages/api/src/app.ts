@@ -6,12 +6,20 @@ import {
 } from "@hoopo/line";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { setCookie } from "hono/cookie";
+import { type AuthEnv, requireGuardian } from "./guard";
+import {
+  getFamily,
+  linkChildByInviteCode,
+  listChildrenForGuardian,
+  parseLink,
+  parseRegistration,
+  registerChildren,
+} from "./registration";
 import {
   createSessionToken,
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
-  verifySessionToken,
 } from "./session";
 
 // 依存はすべて注入する(plan.md 設計判断1・6)。env の読み取りはアプリ側
@@ -28,7 +36,8 @@ export interface ApiDeps {
 }
 
 export function createApi(deps: ApiDeps) {
-  const app = new Hono();
+  const app = new Hono<AuthEnv>();
+  const guardian = requireGuardian(deps);
 
   // LIFF の ID トークンを検証し、guardian を find-or-create してセッションを張る
   app.post("/auth/line", async (c) => {
@@ -98,26 +107,67 @@ export function createApi(deps: ApiDeps) {
   });
 
   // セッション確認。guardian 行の存在まで確認する(無効化・削除済みを弾く)
-  app.get("/me", async (c) => {
-    const token = getCookie(c, SESSION_COOKIE_NAME);
-    const session = token
-      ? await verifySessionToken(token, deps.sessionSecret, {
-          expectedRole: "guardian",
-        })
-      : null;
-    if (!session || session.teamId !== deps.teamId) {
-      return c.json({ error: "未ログインです" }, 401);
-    }
-    const guardian = await withTeam(session.teamId, (tx) =>
+  app.get("/me", guardian, async (c) => {
+    const session = c.get("session");
+    const row = await withTeam(session.teamId, (tx) =>
       tx.query.guardians.findFirst({
         where: eq(guardians.id, session.sub),
         columns: { id: true, createdAt: true },
       }),
     );
-    if (!guardian) {
+    if (!row) {
       return c.json({ error: "未ログインです" }, 401);
     }
-    return c.json({ guardianId: guardian.id, teamId: session.teamId });
+    return c.json({ guardianId: row.id, teamId: session.teamId });
+  });
+
+  // ---- 子ども登録・家族連携(child-registration/plan.md。ロジックは registration.ts) ----
+
+  // 自分の子一覧(active な連携のみ)。0件なら portal は分岐画面(新規登録 / 招待コード)を出す
+  app.get("/children", guardian, async (c) => {
+    const session = c.get("session");
+    const list = await listChildrenForGuardian(session.teamId, session.sub);
+    return c.json({ children: list });
+  });
+
+  // 新規登録(①子ども情報×兄弟 + ②参加情報・続柄)。自動認定で即時有効
+  app.post("/children", guardian, async (c) => {
+    const parsed = parseRegistration(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const created = await registerChildren(
+      session.teamId,
+      session.sub,
+      parsed.value,
+    );
+    return c.json({ children: created }, 201);
+  });
+
+  // 招待コードで既存の子どもと連携(第二保護者)
+  app.post("/family-links", guardian, async (c) => {
+    const parsed = parseLink(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const result = await linkChildByInviteCode(
+      session.teamId,
+      session.sub,
+      parsed.value,
+    );
+    if (!result.ok) {
+      return result.reason === "revoked"
+        ? c.json({ error: "この招待コードは無効化されています" }, 403)
+        : c.json({ error: "招待コードが見つかりません" }, 404);
+    }
+    return c.json(
+      { child: result.child, alreadyLinked: result.alreadyLinked },
+      result.alreadyLinked ? 200 : 201,
+    );
+  });
+
+  // 家族の設定(§4.2-9): 招待コードと連携済み保護者
+  app.get("/family", guardian, async (c) => {
+    const session = c.get("session");
+    return c.json({ children: await getFamily(session.teamId, session.sub) });
   });
 
   return app;
