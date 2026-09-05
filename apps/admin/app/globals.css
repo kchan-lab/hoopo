@@ -353,3 +353,315 @@ input {
   margin: 0 auto;
   padding: 1.5em 1.2em;
 }
+
+/* ---- 画面骨格: PC=左サイドバー / モバイル=ドロワー(§5.1、ワイヤーフレーム .aapp/.aside/.ai/.amain) ---- */
+.aapp {
+  display: flex;
+  min-height: calc(100dvh - 56px);
+}
+
+.aside {
+  width: 168px;
+  flex: none;
+  border-right: 1px solid var(--ahair);
+  padding: 1em 0.6em;
+  background: var(--acard);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aside .lg {
+  font-size: 0.92em;
+  font-weight: 700;
+  padding: 0 0.6em 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.ai {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.5em 0.6em;
+  min-height: 44px;
+  border-radius: 8px;
+  font-size: 0.85em;
+  color: var(--asub);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.ai.on {
+  background: var(--afield);
+  color: var(--aink);
+  font-weight: 600;
+}
+
+.ai.soon {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ai.soon small {
+  margin-left: auto;
+  font-size: 0.8em;
+}
+
+.amain {
+  flex: 1;
+  min-width: 0;
+  padding: 1.1em 1.2em;
+  background: var(--abg);
+}
+
+/* モバイルのトップバー(ハンバーガー+画面名)。PC では出さない */
+.mhead {
+  display: none;
+  align-items: center;
+  gap: 0.6em;
+  margin: -1.1em -1.2em 0.9em;
+  padding: 0.5em 0.9em;
+  border-bottom: 1px solid var(--ahair);
+  background: var(--acard);
+  font-weight: 700;
+  font-size: 1.02em;
+}
+
+.menu-btn {
+  border: 0;
+  background: transparent;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1em;
+}
+
+.adrawer-wrap {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .aside:not(.adrawer) {
+    display: none;
+  }
+  .mhead {
+    display: flex;
+  }
+  .adrawer-wrap {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+  }
+  .adrawer {
+    display: flex;
+    height: 100%;
+    overflow-y: auto;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.25);
+  }
+  .ascrim {
+    flex: 1;
+    border: 0;
+    background: rgba(0, 0, 0, 0.38);
+    cursor: pointer;
+  }
+}
+
+/* ---- 画面ヘッダー・カード・ピル・テーブル(ワイヤーフレーム .ah/.pill/.atable/.arow/.anote) ---- */
+.ah {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 0.8em;
+}
+
+.ah b {
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+.ah .cap {
+  font-size: 0.8em;
+  color: var(--asub);
+}
+
+.ah .cnt {
+  font-size: 0.75em;
+  color: var(--asub);
+  font-weight: 500;
+}
+
+.acard + .acard {
+  margin-top: 0.7em;
+}
+
+.acard .ttl {
+  font-weight: 700;
+}
+
+.acard .meta {
+  font-size: 0.82em;
+  color: var(--asub);
+  margin-top: 0.2em;
+}
+
+.acard .acts {
+  display: flex;
+  gap: 0.6em;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.6em;
+}
+
+.acard .confirm {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.acard .confirm .q {
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.pill {
+  background: var(--acard);
+  border: 1px solid var(--ahair);
+  border-radius: 99px;
+  padding: 0.3em 0.9em;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.anote {
+  font-size: 0.8em;
+  color: var(--asub);
+  margin: 0.7em 0 0;
+}
+
+.atable {
+  width: 100%;
+  table-layout: fixed;
+  font-size: 0.88em;
+  border-collapse: collapse;
+}
+
+.atable td {
+  padding: 0.5em 0.3em;
+  border-bottom: 1px solid var(--ahair);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.atable tr.hd td {
+  color: var(--asub);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.atable tr.row {
+  cursor: pointer;
+}
+
+.atable tr.row:hover td,
+.atable tr.row:focus-visible td {
+  background: var(--afield);
+}
+
+.atable tr.row[aria-expanded="true"] td {
+  border-bottom-color: transparent;
+}
+
+.atable .sub {
+  color: var(--asub);
+}
+
+.atable .has {
+  font-weight: 600;
+}
+
+.atable .c-name {
+  width: 27%;
+}
+
+.atable .c-kana,
+.atable .c-note {
+  width: 17%;
+}
+
+.atable .sp {
+  display: none;
+}
+
+/* 行詳細(ワイヤーフレームには markup が無いため、モノトーンの定義リストで実装) */
+.atable tr.detail td {
+  white-space: normal;
+  background: var(--afield);
+  padding: 0.7em 0.9em;
+}
+
+.atable dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35em 1em;
+}
+
+.atable dt {
+  color: var(--asub);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.atable dd {
+  margin: 0;
+}
+
+.atable dd.code {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+@media (max-width: 639px) {
+  .atable .pc {
+    display: none;
+  }
+  .atable .sp {
+    display: inline;
+  }
+  .atable .c-name {
+    width: 45%;
+  }
+  .atable .c-kana {
+    width: 25%;
+  }
+  .atable dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* スクリーンリーダー専用 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

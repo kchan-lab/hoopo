@@ -3,6 +3,12 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { type AuthEnv, requireCoach } from "./guard";
+import {
+  listMembers,
+  listRegistrations,
+  parseRevoke,
+  revokeRegistration,
+} from "./members";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
   ADMIN_SESSION_COOKIE_NAME,
@@ -86,6 +92,34 @@ export function createAdminApi(deps: AdminApiDeps) {
   app.get("/me", coach, (c) => {
     const session = c.get("session");
     return c.json({ coachId: session.sub, teamId: session.teamId });
+  });
+
+  // ---- 認定管理・部員管理(child-registration/plan.md 12b。ロジックは members.ts) ----
+
+  // 認定履歴(新着順)。「コーチへ通知」の実体
+  app.get("/registrations", coach, async (c) => {
+    const session = c.get("session");
+    return c.json({ registrations: await listRegistrations(session.teamId) });
+  });
+
+  // 無効化(破壊的操作: 確認ダイアログは UI 側。実行ログは updated_at と status で残る)
+  app.post("/registrations/revoke", coach, async (c) => {
+    const parsed = parseRevoke(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const done = await revokeRegistration(session.teamId, parsed.value);
+    return done
+      ? c.json({ ok: true })
+      : c.json(
+          { error: "対象が見つからないか、すでに無効化されています" },
+          404,
+        );
+  });
+
+  // 部員一覧(詳細同梱)
+  app.get("/members", coach, async (c) => {
+    const session = c.get("session");
+    return c.json({ members: await listMembers(session.teamId) });
   });
 
   return app;
