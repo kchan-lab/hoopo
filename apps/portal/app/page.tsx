@@ -1,8 +1,16 @@
-import { listChildrenForGuardian } from "@hoopo/api";
+import {
+  formatDateLabel,
+  formatTimeShort,
+  getNextPractice,
+  listChildrenForGuardian,
+  todayInTokyo,
+} from "@hoopo/api";
 import Link from "next/link";
 import { getGuardianSession } from "../lib/session";
 import { AutoLogin } from "./auto-login";
+import { Icon } from "./icons";
 import { InviteForm } from "./invite-form";
+import { TabBar } from "./tab-bar";
 
 // LIFF 起動 → 自動ログインが基本導線(CLAUDE.md 絶対原則2)。
 // セッションがあれば、子ども未連携なら分岐画面(ワイヤー15)、連携済みならホーム(ワイヤー4)
@@ -53,6 +61,7 @@ export default async function Home() {
   }
 
   const first = children[0];
+  const next = await getNextPractice(session.teamId, todayInTokyo());
   return (
     <>
       <header className="sc-head">
@@ -71,6 +80,24 @@ export default async function Home() {
         </div>
       </header>
       <main className="sc-body">
+        {next ? (
+          <Link href={`/practices/${next.id}`} className="card hero">
+            <span className="kicker">次回の練習</span>
+            <span className="big">
+              {formatDateLabel(next.heldOn)} {formatTimeShort(next.startTime)}–
+              {formatTimeShort(next.endTime)}
+            </span>
+            <span className="kv" style={{ marginTop: 5 }}>
+              <Icon name="pin" />
+              {next.location ?? "場所未定"}
+            </span>
+          </Link>
+        ) : (
+          <div className="card hero">
+            <span className="kicker">次回の練習</span>
+            <span className="help">予定はまだ登録されていません</span>
+          </div>
+        )}
         <div className="label">お子さん</div>
         <ul
           className="news"
@@ -101,6 +128,7 @@ export default async function Home() {
           powered by <b>hoopo</b>
         </div>
       </main>
+      <TabBar active="home" />
     </>
   );
 }

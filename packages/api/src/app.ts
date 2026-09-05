@@ -9,6 +9,12 @@ import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { type AuthEnv, requireGuardian } from "./guard";
 import {
+  getNextPractice,
+  getPractice,
+  listPracticesByMonth,
+  parseMonth,
+} from "./practices";
+import {
   getFamily,
   linkChildByInviteCode,
   listChildrenForGuardian,
@@ -21,6 +27,8 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
 } from "./session";
+import { monthOf, todayInTokyo } from "./tokyo-date";
+import { isUuid } from "./uuid";
 
 // 依存はすべて注入する(plan.md 設計判断1・6)。env の読み取りはアプリ側
 // (apps/portal の Route Handler)の責務にし、この層は Web 標準 API のみで完結させる
@@ -159,6 +167,37 @@ export function createApi(deps: ApiDeps) {
   app.get("/family", guardian, async (c) => {
     const session = c.get("session");
     return c.json({ children: await getFamily(session.teamId, session.sub) });
+  });
+
+  // ---- 日程(practice-schedule/plan.md 3b)。チーム公開情報なので子ども未連携でも閲覧可 ----
+
+  app.get("/practices", guardian, async (c) => {
+    const session = c.get("session");
+    const month = parseMonth(c.req.query("month") ?? monthOf(todayInTokyo()));
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    return c.json({
+      month,
+      practices: await listPracticesByMonth(session.teamId, month),
+    });
+  });
+
+  // 次回の練習(ホーム)。/:id より先に定義する
+  app.get("/practices/next", guardian, async (c) => {
+    const session = c.get("session");
+    return c.json({
+      practice: await getNextPractice(session.teamId, todayInTokyo()),
+    });
+  });
+
+  app.get("/practices/:id", guardian, async (c) => {
+    const session = c.get("session");
+    if (!isUuid(c.req.param("id")))
+      return c.json({ error: "練習が見つかりません" }, 404);
+    const practice = await getPractice(session.teamId, c.req.param("id"));
+    return practice
+      ? c.json({ practice })
+      : c.json({ error: "練習が見つかりません" }, 404);
   });
 
   return app;
