@@ -29,7 +29,12 @@ const COOKIE_BY_ROLE: Record<SessionRole, string> = {
   coach: ADMIN_SESSION_COOKIE_NAME,
 };
 
-async function principalExists(session: SessionPayload): Promise<boolean> {
+// セッションの主体(guardian / coach 行)がまだ DB に存在するか。
+// Hono のガードと、アプリのサーバーコンポーネント(SSR で直接ドメイン関数を呼ぶ経路)の
+// 両方がこれを通り、読み取りと書き込みで認可の強さが変わらないようにする
+export async function principalExists(
+  session: SessionPayload,
+): Promise<boolean> {
   return withTeam(session.teamId, async (tx) => {
     const row =
       session.role === "guardian"

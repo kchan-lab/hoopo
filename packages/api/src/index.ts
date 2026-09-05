@@ -1,6 +1,11 @@
 export { type AdminApiDeps, createAdminApi } from "./admin-app";
 export { type ApiDeps, createApi } from "./app";
-export { type AuthEnv, requireCoach, requireGuardian } from "./guard";
+export {
+  type AuthEnv,
+  principalExists,
+  requireCoach,
+  requireGuardian,
+} from "./guard";
 export {
   listMembers,
   listRegistrations,
