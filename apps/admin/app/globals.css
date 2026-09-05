@@ -665,3 +665,178 @@ input {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* ---- 日程管理(ワイヤーフレーム PC-6 / SP-7。.cellbox/.arow/.k/.v/.bar 相当) ---- */
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.month-nav .abtn {
+  min-width: 44px;
+  padding: 0.4em 0.6em;
+}
+
+.acard .k {
+  font-size: 0.8em;
+  color: var(--asub);
+  font-weight: 600;
+}
+
+.acard .v {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-top: 0.1em;
+}
+
+.acard .v small {
+  font-size: 0.55em;
+  color: var(--asub);
+  font-weight: 500;
+}
+
+.bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ahair);
+  margin-top: 0.5em;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--aink);
+  border-radius: 3px;
+}
+
+.plist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.prow {
+  display: flex;
+  gap: 0.7em;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 0.6em 0;
+  border-top: 1px solid var(--ahair);
+  font-size: 0.9em;
+}
+
+.prow:first-child {
+  border-top: 0;
+}
+
+.prow .pmain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  min-width: 0;
+}
+
+.prow .pmain b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.prow .sub {
+  color: var(--asub);
+  font-size: 0.92em;
+}
+
+.pacts {
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pform {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+}
+
+.pgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6em;
+}
+
+.pgrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--asub);
+}
+
+.pgrid .wide {
+  grid-column: 1 / -1;
+}
+
+.afld {
+  width: 100%;
+  background: var(--afield);
+  border: 1px solid var(--ahair);
+  border-radius: 8px;
+  min-height: 40px;
+  padding: 0.4em 0.6em;
+  font-size: 1.1em;
+  color: var(--aink);
+  font-weight: 400;
+}
+
+.pmenus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.pmenus legend {
+  padding: 0;
+  margin-bottom: 0.3em;
+}
+
+.pmenu {
+  display: flex;
+  gap: 0.4em;
+  align-items: center;
+}
+
+.pmenu .min {
+  width: 5.5em;
+  flex: none;
+}
+
+.pmenu .abtn {
+  min-width: 44px;
+  padding: 0.4em 0.6em;
+}
+
+.pfoot {
+  display: flex;
+  gap: 0.6em;
+  margin: 0.7em 0;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 639px) {
+  .pgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .prow .pacts {
+    width: 100%;
+  }
+}
