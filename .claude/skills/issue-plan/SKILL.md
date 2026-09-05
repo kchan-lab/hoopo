@@ -64,6 +64,9 @@ EOF
 ```
 
 - **1 Issue = 1 関心事。** 機能変更とリファクタリングが混ざるなら分けて切る
+- **Issue 不要の変更**: docs・Skill・運用ファイル・typo のみで、アプリの挙動と DB に触れない変更は
+  Issue と plan.md を作らず PR だけ出す(create-pr Skill 8。`Closes #N` 不要)。
+  挙動に触れるならどんなに小さくても Issue を切る
 - 起票後、ボード(project 13)に載ったか確認する。auto-add が拾うはずだが、
   下記が空を返す場合は `gh project item-add 13 --owner kchan-lab --url <IssueのURL>` で追加:
 
@@ -95,6 +98,26 @@ gh project item-edit --project-id PVT_kwDODn58Jc4BfKhd --id "$ITEM" \
   `gh project view 13 --owner kchan-lab --format json --jq .id` と
   `gh project field-list 13 --owner kchan-lab --format json` で ID を取り直してこの一覧を更新する
 - PR 作成時の In Review 遷移は create-pr Skill、クローズ時の Done は Projects 組み込みワークフローが自動で行う
+
+## 実行体制(モデルの使い分け)
+
+- **Plan(plan.md の設計判断)はメインセッション(Fable)が書く。** 設計の正との整合、
+  絶対原則との照合、Sub-issue の切り方はここで決める
+- **Task の分解と実装は Opus 5 のサブエージェントに委譲し、独立した単位は並列に走らせる。**
+  委譲は Agent ツール(`model: "opus"`、`isolation: "worktree"`)で行い、1エージェント=1ブランチ=1PR
+  - 並列にできる単位: Sub-issue(例: 3a admin / 3b portal)、または同一 Sub-issue 内の
+    「API 層(packages/api + Integration)」と「UI 層(apps/* + E2E)」。UI 層は API 層の型に
+    依存するため、API 層を先に走らせるか、plan.md に API 契約(パス・入出力)を先に書いておく
+  - 委譲プロンプトには plan.md のパス、担当範囲、テスト層の要件、e2e-check の手順、
+    「コミット・push・PR は行わず差分を返す」を必ず含める
+- **統合・検証・PR はメインセッションが行う。** サブエージェントの成果を worktree から取り込み、
+  e2e-check を通し、commit / push / create-pr Skill の承認フローに乗せる。
+  レビュー対応の判断もメインセッションが行う(修正の実装は再委譲してよい)
+- **検証は直列にする。** Integration(`pnpm test:int` はローカル DB を TRUNCATE する)と E2E
+  (compose の portal / admin を共有)を複数エージェントが同時に回すと衝突するため、
+  サブエージェントは Unit・lint・typecheck まで、DB を使う検証はメインセッションで順に行う
+- **やらないこと**: 同じファイル群を複数エージェントに同時に触らせる、承認なしのコミット・push を
+  サブエージェントに許可する
 
 ## PR フロー
 
