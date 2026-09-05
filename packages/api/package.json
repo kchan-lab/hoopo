@@ -4,7 +4,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./shared": "./src/registration-shared.ts"
+    "./shared": "./src/registration-shared.ts",
+    "./practices-shared": "./src/practices-shared.ts",
+    "./tokyo-date": "./src/tokyo-date.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
