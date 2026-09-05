@@ -64,6 +64,9 @@ EOF
 ```
 
 - **1 Issue = 1 関心事。** 機能変更とリファクタリングが混ざるなら分けて切る
+- **Issue 不要の変更**: docs・Skill・運用ファイル・typo のみで、アプリの挙動と DB に触れない変更は
+  Issue と plan.md を作らず PR だけ出す(create-pr Skill 8。`Closes #N` 不要)。
+  挙動に触れるならどんなに小さくても Issue を切る
 - 起票後、ボード(project 13)に載ったか確認する。auto-add が拾うはずだが、
   下記が空を返す場合は `gh project item-add 13 --owner kchan-lab --url <IssueのURL>` で追加:
 
