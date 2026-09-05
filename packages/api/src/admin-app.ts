@@ -11,10 +11,19 @@ import {
 } from "./members";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
+  createPractice,
+  deletePractice,
+  listPracticesByMonth,
+  parseMonth,
+  parsePracticeInput,
+  updatePractice,
+} from "./practices";
+import {
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,
   createSessionToken,
 } from "./session";
+import { monthOf, todayInTokyo } from "./tokyo-date";
 
 // 管理者(コーチ)認証 API(admin-login/plan.md)。
 // 保護者 API(app.ts)とはアプリ・Cookie・role を分離する(絶対原則6)。
@@ -29,6 +38,8 @@ export interface AdminApiDeps {
 
 // 資格情報の誤りは email 不明/パスワード不一致を区別せず同一応答(plan.md 設計判断9)
 const LOGIN_FAILED = "メールアドレスまたはパスワードが違います";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function createAdminApi(deps: AdminApiDeps) {
   const app = new Hono<AuthEnv>();
@@ -120,6 +131,57 @@ export function createAdminApi(deps: AdminApiDeps) {
   app.get("/members", coach, async (c) => {
     const session = c.get("session");
     return c.json({ members: await listMembers(session.teamId) });
+  });
+
+  // ---- 日程管理(practice-schedule/plan.md 3a。ロジックは practices.ts) ----
+
+  // 月の練習一覧(?month=YYYY-MM。省略時は Tokyo の今月)
+  app.get("/practices", coach, async (c) => {
+    const session = c.get("session");
+    const month = parseMonth(c.req.query("month") ?? monthOf(todayInTokyo()));
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    return c.json({
+      month,
+      practices: await listPracticesByMonth(session.teamId, month),
+    });
+  });
+
+  app.post("/practices", coach, async (c) => {
+    const parsed = parsePracticeInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    return c.json(
+      { practice: await createPractice(session.teamId, parsed.value) },
+      201,
+    );
+  });
+
+  app.put("/practices/:id", coach, async (c) => {
+    const parsed = parsePracticeInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    if (!UUID_PATTERN.test(c.req.param("id")))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const practice = await updatePractice(
+      session.teamId,
+      c.req.param("id"),
+      parsed.value,
+    );
+    return practice
+      ? c.json({ practice })
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // 破壊的操作: 確認は UI 側の二段階確認。出欠・メニューも CASCADE で消える(plan.md 設計判断7)
+  app.delete("/practices/:id", coach, async (c) => {
+    const session = c.get("session");
+    if (!UUID_PATTERN.test(c.req.param("id")))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const done = await deletePractice(session.teamId, c.req.param("id"));
+    return done
+      ? c.body(null, 204)
+      : c.json({ error: "対象が見つかりません" }, 404);
   });
 
   return app;
