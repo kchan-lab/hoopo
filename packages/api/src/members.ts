@@ -42,7 +42,13 @@ export async function listRegistrations(
         createdAt: children.createdAt,
       })
       .from(children)
-      .where(eq(children.archived, false));
+      .where(eq(children.archived, false))
+      // 同時登録の兄弟は created_at が同一なので学年降順→名前で安定させる(registration.ts と同じ規則)
+      .orderBy(
+        asc(children.createdAt),
+        desc(children.grade),
+        asc(children.name),
+      );
     const links = await tx
       .select({
         guardianId: guardianChildren.guardianId,
@@ -84,6 +90,7 @@ export async function listRegistrations(
         });
       }
     }
+    // 新着順。同時刻は上の kids / links の取得順(学年降順→名前、連携は作成順)を保つ安定ソート
     return entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }

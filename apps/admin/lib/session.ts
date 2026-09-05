@@ -1,5 +1,6 @@
 import {
   ADMIN_SESSION_COOKIE_NAME,
+  principalExists,
   type SessionPayload,
   verifySessionToken,
 } from "@hoopo/api";
@@ -16,5 +17,8 @@ export async function getCoachSession(): Promise<SessionPayload | null> {
   const session = await verifySessionToken(token, secret, {
     expectedRole: "coach",
   });
-  return session && session.teamId === teamId ? session : null;
+  // API の requireGuardian / requireCoach と同じく、DB 上の行の存在まで確認する
+  // (削除・失効した主体のセッションで SSR ページを読めないようにする)
+  if (!session || session.teamId !== teamId) return null;
+  return (await principalExists(session)) ? session : null;
 }
