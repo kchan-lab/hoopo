@@ -21,9 +21,21 @@ x-app-base: &app-base
     - "host.docker.internal:host-gateway"
 
 services:
+  # 依存インストールを一度だけ行う one-shot サービス(#68)。
+  # portal / admin / playwright が同時に pnpm install を走らせると共有の node_modules
+  # ボリューム上で競合して片方が落ちるため、ここで直列化してから各サービスを起動する。
+  # `docker compose up` は終了済みの one-shot も再実行するので、依存を追加したら up し直せばよい
+  deps:
+    <<: *app-base
+    command: pnpm install --frozen-lockfile
+    restart: "no"
+
   portal:
     <<: *app-base
-    command: sh -c "pnpm install --frozen-lockfile && pnpm --filter @hoopo/portal dev"
+    command: pnpm --filter @hoopo/portal dev
+    depends_on:
+      deps:
+        condition: service_completed_successfully
     ports:
       - "8000:8000"
     healthcheck:
@@ -35,7 +47,10 @@ services:
 
   admin:
     <<: *app-base
-    command: sh -c "pnpm install --frozen-lockfile && pnpm --filter @hoopo/admin dev"
+    command: pnpm --filter @hoopo/admin dev
+    depends_on:
+      deps:
+        condition: service_completed_successfully
     ports:
       - "8001:8001"
     healthcheck:
@@ -63,11 +78,14 @@ services:
       ADMIN_URL: http://admin:8001
       CI: "1"
     depends_on:
+      deps:
+        condition: service_completed_successfully
       portal:
         condition: service_healthy
       admin:
         condition: service_healthy
-    command: sh -c "npm install -g pnpm@11.18.0 && pnpm install --frozen-lockfile && pnpm exec playwright test"
+    # 依存は deps が入れ済み。pnpm 本体だけこのイメージに無いので入れる
+    command: sh -c "npm install -g pnpm@11.18.0 && pnpm exec playwright test"
 
 volumes:
   node_modules:
