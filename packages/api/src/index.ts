@@ -62,3 +62,4 @@ export {
   verifySessionToken,
 } from "./session";
 export * from "./tokyo-date";
+export { isUuid } from "./uuid";

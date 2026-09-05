@@ -60,10 +60,6 @@ test("リスト → カレンダー → 詳細(メニュー)と表示形式の�
   // カレンダー(14日が練習日としてアクティブ)
   await page.getByRole("tab", { name: "カレンダー" }).click();
   await expect(page.locator(".cell.prac")).toHaveCount(1);
-  const viewCookie = (await page.context().cookies()).find(
-    (c) => c.name === "portal_schedule_view",
-  );
-  console.log("DEBUG cookie", JSON.stringify(viewCookie), page.url());
   await page.getByRole("link", { name: "3/14 (日)の練習" }).click();
   const card = page.locator(".day-detail", { hasText: place });
   await expect(card).toContainText("3/14 (日) 9:00–12:00");
@@ -105,7 +101,17 @@ test("ホームに次回の練習が出て、タブバーから日程へ移動�
   });
   expect(reg.status()).toBe(201);
   await page.goto(urls.portal);
-  await expect(page.locator(".hero")).toContainText("次回の練習");
+  // 「次回の練習」は実データ(日付・時間)と詳細ページへのリンクまで確認する
+  // (シードとテストで作った練習のどちらが次回かは実行日に依存するため、形式で検証)
+  const hero = page.locator("a.hero");
+  await expect(hero).toContainText("次回の練習");
+  await expect(hero).toContainText(
+    /\d{1,2}\/\d{1,2} \([日月火水木金土]\) \d{1,2}:\d{2}–\d{1,2}:\d{2}/,
+  );
+  await expect(hero).toHaveAttribute("href", /^\/practices\/[0-9a-f-]{36}$/);
+  await hero.click();
+  await expect(page.locator("h1")).toContainText("練習の詳細");
+  await page.goBack();
   await page.getByRole("link", { name: "日程" }).click();
   await expect(page.locator("h1")).toContainText("練習日程");
 });
