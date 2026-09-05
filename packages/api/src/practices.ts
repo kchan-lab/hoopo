@@ -1,7 +1,7 @@
 import { practiceMenus, practices, withTeam } from "@hoopo/db";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { PracticeInput } from "./practices-shared";
-import { monthRange, toHHMM } from "./tokyo-date";
+import { monthRange, toHHMM, weekdayOf } from "./tokyo-date";
 
 // 練習(practice)のドメインロジック(practice-schedule/plan.md)。
 // 管理(CRUD)と保護者(参照)の両方から使う。定数・検証は practices-shared.ts
@@ -42,7 +42,8 @@ function toPractice(r: Row, menus: PracticeMenu[]): Practice {
   return {
     id: r.id,
     heldOn: r.heldOn,
-    weekday: r.weekday ?? 0,
+    // 生成列が万一 null でも日付から再計算する(日曜へ黙ってフォールバックしない)
+    weekday: r.weekday ?? weekdayOf(r.heldOn),
     startTime: toHHMM(r.startTime),
     endTime: toHHMM(r.endTime),
     location: r.location,

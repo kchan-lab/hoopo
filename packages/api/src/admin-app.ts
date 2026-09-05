@@ -24,6 +24,7 @@ import {
   createSessionToken,
 } from "./session";
 import { monthOf, todayInTokyo } from "./tokyo-date";
+import { isUuid } from "./uuid";
 
 // 管理者(コーチ)認証 API(admin-login/plan.md)。
 // 保護者 API(app.ts)とはアプリ・Cookie・role を分離する(絶対原則6)。
@@ -38,8 +39,6 @@ export interface AdminApiDeps {
 
 // 資格情報の誤りは email 不明/パスワード不一致を区別せず同一応答(plan.md 設計判断9)
 const LOGIN_FAILED = "メールアドレスまたはパスワードが違います";
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function createAdminApi(deps: AdminApiDeps) {
   const app = new Hono<AuthEnv>();
@@ -161,7 +160,7 @@ export function createAdminApi(deps: AdminApiDeps) {
     const parsed = parsePracticeInput(await c.req.json().catch(() => null));
     if (!parsed.ok) return c.json({ error: parsed.error }, 400);
     const session = c.get("session");
-    if (!UUID_PATTERN.test(c.req.param("id")))
+    if (!isUuid(c.req.param("id")))
       return c.json({ error: "対象が見つかりません" }, 404);
     const practice = await updatePractice(
       session.teamId,
@@ -176,7 +175,7 @@ export function createAdminApi(deps: AdminApiDeps) {
   // 破壊的操作: 確認は UI 側の二段階確認。出欠・メニューも CASCADE で消える(plan.md 設計判断7)
   app.delete("/practices/:id", coach, async (c) => {
     const session = c.get("session");
-    if (!UUID_PATTERN.test(c.req.param("id")))
+    if (!isUuid(c.req.param("id")))
       return c.json({ error: "対象が見つかりません" }, 404);
     const done = await deletePractice(session.teamId, c.req.param("id"));
     return done

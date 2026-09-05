@@ -7,6 +7,7 @@ import {
 } from "@hoopo/db";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Gender, Relation } from "./registration-shared";
+import { isUuid } from "./uuid";
 
 // 管理側の認定管理・部員管理(child-registration/plan.md 12b)。
 // 「コーチへ通知」の実体は認定履歴の一覧(設計判断1)。経由元はレコード種別から導出する(判断2)
@@ -101,8 +102,6 @@ export interface RevokeInput {
   guardianId?: string;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function parseRevoke(
   body: unknown,
 ): { ok: true; value: RevokeInput } | { ok: false; error: string } {
@@ -113,12 +112,12 @@ export function parseRevoke(
   if (!r) return { ok: false, error: "入力内容が不正です" };
   const kind = r.kind;
   const childId = typeof r.childId === "string" ? r.childId : "";
-  if ((kind !== "child" && kind !== "link") || !UUID.test(childId)) {
+  if ((kind !== "child" && kind !== "link") || !isUuid(childId)) {
     return { ok: false, error: "対象の指定が不正です" };
   }
   if (kind === "link") {
     const guardianId = typeof r.guardianId === "string" ? r.guardianId : "";
-    if (!UUID.test(guardianId)) {
+    if (!isUuid(guardianId)) {
       return { ok: false, error: "対象の指定が不正です" };
     }
     return { ok: true, value: { kind, childId, guardianId } };
