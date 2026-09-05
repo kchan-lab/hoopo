@@ -81,6 +81,12 @@ Sub-issue: [#66](https://github.com/kchan-lab/hoopo/issues/66)(12a: portal)/ [#6
 14. **E2E は AutoLogin の固定ユーザーではなく、フェイク ID トークンで毎回別の保護者としてログインする**:
     同じ DB で繰り返し実行しても「未連携の保護者」から始められる(`context.request.post('/api/auth/line')`
     で Cookie を張る)。第二保護者の連携は保護者Aを API で作り、Bをブラウザで操作する
+16. **SSR ページはドメイン関数を直接呼び、同じデータの GET ルートも残す**(#70 レビューを受けて明文化):
+    Next.js のサーバーコンポーネントから自サーバーの HTTP API を fetch するのは冗長なので、
+    `listRegistrations` / `listMembers` 等を直接 import する。一方 `GET /registrations` / `GET /members`
+    は「API 一元提供+UI SDK 配布」(CLAUDE.md)のヘッドレス方針上の製品面であり、Integration テストの
+    対象でもあるため削除しない。認可の強さが経路で変わらないよう、SSR 側のセッション取得
+    (`apps/*/lib/session.ts`)も API のガードと同じ `principalExists`(DB 上の行の存在確認)を通す
 15. **招待コード衝突のリトライはネストしたトランザクション(SAVEPOINT)で行う**: 一意制約違反は
     トランザクション全体を abort するため、`tx.transaction()` の中で INSERT し、衝突時はそこまで
     巻き戻して別コードで再試行する(上限5回)

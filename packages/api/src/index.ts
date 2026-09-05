@@ -1,6 +1,21 @@
 export { type AdminApiDeps, createAdminApi } from "./admin-app";
 export { type ApiDeps, createApi } from "./app";
-export { type AuthEnv, requireCoach, requireGuardian } from "./guard";
+export {
+  type AuthEnv,
+  principalExists,
+  requireCoach,
+  requireGuardian,
+} from "./guard";
+export {
+  listMembers,
+  listRegistrations,
+  type MemberRow,
+  parseRevoke,
+  type RegistrationEntry,
+  type RegistrationKind,
+  type RevokeInput,
+  revokeRegistration,
+} from "./members";
 export { hashPassword, verifyPassword } from "./password";
 export {
   type ChildSummary,
