@@ -83,7 +83,7 @@ make up
 
 - 初回はイメージビルドとコンテナ内 `pnpm install` が走るため数分かかる
 - ソースは bind mount しているので、編集は即座にホットリロードされる
-- 依存を追加したら `docker compose restart`(コンテナ起動時に毎回 `pnpm install` が走る)
+- 依存を追加したら `docker compose up -d portal admin`(one-shot の `deps` サービスが `pnpm install` を一度だけ実行してから各サービスを起動する。`restart` では deps が走らないので注意)
 - Supabase CLI は devDependency で導入済み(バージョン固定)。CLI が専用の Docker コンテナ群を
   起動するため、アプリの compose.yaml には含めていない
 - `.env` は `make up` で supabase を選ぶと `.env.example` から自動生成され、空の
