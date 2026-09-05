@@ -29,16 +29,20 @@ Sub-issue 2本(12a → 12b の順)で実装する。起票時に親 #12 へ紐�
 - [x] e2e-check: Unit 61 / Integration 43 / E2E 16 passed(2026-09-05)
 - [ ] PR(`Refs #12` + `Closes #66`)→ CI → merge commit でマージ
 
-## 12b: 管理の認定管理・部員管理(admin)
+## 12b: 管理の認定管理・部員管理(admin)— #67 / feat/member-management
 
-- [ ] admin レイアウト基盤: PC=左サイドバー(170px)/ モバイル=ドロワー(§5.1)
-- [ ] packages/api(admin): `GET /registrations`(認定履歴: children+guardian_children を
+- [x] admin レイアウト基盤: PC=左サイドバー(168px)/ モバイル=ドロワー(§5.1)。
+      `(app)` ルートグループで認証ガード、未実装画面はナビに「準備中」で置く
+- [x] packages/api(admin): `GET /registrations`(認定履歴: children+guardian_children を
       新着順にマージ)/ `POST /registrations/revoke`(種別+id で status=revoked)/
-      `GET /members`(部員一覧+詳細)
-- [ ] 画面: 認定管理(カード+認定済(自動)ピル+無効化ボタン、ワイヤー PC-5/SP-6)/
-      部員管理(テーブル+行詳細、年度更新ボタンは disabled、ワイヤー PC-8/SP-9)
-- [ ] Integration: revoke 後に保護者から見えないこと・RLS / E2E: 登録→認定管理に
-      表示→無効化の導線
+      `GET /members`(部員一覧+詳細)— members.ts
+- [x] 画面: 認定管理(カード+認定済(自動)ピル+無効化ボタン=行内二段階確認、ワイヤー PC-5/SP-6)/
+      部員管理(テーブル+行詳細の展開、年度更新ボタンは disabled、ワイヤー PC-8/SP-9)
+- [x] Integration: 新着順・経由元、連携の無効化→保護者から不可視、登録の無効化→部員一覧から消える、
+      他チームからは不可視・無効化不可(6件)/ E2E: 登録→部員管理(行詳細)→認定管理で無効化→
+      一覧から消える、モバイルのドロワー切替
+- [x] e2e-check: Unit 64 / Integration 49 / E2E 19 passed ×2(2026-09-06。長時間稼働の dev サーバーと
+      並行実行が重なるとタイムアウトするため、検証前に portal → admin を順に再起動する)
 - [ ] PR(`Closes #12` + `Closes #67`)→ CI → merge commit でマージ
 
 ## マージ後
