@@ -6,7 +6,8 @@
     ".": "./src/index.ts",
     "./shared": "./src/registration-shared.ts",
     "./practices-shared": "./src/practices-shared.ts",
-    "./tokyo-date": "./src/tokyo-date.ts"
+    "./tokyo-date": "./src/tokyo-date.ts",
+    "./attendances-shared": "./src/attendances-shared.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
