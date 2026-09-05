@@ -16,7 +16,11 @@ Issue: [#13](https://github.com/kchan-lab/hoopo/issues/13) / Plan: [plan.md](pla
 
 ## 3b: 保護者の日程リスト/カレンダー — #72 / feat/practice-calendar
 
-- [ ] 保護者 API: `GET /practices?month` / `GET /practices/:id` / `GET /practices/next`
-- [ ] タブバー(5ボタン)+ 日程画面(リスト ⇄ カレンダー、Cookie 保存)+ 練習詳細ページ + ホームの次回練習
-- [ ] Integration: 保護者 API+RLS / E2E: 管理で入力→保護者のリスト・カレンダー・詳細で確認
+- [x] 保護者 API: `GET /practices?month` / `GET /practices/next` / `GET /practices/:id`(子ども未連携でも閲覧可)
+- [x] タブバー(5ボタン。月謝/チーム/提出は無効)+ 日程画面(リスト ⇄ カレンダー、Cookie 保存。
+      カレンダーの日付タップは ?day= で選択して下のカードに表示)+ 練習詳細ページ + ホームの次回練習
+- [x] Integration: 一覧・次回・詳細・他チーム 404(2件)/ E2E: コーチ API で作成→保護者のリスト→カレンダー→
+      詳細(メニュー)→戻ると表示形式が記憶、ホームの次回練習とタブバー(2件×2端末)
+- [x] e2e-check: Unit 87 / Integration 55 / E2E 27 passed(2026-09-06)。
+      注: 詳細→一覧の戻りリンクは `view=` を明示する(クライアントのルーターキャッシュに古い一覧が残るため)
 - [ ] PR(`Closes #13` + `Closes #72`)→ CI → merge commit でマージ
