@@ -20,7 +20,7 @@ Issue: [#15](https://github.com/kchan-lab/hoopo/issues/15) / Plan: [plan.md](pla
 
 ## 5b: 管理の月謝管理 — #82 / feat/fees-admin(Opus サブエージェント)
 
-- [ ] `fees-coach.ts`: getFeeGrid / setFeeStatus、管理 API `GET /fee-grid` / `PUT /fee-records`
-- [ ] 月謝管理画面(PC=部員×12月の表、モバイル=部員セレクト+4列グリッド、セルで済⇄未、年切替)、ナビ有効化
-- [ ] Integration(管理 API+RLS)/ E2E(済⇄未 → 再表示で保持)
+- [x] `fees-coach.ts`: getFeeGrid / setFeeStatus、管理 API `GET /fee-grid` / `PUT /fee-records`
+- [x] 月謝管理画面(PC=部員×12月の表、モバイル=部員セレクト+4列グリッド、セルで済⇄未、年切替)、ナビ有効化
+- [x] Integration(管理 API+RLS)/ E2E(済⇄未 → 再表示で保持)
 - [ ] メインセッションで統合・検証 → PR(`Closes #15` + `Closes #82`)→ CI → merge commit
