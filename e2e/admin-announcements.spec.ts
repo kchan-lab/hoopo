@@ -11,7 +11,7 @@ async function loginAsCoach(page: Page) {
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page.locator("main")).toContainText("ログインしました");
+  await expect(page.locator("main")).toContainText("ダッシュボード");
 }
 
 test("お知らせを下書き保存・公開・下書きに戻す・削除できる", async ({
