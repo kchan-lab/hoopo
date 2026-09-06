@@ -17,7 +17,7 @@ Issue: [#26](https://github.com/kchan-lab/hoopo/issues/26) / Plan: [plan.md](pla
 
 ## 6b-2: 予定表画像 — #91 / feat/schedule-image(Opus サブエージェント)
 
-- [ ] `schedule-image.ts`: getScheduleImageData
-- [ ] `apps/portal/app/api/schedule/[month]/route.ts`: next/og で PNG、フォントのサブセット取得、キャッシュヘッダ
-- [ ] Integration(データ取得+RLS)/ E2E(画像取得 200 image/png、不正な month は 404)
+- [x] `schedule-image.ts`: getScheduleImageData
+- [x] `apps/portal/app/api/schedule/[month]/route.ts`: next/og で PNG、フォントのサブセット取得、キャッシュヘッダ
+- [x] Integration(データ取得+RLS)/ E2E(画像取得 200 image/png、不正な month は 404)
 - [ ] メインセッションで統合・検証 → PR(`Closes #26` + `Closes #91`)→ CI → merge commit
