@@ -7,7 +7,8 @@
     "./shared": "./src/registration-shared.ts",
     "./practices-shared": "./src/practices-shared.ts",
     "./tokyo-date": "./src/tokyo-date.ts",
-    "./attendances-shared": "./src/attendances-shared.ts"
+    "./attendances-shared": "./src/attendances-shared.ts",
+    "./fees-shared": "./src/fees-shared.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

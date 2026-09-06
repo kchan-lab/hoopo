@@ -137,7 +137,7 @@ export default async function Home() {
           家族の設定
           <small>招待コードの共有・連携済みの家族</small>
         </Link>
-        <p className="sync">月謝・チームは順次利用できるようになります</p>
+        <p className="sync">チームは順次利用できるようになります</p>
         <div className="powered">
           powered by <b>hoopo</b>
         </div>

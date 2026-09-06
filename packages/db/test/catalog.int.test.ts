@@ -114,14 +114,19 @@ describe("⑦ カタログ検査(絶対原則5の恒久ガード)", () => {
     }
   });
 
-  it("SECURITY DEFINER 関数は許可された2本だけ(escape hatch の棚卸し)", async () => {
+  it("SECURITY DEFINER 関数は許可された4本だけ(escape hatch の棚卸し)", async () => {
     const rows = await owner`
       SELECT p.proname FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.prosecdef = true
       ORDER BY p.proname
     `;
+    // 許可リスト(増やすときは plan.md に理由を残す):
+    // - resolve_*: team 未確定導線の解決(#6)
+    // - generate_*fee_records: 月次の月謝レコード生成ジョブ(0004、fees/plan.md 設計判断5)
     expect(rows.map((r) => r.proname)).toEqual([
+      "generate_current_fee_records",
+      "generate_fee_records",
       "resolve_guardian_by_lookup",
       "resolve_invite_code",
     ]);

@@ -933,3 +933,106 @@ textarea.inbox {
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* ---- 月謝確認: 年ナビ・封筒グリッド(DESIGN §1.3 月謝スタンプ。ワイヤー13) ---- */
+.year-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.year-nav a,
+.year-nav .off {
+  color: var(--faint);
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.year-nav .off {
+  opacity: 0.35;
+}
+.year-nav b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fee-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.fee {
+  background: var(--paper);
+  border: 1px solid var(--card-hair);
+  border-radius: 14px;
+  padding: 8px 0 9px;
+  text-align: center;
+}
+.fee .m {
+  display: block;
+  font-size: 10.5px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.fee .st {
+  width: 29px;
+  height: 29px;
+  margin: 5px auto 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+/* 済=deep の2px円枠、未=accent 枠カード+破線円、未来=淡色の「–」 */
+.fee.paid .st {
+  border: 2px solid var(--deep);
+  color: var(--deep);
+}
+.fee.due {
+  border-color: var(--accent);
+}
+.fee.due .st {
+  border: 2px dashed var(--faint);
+  color: var(--faint);
+  font-size: 10px;
+}
+.fee.later .st {
+  color: #d8d0c5;
+}
+/* 凡例のスタンプ(色だけに頼らず文字も併記する。DESIGN §3) */
+.legend .fee-sw {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+.legend .fee-sw.paid {
+  border: 1.5px solid var(--deep);
+  color: var(--deep);
+}
+.legend .fee-sw.due {
+  border: 1.5px dashed var(--faint);
+  color: var(--faint);
+}
+.legend .fee-sw.later {
+  color: #d8d0c5;
+}
+.fee-note {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--sub);
+  margin: 0;
+}
