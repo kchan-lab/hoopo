@@ -14,6 +14,8 @@ import { getDashboard } from "./dashboard";
 import { getFeeGrid, setFeeStatus } from "./fees-coach";
 import { parseFeeToggle, parseYear } from "./fees-shared";
 import { type AuthEnv, requireCoach } from "./guard";
+import { getLineupForCoach, saveLineup } from "./lineups-coach";
+import { parseLineupInput } from "./lineups-shared";
 import {
   listMembers,
   listRegistrations,
@@ -259,6 +261,36 @@ export function createAdminApi(deps: AdminApiDeps) {
       published: result.published,
       publishedAt: result.publishedAt,
     });
+  });
+
+  // ---- チーム編成(lineups/plan.md 7b-1。ロジックは lineups-coach.ts) ----
+
+  // 練習1コマの編成(スターター・ベンチ・選べる部員)。他チームの練習は存在を漏らさず 404
+  app.get("/lineups/:practiceId", coach, async (c) => {
+    const session = c.get("session");
+    const practiceId = c.req.param("practiceId");
+    if (!isUuid(practiceId))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const lineup = await getLineupForCoach(session.teamId, practiceId);
+    return lineup
+      ? c.json(lineup)
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // 全置換(plan.md 設計判断2)。スターターが5人未満でも保存できる(編成途中)
+  app.put("/lineups/:practiceId", coach, async (c) => {
+    const parsed = parseLineupInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const practiceId = c.req.param("practiceId");
+    if (!isUuid(practiceId))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const result = await saveLineup(session.teamId, practiceId, parsed.value);
+    if (result.ok)
+      return c.json({ starters: result.starters, bench: result.bench });
+    return result.reason === "invalid_member"
+      ? c.json({ error: "対象の部員が見つかりません" }, 400)
+      : c.json({ error: "対象が見つかりません" }, 404);
   });
 
   // ---- 出欠管理・欠席者管理(attendance/plan.md 4b。ロジックは attendances-coach.ts) ----
