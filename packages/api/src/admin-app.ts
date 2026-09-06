@@ -37,6 +37,11 @@ import {
 } from "./session";
 import { monthOf, todayInTokyo } from "./tokyo-date";
 import { isUuid } from "./uuid";
+import {
+  executeYearRollover,
+  getYearRolloverStatus,
+  undoYearRollover,
+} from "./year-rollover";
 
 // 管理者(コーチ)認証 API(admin-login/plan.md)。
 // 保護者 API(app.ts)とはアプリ・Cookie・role を分離する(絶対原則6)。
@@ -142,6 +147,37 @@ export function createAdminApi(deps: AdminApiDeps) {
   app.get("/members", coach, async (c) => {
     const session = c.get("session");
     return c.json({ members: await listMembers(session.teamId) });
+  });
+
+  // ---- 年度更新(year-rollover/plan.md。ロジックは year-rollover.ts) ----
+  // 注: `/members/:id` のようなパラメータ付きルートを足すときは必ずこの下に置くこと
+  // (Hono は登録順に照合するため、先に置くと year-rollover が :id に食われる)
+
+  // 実行状況(最新の実行ログ+「今実行したら」の人数)
+  app.get("/members/year-rollover", coach, async (c) => {
+    const session = c.get("session");
+    return c.json(await getYearRolloverStatus(session.teamId, new Date()));
+  });
+
+  // 破壊的操作: 確認は UI 側の二段階確認。実行ログは year_rollovers に残る(CLAUDE.md 開発ルール)
+  app.post("/members/year-rollover", coach, async (c) => {
+    const session = c.get("session");
+    const result = await executeYearRollover(session.teamId, new Date());
+    if (!result.ok) {
+      return result.reason === "no_members"
+        ? c.json({ error: "対象の部員がいません" }, 400)
+        : c.json({ error: "取り消し猶予中の年度更新があります" }, 409);
+    }
+    return c.json({ rollover: result.rollover }, 201);
+  });
+
+  // 取り消し(猶予 24 時間・1回。設計判断2)。猶予切れ・取り消し済みは 409
+  app.post("/members/year-rollover/undo", coach, async (c) => {
+    const session = c.get("session");
+    const result = await undoYearRollover(session.teamId, new Date());
+    return result.ok
+      ? c.json({ restored: result.restored })
+      : c.json({ error: "取り消せる年度更新がありません" }, 409);
   });
 
   // ---- 日程管理(practice-schedule/plan.md 3a。ロジックは practices.ts) ----
