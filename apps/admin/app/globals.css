@@ -1114,3 +1114,42 @@ input {
     display: block;
   }
 }
+
+/* ---- お知らせ管理(announcements/plan.md 6a-1) ---- */
+/* 本文は複数行。入力欄の見た目は afld に揃え、縦だけリサイズできるようにする
+ * (textarea はベースの button/input ルールに含まれないので font/color を明示する) */
+textarea.afld {
+  font-family: inherit;
+  color: var(--aink);
+  font-size: 1em;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+/* 一覧の本文プレビュー(書き出しの1行だけ) */
+.acard .pbody {
+  margin: 0.35em 0 0;
+  font-size: 0.88em;
+  color: var(--asub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 「LINE へ通知する」のチェック行。タップ領域は 44px を確保する(DESIGN §3) */
+.achk {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 44px;
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--asub);
+}
+
+.achk input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: var(--aacc);
+}
