@@ -335,7 +335,18 @@ export function AttendanceEditor({
                       <button
                         type="button"
                         onClick={() => cycleDay(c.date)}
-                        aria-label={`${formatDateLabel(c.date)} ${labelOf(status)}(タップで切り替え)`}
+                        // 同じ日に練習が複数あるときは、タップでその日の全件にまとめて適用される
+                        // (個別に変えたい場合はリスト表示で。plan.md 設計判断6 の補足)
+                        title={
+                          (list?.length ?? 0) > 1
+                            ? `この日の練習${list?.length}件にまとめて適用します(個別の変更はリストで)`
+                            : undefined
+                        }
+                        aria-label={`${formatDateLabel(c.date)} ${labelOf(status)}(タップで切り替え${
+                          (list?.length ?? 0) > 1
+                            ? `。この日の練習${list?.length}件にまとめて適用`
+                            : ""
+                        })`}
                       >
                         <i>{c.day}</i>
                       </button>
