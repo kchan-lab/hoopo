@@ -82,7 +82,7 @@
 | お知らせ管理 | タイトル/本文/「LINEへ通知する」フラグ。下書き保存と公開、編集・削除。公開したものだけ保護者のホームに新しい順で表示。LINE 通知の実送信は 6c(通数カウンター)で有効化 |
 | チーム編成 | 公式戦/練習試合ごとにスタメン(ポジション割当)とベンチを設定 → 保護者のチーム画面に反映 |
 
-- 年度更新: 全部員の学年+1、6年生は卒団アーカイブ。確認ダイアログ+取り消し猶予つき一括処理
+- 年度更新: 全部員の学年+1、6年生は卒団アーカイブ(archived=true、学年は据え置き)。確認ダイアログ+取り消し猶予(24時間)つき一括処理。実行ログ(year_rollovers)を残し、猶予内は1回だけ取り消せる
 
 ## 6. LINE連携仕様
 
@@ -123,11 +123,12 @@
 - fee_records(id, team_id, child_id, year, month[1..12], status[paid/unpaid], received_at) — (child_id, year, month) 一意。「未来」はアプリが year/month から導出
 - announcements(id, team_id, title, body, notify_line, published_at)
 - lineups(id, team_id, practice_id, child_id, role[starter/bench], position[PG..C・任意]) — チーム編成用。(practice_id, child_id) 一意
+- year_rollovers(id, team_id, executed_at, undone_at, snapshot[jsonb: child_id → { grade, archived }]) — 年度更新の実行ログ。取り消し猶予(24時間)内は snapshot から復元する。1チームにつき未取り消しの最新1件だけが取り消し対象
 
 整合性の方針: 子テーブルは複合外部キー(xxx_id, team_id)で親を参照し、他チームの行を参照する
 不整合(例: A チームの出欠が B チームの練習を指す)を DB レベルで防ぐ。
-LINE 送信ログ・通数カウンター・破壊的操作の実行ログ用テーブルは未定義であり、
-該当機能の実装 Issue で本節を更新してから追加する。
+LINE 送信ログ・通数カウンターのテーブルは未定義であり、該当機能(6c)の実装 Issue で本節を更新してから追加する
+(年度更新の実行ログは year_rollovers として定義済み)。
 
 
 ### ER図(概念)
