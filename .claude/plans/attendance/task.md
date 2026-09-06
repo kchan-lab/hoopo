@@ -10,11 +10,11 @@ Issue: [#14](https://github.com/kchan-lab/hoopo/issues/14) / Plan: [plan.md](pla
 
 ## 4a: 保護者の提出 — #76 / feat/attendance-portal(Opus サブエージェント)
 
-- [ ] `attendances-guardian.ts`: getAttendanceSheet / submitAttendance / getUnansweredSummary
-- [ ] 保護者 API: `GET /attendance` / `PUT /attendance` / `GET /attendance/summary`
-- [ ] 提出画面(リスト ⇄ カレンダー、お子さん切替、一括チップ、CTA「回答 n / m 件」)、ホームの未提出アラート、
+- [x] `attendances-guardian.ts`: getAttendanceSheet / submitAttendance / getUnansweredSummary
+- [x] 保護者 API: `GET /attendance` / `PUT /attendance` / `GET /attendance/summary`
+- [x] 提出画面(リスト ⇄ カレンダー、お子さん切替、一括チップ、CTA「回答 n / m 件」)、ホームの未提出アラート、
       練習詳細の「参加予定を変更する」を有効化、タブバー「提出」を有効化
-- [ ] Integration(保護者 API+RLS+未連携の子は 404)/ E2E(提出→再表示・形式切替)
+- [x] Integration(保護者 API+RLS+未連携の子は 404)/ E2E(提出→再表示・形式切替)
 - [ ] メインセッションで統合・検証 → PR(`Refs #14` + `Closes #76`)→ CI → merge commit
 
 ## 4b: 管理の出欠・欠席者 — #77 / feat/attendance-admin(Opus サブエージェント)
