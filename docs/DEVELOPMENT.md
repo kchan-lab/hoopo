@@ -106,6 +106,7 @@ hotfix/xxx ───────────────────────
 ```
 
 - **feat/xxx**: Issue単位で作成し dev へPR。CIは Unit + Integration(Integrationのジョブ追加はIssue #6以降)、Vercelの使い捨てプレビューURLで確認
+- **Vercel の関数リージョンは東京(hnd1)に固定**(`apps/*/vercel.json` の `regions`)。既定の iad1(米国東部)だと東京の Supabase との DB 往復ごとに約150ms かかり、画面遷移が数秒になる。stg 用プロジェクトの Production Branch は `development`、本番用は `main`(Vercel の Settings → Environments → Production → Branch Tracking)
 - **dev(ステージング)**: マージで固定のstgドメインへ自動デプロイ。DBは**2つ目のSupabase Freeプロジェクト(stg用)**を使い本番と完全分離(無料枠内)。`e2e-check` Skill・家族テストはここに対して実施
 - **main(本番)**: リリースしたいタイミングで dev→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーン確認 → 本番Supabaseへマイグレーション適用 → マージ(=Vercel本番デプロイ)。適用がマージより先(手順は「prod マイグレーション適用」)
 - **タグ・リリースノート(release-please)**: Conventional Commits(`feat:`=minor / `fix:`=patch / `BREAKING CHANGE`=major)からバージョンを自動計算し、CHANGELOG込みの「release: vX.Y.Z」PRを常時維持。マージした瞬間にタグ打ち+GitHub Release発行+CHANGELOG更新が完了する。**タグはデプロイのトリガーではなく版の記録とロールバックの目印**(ロールバック自体はVercelの過去デプロイ再昇格で即時)
