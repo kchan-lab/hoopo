@@ -13,9 +13,9 @@ Issue: [#15](https://github.com/kchan-lab/hoopo/issues/15) / Plan: [plan.md](pla
 
 ## 5a: 保護者の月謝確認 — #81 / feat/fees-portal(Opus サブエージェント)
 
-- [ ] `fees-guardian.ts`: getFeeSheet / 保護者 API `GET /fees`
-- [ ] 月謝確認画面(封筒グリッド 4列、済/未/未来のスタンプ、年切替、お子さん切替、金額・注記)、タブバー「月謝」を有効化
-- [ ] Integration(保護者 API+RLS)/ E2E(管理 API で済にする→保護者で済に見える)
+- [x] `fees-guardian.ts`: getFeeSheet / 保護者 API `GET /fees`
+- [x] 月謝確認画面(封筒グリッド 4列、済/未/未来のスタンプ、年切替、お子さん切替、金額・注記)、タブバー「月謝」を有効化
+- [x] Integration(保護者 API+RLS)/ E2E(管理 API で済にする→保護者で済に見える)
 - [ ] メインセッションで統合・検証 → PR(`Refs #15` + `Closes #81`)→ CI → merge commit
 
 ## 5b: 管理の月謝管理 — #82 / feat/fees-admin(Opus サブエージェント)

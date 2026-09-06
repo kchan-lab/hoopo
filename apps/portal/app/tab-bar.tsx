@@ -2,13 +2,13 @@ import Link from "next/link";
 import { Icon, type IconName } from "./icons";
 
 // タブバー(DESIGN_GUIDELINES §1.3): ホーム / 月謝 / 日程(中央の黒丸) / チーム / 提出。
-// 未実装のタブはリンクにせず無効表示(月謝 #15、チーム #28)
+// 未実装のタブはリンクにせず無効表示(チーム #28)
 
 type TabKey = "home" | "yen" | "cal" | "team" | "send";
 
 const TABS: { key: TabKey; label: string; icon: IconName; href?: string }[] = [
   { key: "home", label: "ホーム", icon: "home", href: "/" },
-  { key: "yen", label: "月謝", icon: "yen" },
+  { key: "yen", label: "月謝", icon: "yen", href: "/fees" },
   { key: "cal", label: "日程", icon: "cal", href: "/schedule" },
   { key: "team", label: "チーム", icon: "team" },
   { key: "send", label: "提出", icon: "send", href: "/attendance" },
