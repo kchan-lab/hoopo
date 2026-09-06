@@ -2,6 +2,7 @@ import {
   formatDateLabel,
   formatTimeShort,
   getPractice,
+  hasLineup,
   isUuid,
   monthOf,
 } from "@hoopo/api";
@@ -15,7 +16,8 @@ import { TabBar } from "../../tab-bar";
 export const dynamic = "force-dynamic";
 
 // 練習の詳細(REQUIREMENTS §4.2-5。ワイヤー7)。フル画面、左上シェブロンで日程へ戻る。
-// 「出場メンバーはこちら」(#29)は無効表示。「参加予定を変更する」はその月の提出画面(リスト)へ
+// 「出場メンバーはこちら →」は編成のある練習だけに出す(lineups/plan.md 7b-2)。
+// 「参加予定を変更する」はその月の提出画面(リスト)へ
 
 export default async function PracticePage({
   params,
@@ -28,6 +30,7 @@ export default async function PracticePage({
   if (!isUuid(id)) notFound();
   const practice = await getPractice(session.teamId, id);
   if (!practice) notFound();
+  const showLineup = await hasLineup(session.teamId, practice.id);
   // 戻り先は保存済みの表示形式を明示する(クライアントのルーターキャッシュに
   // 古い一覧が残っていても、URL が違えば再取得される)
   const view =
@@ -84,14 +87,11 @@ export default async function PracticePage({
             </ul>
           )}
         </section>
-        <button
-          type="button"
-          className="cta sec2"
-          disabled
-          title="出場メンバーは準備中"
-        >
-          出場メンバーはこちら →(準備中)
-        </button>
+        {showLineup && (
+          <Link className="cta sec2" href={`/practices/${practice.id}/lineup`}>
+            出場メンバーはこちら →
+          </Link>
+        )}
         <Link
           href={`/attendance?month=${monthOf(practice.heldOn)}&view=list`}
           className="cta"
