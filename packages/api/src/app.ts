@@ -13,6 +13,8 @@ import {
   submitAttendance,
 } from "./attendances-guardian";
 import { parseSubmitAttendance } from "./attendances-shared";
+import { getFeeSheet } from "./fees-guardian";
+import { parseYear } from "./fees-shared";
 import { type AuthEnv, requireGuardian } from "./guard";
 import {
   getNextPractice,
@@ -245,6 +247,20 @@ export function createApi(deps: ApiDeps) {
         : c.json({ error: "練習が見つかりません" }, 400);
     }
     return c.json({ saved: result.saved });
+  });
+
+  // ---- 月謝の確認(fees/plan.md 5a。ロジックは fees-guardian.ts) ----
+
+  // 封筒グリッド(お子さん × 1〜12月)。年は暦年で、省略時は Tokyo の今年(設計判断2)
+  app.get("/fees", guardian, async (c) => {
+    const today = todayInTokyo();
+    const year = parseYear(c.req.query("year") ?? today.slice(0, 4));
+    if (year === null)
+      return c.json({ error: "year は 2020〜2100 で指定してください" }, 400);
+    const session = c.get("session");
+    return c.json(
+      await getFeeSheet(session.teamId, session.sub, year, monthOf(today)),
+    );
   });
 
   return app;
