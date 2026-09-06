@@ -1,4 +1,8 @@
-export { type AdminApiDeps, createAdminApi } from "./admin-app";
+export {
+  type AdminApiDeps,
+  type AdminLineLoginDeps,
+  createAdminApi,
+} from "./admin-app";
 export * from "./announcements-coach";
 export * from "./announcements-guardian";
 export * from "./announcements-shared";
@@ -6,6 +10,7 @@ export { type ApiDeps, createApi } from "./app";
 export * from "./attendances-coach";
 export * from "./attendances-guardian";
 export * from "./attendances-shared";
+export { type CoachAccount, getCoachAccount } from "./coach-account";
 export * from "./dashboard";
 export * from "./fees-coach";
 export * from "./fees-guardian";
@@ -13,9 +18,27 @@ export * from "./fees-shared";
 export {
   type AuthEnv,
   principalExists,
+  readSession,
   requireCoach,
   requireGuardian,
 } from "./guard";
+export {
+  buildAuthorizeUrl,
+  callbackUrlFromStart,
+  createLineOAuthState,
+  createLineOAuthToken,
+  FAKE_COACH_LINE_USER_ID,
+  fakeCallbackPath,
+  LINE_AUTHORIZE_URL,
+  LINE_OAUTH_COOKIE_NAME,
+  LINE_OAUTH_COOKIE_PATH,
+  LINE_OAUTH_TTL_SECONDS,
+  type LineOAuthMode,
+  type LineOAuthState,
+  parseFakeUser,
+  redirectUriFromCallback,
+  verifyLineOAuthToken,
+} from "./line-login";
 export {
   listMembers,
   listRegistrations,
@@ -74,7 +97,9 @@ export {
   SESSION_TTL_SECONDS,
   type SessionPayload,
   type SessionRole,
+  signPayload,
   verifySessionToken,
+  verifySignedPayload,
 } from "./session";
 export * from "./team";
 export * from "./tokyo-date";

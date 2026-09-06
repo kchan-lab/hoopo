@@ -25,6 +25,8 @@ const NAV: NavItem[] = [
   { key: "fee", label: "月謝管理", icon: "yen", href: "/fees" },
   { key: "mem", label: "部員管理", icon: "team", href: "/members" },
   { key: "news", label: "お知らせ", icon: "megaphone", href: "/announcements" },
+  // アカウント(ログイン手段・LINE 連携)は設定系なので末尾に置く(admin-line-login/plan.md)
+  { key: "acct", label: "アカウント", icon: "person", href: "/account" },
 ];
 
 function activeKey(pathname: string): string {
