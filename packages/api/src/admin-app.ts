@@ -2,6 +2,7 @@ import { coaches, withTeam } from "@hoopo/db";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
+import { getAbsentees, getAttendanceMatrix } from "./attendances-coach";
 import { type AuthEnv, requireCoach } from "./guard";
 import {
   listMembers,
@@ -180,6 +181,30 @@ export function createAdminApi(deps: AdminApiDeps) {
     const done = await deletePractice(session.teamId, c.req.param("id"));
     return done
       ? c.body(null, 204)
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // ---- 出欠管理・欠席者管理(attendance/plan.md 4b。ロジックは attendances-coach.ts) ----
+
+  // 部員×練習日のマトリクス(?month=YYYY-MM。省略時は Tokyo の今月)
+  app.get("/attendance-matrix", coach, async (c) => {
+    const session = c.get("session");
+    const month = parseMonth(c.req.query("month") ?? monthOf(todayInTokyo()));
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    return c.json(await getAttendanceMatrix(session.teamId, month));
+  });
+
+  // 練習日ごとの欠席者(不参加 / 途中参加・早退 / 未回答)。
+  // 他チームの練習は存在を漏らさず 404(RLS 配下で見つからない)
+  app.get("/absentees", coach, async (c) => {
+    const session = c.get("session");
+    const practiceId = c.req.query("practiceId") ?? "";
+    if (!isUuid(practiceId))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const result = await getAbsentees(session.teamId, practiceId);
+    return result
+      ? c.json(result)
       : c.json({ error: "対象が見つかりません" }, 404);
   });
 
