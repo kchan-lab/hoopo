@@ -65,13 +65,12 @@ export default async function Home() {
   const first = children[0];
   const today = todayInTokyo();
   const month = monthOf(today);
-  const next = await getNextPractice(session.teamId, today);
-  // 今月に未回答があれば提出へ誘導する(ワイヤー4。件数は練習 × お子さん)
-  const summary = await getUnansweredSummary(
-    session.teamId,
-    session.sub,
-    month,
-  );
+  // 次回の練習と今月の未回答件数は独立したクエリなので並列に取る
+  // (未回答があれば提出へ誘導する。ワイヤー4。件数は練習 × お子さん)
+  const [next, summary] = await Promise.all([
+    getNextPractice(session.teamId, today),
+    getUnansweredSummary(session.teamId, session.sub, month),
+  ]);
   return (
     <>
       <header className="sc-head">
