@@ -47,6 +47,13 @@ const PATHS = {
     </>
   ),
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  // お知らせ(メガホン)。欠席者管理の note と区別する
+  megaphone: (
+    <>
+      <path d="M4 10v4a1 1 0 001 1h3l6 4V5L8 9H5a1 1 0 00-1 1z" />
+      <path d="M17.5 9.5a3.5 3.5 0 010 5" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;
