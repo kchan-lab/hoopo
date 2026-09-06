@@ -1185,3 +1185,47 @@ textarea.afld {
   flex: none;
   accent-color: var(--aacc);
 }
+
+/* ---- 年度更新(year-rollover/plan.md)。画面ヘッダーに二段階確認と実行ログを畳み込む ---- */
+/* 実行ログ+「取り消す」のカード。文章とボタンを1行に、狭い画面では折り返す */
+.yrcard {
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.yrcard .yrmsg {
+  flex: 1;
+  min-width: 12em;
+  font-size: 0.82em;
+  color: var(--asub);
+}
+
+/* .ah は flex-wrap するので、確認文・実行ログ・エラーは幅いっぱいで次の行に落とす */
+.ah .confirm,
+.ah .yrcard,
+.ah .lgerr {
+  flex-basis: 100%;
+}
+
+.ah .confirm {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ah .confirm .q {
+  flex: 1;
+  min-width: 12em;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-align: left;
+}
