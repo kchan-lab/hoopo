@@ -18,7 +18,7 @@ Sub-issue: [#81](https://github.com/kchan-lab/hoopo/issues/81)(5a: portal 月謝
                 モバイル: 部員を選んで封筒グリッド(4列)
 [保護者(portal)] タブバー「月謝」→ /fees?year=&child= : 1〜12月の封筒(済=deep 円枠 / 未=accent 枠+破線円 / 未来=淡色「–」)
                  金額と運用注記のカード
-[ジョブ] 毎月1日 00:10 JST: generate_current_fee_records() で全チームの有効な部員に当月の「未」を冪等に作成
+[ジョブ] 毎月1日 09:10 JST: generate_current_fee_records() で全チームの有効な部員に当月の「未」を冪等に作成
 ```
 
 ### API 契約(5a と 5b が並列で実装するため先に固定する)
@@ -52,7 +52,7 @@ Sub-issue: [#81](https://github.com/kchan-lab/hoopo/issues/81)(5a: portal 月謝
 4. **金額と運用注記は当面 env(`FEE_AMOUNT_YEN` / `FEE_NOTE`)**: teams に列を足す(仕様変更+マイグレーション)
    より軽く、チーム設定画面(横展開時)で DB 化する。金額未設定なら金額行を出さない
 5. **月次生成は DB 関数 `generate_fee_records(year, month)` + `generate_current_fee_records()`(0004)を
-   GitHub Actions(fee-records.yml、毎月1日 00:10 JST)から psql で呼ぶ**: SECURITY DEFINER で全チームを対象にでき、
+   GitHub Actions(fee-records.yml、毎月1日 09:10 JST。schedule は UTC 基準なので JST 0〜8時台は前月末日にずれる)から psql で呼ぶ**: SECURITY DEFINER で全チームを対象にでき、
    接続は Supabase ping と同じ hoopo_app 系の秘密情報を流用できる(新しいシークレット不要)。
    冪等(ON CONFLICT DO NOTHING)なので手動再実行も安全
 6. **未来の月への「済」は許可、「未」は行を作らない**: 前払いを記録できるようにする一方、未来の「未」は

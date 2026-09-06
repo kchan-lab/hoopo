@@ -6,7 +6,7 @@ Issue: [#15](https://github.com/kchan-lab/hoopo/issues/15) / Plan: [plan.md](pla
 
 - [x] `fees-shared.ts`(3状態の導出・年/トグル入力の検証)+ Unit(4件)
 - [x] マイグレーション 0004: `generate_fee_records(year, month)` / `generate_current_fee_records()`(冪等・hoopo_app に EXECUTE)
-- [x] ジョブ `.github/workflows/fee-records.yml`(毎月1日 00:10 JST、ping と同じシークレット)
+- [x] ジョブ `.github/workflows/fee-records.yml`(毎月1日 09:10 JST、ping と同じシークレット)
 - [x] `.env.example` に FEE_AMOUNT_YEN / FEE_NOTE、API 契約を plan.md に固定、空モジュールと index の export
 - [x] Sub-issue #81(5a)/ #82(5b)を起票し親 #15 に紐付け
 - [x] Integration: DB 関数の冪等性・対象外・アプリロールからの呼び出し(packages/db/test/fee-records.int.test.ts、3件)
