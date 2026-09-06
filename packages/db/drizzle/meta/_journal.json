@@ -36,6 +36,13 @@
       "when": 1788666559628,
       "tag": "0004_fee_records_generate",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788727235288,
+      "tag": "0005_year_rollovers",
+      "breakpoints": true
     }
   ]
 }
