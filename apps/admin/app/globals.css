@@ -295,6 +295,31 @@ input {
   margin-left: 0.3em;
 }
 
+/* LINE ログイン・LINE 連携は画面遷移だけで完結する(GET /api/auth/line/start)ため
+ * リンクで置く。a には既定の色・下線が付くのでボタンと同じ見た目にそろえる */
+a.lgbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+a.lgbtn,
+a.abtn {
+  color: var(--aink);
+  text-decoration: none;
+}
+
+/* 連携完了などの通知。エラー(.lgerr)と同じ形でモノトーン(色に頼らない。絶対原則6) */
+.anotice {
+  margin: 0 0 0.8em;
+  padding: 0.6em 0.7em;
+  background: var(--afield);
+  border: 1px solid var(--ahair);
+  border-radius: 9px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
 .or {
   display: flex;
   align-items: center;

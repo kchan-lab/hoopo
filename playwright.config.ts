@@ -28,7 +28,9 @@ export default defineConfig({
     {
       name: "mobile",
       use: { ...devices["iPhone 15"] },
-      testIgnore: /admin-year-rollover/,
+      // LINE 連携はコーチ1行の line_user_id を書き換えるため、desktop / mobile の
+      // 同時実行で潰し合う。desktop 側だけで通す(admin-line-login/plan.md)
+      testIgnore: /admin-year-rollover|admin-line-login/,
     },
     // 年度更新は共有 DB の全部員の学年を動かすため、他のスペックがすべて終わってから単独で回す
     {

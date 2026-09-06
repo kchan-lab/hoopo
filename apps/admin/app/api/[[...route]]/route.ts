@@ -1,4 +1,13 @@
-import { type AdminApiDeps, createAdminApi } from "@hoopo/api";
+import {
+  type AdminApiDeps,
+  type AdminLineLoginDeps,
+  createAdminApi,
+} from "@hoopo/api";
+import {
+  createFakeIdTokenVerifier,
+  createLineIdTokenVerifier,
+  exchangeAuthorizationCode,
+} from "@hoopo/line";
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 
@@ -14,11 +23,38 @@ function requireEnv(name: string): string {
   return value;
 }
 
+// LINE ログイン(admin-line-login/plan.md)。フェイクはローカル/E2E 専用で、
+// 実チャネル(#9)未取得でも導線を貫通させる(本番は verifier のファクトリ側が拒否する)
+function buildLineLoginDeps(): AdminLineLoginDeps {
+  if (process.env.AUTH_FAKE === "1") {
+    return {
+      channelId: "",
+      channelSecret: "",
+      verifyIdToken: createFakeIdTokenVerifier(),
+      exchangeCode: exchangeAuthorizationCode,
+      fake: true,
+    };
+  }
+  // ID トークンの verify も認可コードの交換も LINE ログインチャネル宛て(LIFF とは別チャネル)
+  const channelId = requireEnv("LINE_LOGIN_CHANNEL_ID");
+  return {
+    channelId,
+    channelSecret: requireEnv("LINE_LOGIN_CHANNEL_SECRET"),
+    verifyIdToken: createLineIdTokenVerifier(channelId),
+    exchangeCode: exchangeAuthorizationCode,
+    fake: false,
+  };
+}
+
 function buildDeps(): AdminApiDeps {
   return {
     teamId: requireEnv("TEAM_ID"),
     sessionSecret: requireEnv("SESSION_SECRET"),
     secureCookie: process.env.VERCEL === "1",
+    // LINE userId の暗号化・検索キーは portal と共通の鍵を使う
+    encryptionKey: requireEnv("LINE_ID_ENCRYPTION_KEY"),
+    hmacKey: requireEnv("LINE_ID_HMAC_KEY"),
+    lineLogin: buildLineLoginDeps(),
   };
 }
 

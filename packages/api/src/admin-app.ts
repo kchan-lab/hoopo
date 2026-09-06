@@ -1,7 +1,13 @@
 import { coaches, withTeam } from "@hoopo/db";
+import {
+  type AuthorizationCodeExchanger,
+  encryptLineUserId,
+  type IdTokenVerifier,
+  lineUserIdLookup,
+} from "@hoopo/line";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { deleteCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -13,7 +19,21 @@ import { getAbsentees, getAttendanceMatrix } from "./attendances-coach";
 import { getDashboard } from "./dashboard";
 import { getFeeGrid, setFeeStatus } from "./fees-coach";
 import { parseFeeToggle, parseYear } from "./fees-shared";
-import { type AuthEnv, requireCoach } from "./guard";
+import { type AuthEnv, readSession, requireCoach } from "./guard";
+import {
+  buildAuthorizeUrl,
+  callbackUrlFromStart,
+  createLineOAuthState,
+  createLineOAuthToken,
+  fakeCallbackPath,
+  LINE_OAUTH_COOKIE_NAME,
+  LINE_OAUTH_COOKIE_PATH,
+  LINE_OAUTH_TTL_SECONDS,
+  type LineOAuthMode,
+  parseFakeUser,
+  redirectUriFromCallback,
+  verifyLineOAuthToken,
+} from "./line-login";
 import {
   listMembers,
   listRegistrations,
@@ -43,15 +63,39 @@ import {
   undoYearRollover,
 } from "./year-rollover";
 
-// 管理者(コーチ)認証 API(admin-login/plan.md)。
+// 管理者(コーチ)認証 API(admin-login/plan.md、admin-line-login/plan.md)。
 // 保護者 API(app.ts)とはアプリ・Cookie・role を分離する(絶対原則6)。
-// LINE ログインは別 Issue(1b はメール+パスワードのみ。plan.md 設計判断1)
+// 主経路は LINE ログイン、メール+パスワードは予備(admin-login/plan.md 設計判断10)
+
+export interface AdminLineLoginDeps {
+  /** LINE ログインチャネルの Channel ID / secret(LIFF のチャネルとは別) */
+  channelId: string;
+  channelSecret: string;
+  verifyIdToken: IdTokenVerifier;
+  exchangeCode: AuthorizationCodeExchanger;
+  /** AUTH_FAKE=1。認可画面へ飛ばさず callback へ短絡する(admin-line-login/plan.md 設計判断5) */
+  fake: boolean;
+}
 
 export interface AdminApiDeps {
   /** 当面は env の単一チーム。コーチ検索もこのチームの RLS 配下で行う */
   teamId: string;
   sessionSecret: string;
   secureCookie: boolean;
+  encryptionKey: string;
+  hmacKey: string;
+  lineLogin: AdminLineLoginDeps;
+}
+
+// LINE 連携の一意制約違反(別のコーチが同じ LINE を連携済み)だけを取り出す。
+// ドライバの例外は ORM に包まれることがあるので cause を数段たどる
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 5; depth++) {
+    if ((current as { code?: unknown }).code === "23505") return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
 }
 
 // 資格情報の誤りは email 不明/パスワード不一致を区別せず同一応答(plan.md 設計判断9)
@@ -112,6 +156,183 @@ export function createAdminApi(deps: AdminApiDeps) {
   // 共有 PC を想定し明示的なログアウトを用意する(保護者側にはない管理専用の導線)
   app.post("/auth/logout", (c) => {
     deleteCookie(c, ADMIN_SESSION_COOKIE_NAME, { path: "/" });
+    return c.body(null, 204);
+  });
+
+  // ---- LINE ログイン(admin-line-login/plan.md。ロジックは line-login.ts) ----
+
+  // 認可の開始。state / nonce を署名 Cookie に置いて LINE の認可画面へ送る。
+  // mode=link はログイン済みコーチが自分の行に LINE を紐づける導線(設計判断3)
+  app.get("/auth/line/start", async (c) => {
+    const mode: LineOAuthMode =
+      c.req.query("mode") === "link" ? "link" : "login";
+    let coachId: string | undefined;
+    if (mode === "link") {
+      const session = await readSession(c, "coach", deps);
+      if (!session) return c.json({ error: "未ログインです" }, 401);
+      coachId = session.sub;
+    }
+
+    const oauth = createLineOAuthState(mode, coachId);
+    setCookie(
+      c,
+      LINE_OAUTH_COOKIE_NAME,
+      await createLineOAuthToken(oauth, deps.sessionSecret),
+      {
+        httpOnly: true,
+        secure: deps.secureCookie,
+        sameSite: "Lax",
+        // LINE からの戻りはトップレベル GET なので Lax でも送られる(設計判断2)
+        path: LINE_OAUTH_COOKIE_PATH,
+        maxAge: LINE_OAUTH_TTL_SECONDS,
+      },
+    );
+
+    if (deps.lineLogin.fake) {
+      // 認可画面の代替 UI は作らず、そのまま callback へ短絡する(設計判断5)
+      const lineUserId = parseFakeUser(c.req.query("fake_user"));
+      return c.redirect(fakeCallbackPath(c.req.url, lineUserId, oauth.state));
+    }
+    return c.redirect(
+      buildAuthorizeUrl({
+        channelId: deps.lineLogin.channelId,
+        redirectUri: callbackUrlFromStart(c.req.url),
+        state: oauth.state,
+        nonce: oauth.nonce,
+      }),
+    );
+  });
+
+  // 認可の戻り。state 照合 → code を id_token に交換 → 検証 → ログイン or 連携。
+  // 画面遷移(302)で終わるため、失敗は例外なく ?error= を付けた画面に返す
+  app.get("/auth/line/callback", async (c) => {
+    const cookie = getCookie(c, LINE_OAUTH_COOKIE_NAME);
+    // 使い捨て。成否にかかわらず落とす(リプレイ防止)
+    deleteCookie(c, LINE_OAUTH_COOKIE_NAME, { path: LINE_OAUTH_COOKIE_PATH });
+    const oauth = cookie
+      ? await verifyLineOAuthToken(cookie, deps.sessionSecret)
+      : null;
+    const fail = (code: string) =>
+      c.redirect(
+        oauth?.mode === "link"
+          ? `/account?error=${code}`
+          : `/login?error=${code}`,
+      );
+
+    const state = c.req.query("state");
+    if (!oauth || !state || state !== oauth.state) return fail("line_state");
+    const error = c.req.query("error");
+    if (error)
+      return fail(error === "access_denied" ? "line_denied" : "line_failed");
+
+    const code = c.req.query("code") ?? "";
+    if (!code) return fail("line_failed");
+    let idToken: string;
+    if (deps.lineLogin.fake && code.startsWith("fake:")) {
+      idToken = code;
+    } else {
+      const exchanged = await deps.lineLogin.exchangeCode({
+        code,
+        // authorize に送ったものと同一である必要があるため、callback 自身の URL から作る
+        redirectUri: redirectUriFromCallback(c.req.url),
+        channelId: deps.lineLogin.channelId,
+        channelSecret: deps.lineLogin.channelSecret,
+      });
+      if (!exchanged.ok) return fail("line_failed");
+      idToken = exchanged.idToken;
+    }
+    const verified = await deps.lineLogin.verifyIdToken(idToken, {
+      nonce: oauth.nonce,
+    });
+    if (!verified.ok) return fail("line_failed");
+
+    const lookup = await lineUserIdLookup(verified.lineUserId, deps.hmacKey);
+
+    if (oauth.mode === "login") {
+      const found = await withTeam(deps.teamId, (tx) =>
+        tx.query.coaches.findFirst({
+          where: eq(coaches.lineUserIdLookup, lookup),
+          columns: { id: true },
+        }),
+      );
+      // 招待コード等で自己申告の管理者を作らない(設計判断3)。未連携は連携導線へ案内する
+      if (!found) return c.redirect("/login?error=line_unlinked");
+      const token = await createSessionToken(
+        {
+          sub: found.id,
+          role: "coach",
+          teamId: deps.teamId,
+          exp: Math.floor(Date.now() / 1000) + ADMIN_SESSION_TTL_SECONDS,
+        },
+        deps.sessionSecret,
+      );
+      setCookie(c, ADMIN_SESSION_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: deps.secureCookie,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: ADMIN_SESSION_TTL_SECONDS,
+      });
+      return c.redirect("/");
+    }
+
+    // mode=link: 認可の往復中にセッションが切れていないか改めて確認する
+    const session = await readSession(c, "coach", deps);
+    if (!session || !oauth.coachId || session.sub !== oauth.coachId) {
+      return c.redirect("/login");
+    }
+    // 暗号化は withTeam の外で済ませる(トランザクション内で DB 以外の処理をしない)
+    const encrypted = await encryptLineUserId(
+      verified.lineUserId,
+      deps.encryptionKey,
+    );
+    try {
+      const updated = await withTeam(deps.teamId, (tx) =>
+        tx
+          .update(coaches)
+          .set({
+            lineUserId: encrypted,
+            lineUserIdLookup: lookup,
+            updatedAt: new Date(),
+          })
+          .where(eq(coaches.id, session.sub))
+          .returning({ id: coaches.id }),
+      );
+      if (updated.length === 0) return c.redirect("/login");
+    } catch (e) {
+      // (team_id, line_user_id_lookup) の一意制約 = 別のコーチが同じ LINE を連携済み
+      if (isUniqueViolation(e)) return c.redirect("/account?error=line_taken");
+      throw e;
+    }
+    return c.redirect("/account?linked=1");
+  });
+
+  // 連携の解除。パスワード未設定(LINE だけで入れる)コーチは締め出しになるので拒む(設計判断6)
+  app.delete("/auth/line/link", coach, async (c) => {
+    const session = c.get("session");
+    const row = await withTeam(session.teamId, (tx) =>
+      tx.query.coaches.findFirst({
+        where: eq(coaches.id, session.sub),
+        columns: { passwordHash: true },
+      }),
+    );
+    if (!row) return c.json({ error: "対象が見つかりません" }, 404);
+    if (!row.passwordHash) {
+      return c.json(
+        { error: "パスワードが未設定のため、LINE 連携は解除できません" },
+        409,
+      );
+    }
+    await withTeam(session.teamId, (tx) =>
+      tx
+        .update(coaches)
+        .set({
+          lineUserId: null,
+          lineUserIdLookup: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(coaches.id, session.sub)),
+    );
     return c.body(null, 204);
   });
 

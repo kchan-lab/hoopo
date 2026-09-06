@@ -6,6 +6,7 @@ import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 管理者認証 API を RLS 配下で検証する(admin-login/plan.md)。
 // リセット方式は auth.int.test.ts と同じ(beforeEach で TRUNCATE+フィクスチャ再作成)
@@ -27,11 +28,8 @@ let coachId: string;
 let coachHash: string;
 
 function adminApi(team = teamId) {
-  return createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  // LINE ログインの経路は admin-line-login.int.test.ts で検証する(ここではメール経路のみ)
+  return createAdminApi(adminDeps(team, SESSION_SECRET));
 }
 
 async function login(
