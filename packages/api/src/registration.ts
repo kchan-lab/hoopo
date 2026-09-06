@@ -7,7 +7,7 @@ import {
   withInviteCodeRetry,
   withTeam,
 } from "@hoopo/db";
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type {
   Gender,
   LinkInput,
@@ -204,6 +204,9 @@ export async function unlinkChild(
   childId: string,
 ): Promise<UnlinkResult> {
   return withTeam(teamId, async (tx) => {
+    // 父と母が同時に解除すると両方が「他に保護者がいる」と判定して孤児化しうる(TOCTOU)ため、
+    // 子ども単位のトランザクション内アドバイザリロックで直列化する(READ COMMITTED でも安全)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${childId}))`);
     // 自分の active な連携だけが対象(他チーム・未連携・無効化済みは存在を漏らさず not_found)
     const mine = await tx.query.guardianChildren.findFirst({
       where: and(
