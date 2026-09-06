@@ -102,22 +102,17 @@ export async function updateAnnouncement(
   input: AnnouncementInput,
 ): Promise<Announcement | null> {
   return withTeam(teamId, async (tx) => {
-    // 公開日時の維持判定に現在値が要るので、更新前に1回読む(同じ RLS 配下のトランザクション内)
-    const [current] = await tx
-      .select({ publishedAt: announcements.publishedAt })
-      .from(announcements)
-      .where(eq(announcements.id, id));
-    if (!current) return null;
-    const publishedAt = input.publish
-      ? (current.publishedAt ?? new Date())
-      : null;
+    // 公開日時の維持判定は SQL 側で行い、1クエリで更新する
+    // (publish: 既存の published_at があれば維持、無ければ now()。下書きに戻すなら null)
     const [row] = await tx
       .update(announcements)
       .set({
         title: input.title,
         body: input.body,
         notifyLine: input.notifyLine,
-        publishedAt,
+        publishedAt: input.publish
+          ? sql`coalesce(${announcements.publishedAt}, now())`
+          : null,
         updatedAt: new Date(),
       })
       .where(eq(announcements.id, id))
