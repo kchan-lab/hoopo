@@ -1,4 +1,7 @@
 export { type AdminApiDeps, createAdminApi } from "./admin-app";
+export * from "./announcements-coach";
+export * from "./announcements-guardian";
+export * from "./announcements-shared";
 export { type ApiDeps, createApi } from "./app";
 export * from "./attendances-coach";
 export * from "./attendances-guardian";
