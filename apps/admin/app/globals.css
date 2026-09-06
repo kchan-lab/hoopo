@@ -840,3 +840,140 @@ input {
     width: 100%;
   }
 }
+
+/* ---- 出欠管理・欠席者管理(ワイヤーフレーム PC-3・PC-4 / SP-4・SP-5) ---- */
+/* 選択中の日付ピル(欠席者管理)。リンクなのでタップ領域は 44px を確保する */
+.pill.fill {
+  background: var(--aacc);
+  color: var(--aon);
+  border-color: var(--aacc);
+}
+
+.pills {
+  display: flex;
+  gap: 0.4em;
+  flex-wrap: wrap;
+  margin-bottom: 0.7em;
+}
+
+.pills .pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 3グループの1行(名前+コメント / 未回答はリマインドボタン) */
+.arow {
+  display: flex;
+  gap: 0.7em;
+  align-items: baseline;
+  padding: 0.5em 0;
+  border-top: 1px solid var(--ahair);
+  font-size: 0.9em;
+}
+
+.arow:first-of-type {
+  border-top: 0;
+}
+
+.arow b {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.arow span {
+  color: var(--asub);
+  font-size: 0.92em;
+}
+
+.arow .abtn {
+  margin-left: auto;
+  font-size: 0.85em;
+}
+
+/* 出欠マトリクス: 列は練習日ぶんだけ増えるので横スクロールを許可する(DESIGN §2.3) */
+.ascroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.amatrix {
+  /* 列数が可変なので固定レイアウトにしない(コメントを開いた列だけ広がる) */
+  table-layout: auto;
+  min-width: 100%;
+}
+
+.amatrix td {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  overflow: visible;
+}
+
+.amatrix td.c-member {
+  width: 34%;
+  text-align: left;
+}
+
+/* ○△は濃く、×−は薄く */
+.amatrix td.mark {
+  font-weight: 700;
+}
+
+.amatrix td.none {
+  color: var(--asub);
+}
+
+/* 一度も回答していない部員は名前も薄くする */
+.amatrix tr.muted td.c-member {
+  color: var(--asub);
+}
+
+/* △のコメントはネイティブの開閉で出す(plan.md 設計判断8。JS を使わない) */
+.amatrix details {
+  display: inline-block;
+}
+
+.amatrix summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  font-weight: 700;
+}
+
+.amatrix summary::-webkit-details-marker {
+  display: none;
+}
+
+.amatrix details[open] summary {
+  text-decoration: underline;
+}
+
+.amatrix .cmt {
+  display: block;
+  width: max-content;
+  max-width: 14em;
+  margin: 0 auto 0.3em;
+  padding: 0.4em 0.6em;
+  background: var(--afield);
+  border: 1px solid var(--ahair);
+  border-radius: 8px;
+  white-space: normal;
+  text-align: left;
+  font-weight: 400;
+  font-size: 0.9em;
+  color: var(--aink);
+}
+
+@media (max-width: 639px) {
+  .amatrix td.c-member {
+    width: 44%;
+  }
+  .arow {
+    flex-wrap: wrap;
+  }
+}
