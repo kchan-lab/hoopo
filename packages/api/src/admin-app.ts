@@ -2,6 +2,13 @@ import { coaches, withTeam } from "@hoopo/db";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
+import {
+  createAnnouncement,
+  deleteAnnouncement,
+  listAnnouncementsForCoach,
+  updateAnnouncement,
+} from "./announcements-coach";
+import { parseAnnouncementInput } from "./announcements-shared";
 import { getAbsentees, getAttendanceMatrix } from "./attendances-coach";
 import { getFeeGrid, setFeeStatus } from "./fees-coach";
 import { parseFeeToggle, parseYear } from "./fees-shared";
@@ -234,6 +241,54 @@ export function createAdminApi(deps: AdminApiDeps) {
     );
     return result.ok
       ? c.json({ month: result.month })
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // ---- お知らせ管理(announcements/plan.md 6a-1。ロジックは announcements-coach.ts) ----
+
+  // 下書きを含む全件(下書きが先頭 → 公開済みを新しい順)
+  app.get("/announcements", coach, async (c) => {
+    const session = c.get("session");
+    return c.json({
+      announcements: await listAnnouncementsForCoach(session.teamId),
+    });
+  });
+
+  app.post("/announcements", coach, async (c) => {
+    const parsed = parseAnnouncementInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    return c.json(
+      { announcement: await createAnnouncement(session.teamId, parsed.value) },
+      201,
+    );
+  });
+
+  // publish: true で公開(公開済みなら日時は維持)、false で下書きに戻す(plan.md 設計判断1)
+  app.put("/announcements/:id", coach, async (c) => {
+    const parsed = parseAnnouncementInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    if (!isUuid(c.req.param("id")))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const announcement = await updateAnnouncement(
+      session.teamId,
+      c.req.param("id"),
+      parsed.value,
+    );
+    return announcement
+      ? c.json({ announcement })
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // 破壊的操作: 確認は UI 側の二段階確認(CLAUDE.md 開発ルール)
+  app.delete("/announcements/:id", coach, async (c) => {
+    const session = c.get("session");
+    if (!isUuid(c.req.param("id")))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const done = await deleteAnnouncement(session.teamId, c.req.param("id"));
+    return done
+      ? c.body(null, 204)
       : c.json({ error: "対象が見つかりません" }, 404);
   });
 
