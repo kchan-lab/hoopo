@@ -977,3 +977,115 @@ input {
     flex-wrap: wrap;
   }
 }
+
+/* ---- 月謝管理(ワイヤーフレーム PC-7 / SP-8) ---- */
+/* PC は部員×1〜12月の表、モバイルは部員セレクト+封筒グリッド(fees/plan.md 設計判断7)。
+ * 同じ state を2つのレイアウトで描き、表示切替は CSS だけで行う */
+.fee-pc {
+  display: block;
+}
+
+.fee-sp {
+  display: none;
+}
+
+/* 月の列は12本。セルはすべてタップ領域44pxのボタンにする(済⇄未の即保存) */
+.afee td {
+  text-align: center;
+  padding: 0 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.afee tr.hd td {
+  padding: 0.5em 0.1em;
+}
+
+.afee td.c-member {
+  width: 26%;
+  text-align: left;
+  padding: 0.5em 0.3em;
+}
+
+.afee button {
+  width: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--asub);
+  font-size: 1em;
+  cursor: pointer;
+}
+
+/* 済だけ濃く太く(未・未来は薄く。色に頼らず文字も併記。DESIGN §3) */
+.afee button.on {
+  color: var(--aink);
+  font-weight: 700;
+}
+
+.afee button:hover:not(:disabled) {
+  background: var(--afield);
+}
+
+.afee button:disabled {
+  cursor: progress;
+}
+
+/* モバイルの封筒グリッド(4列)。ワイヤー .mfee の div をボタンに置き換えたもの */
+.feesel {
+  display: flex;
+  gap: 0.4em;
+  align-items: center;
+  margin-bottom: 0.7em;
+}
+
+.feesel .afld {
+  min-height: 44px;
+  font-size: 0.95em;
+}
+
+.mfee {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45em;
+}
+
+.mfee button {
+  background: var(--acard);
+  border: 1px solid var(--ahair);
+  border-radius: 9px;
+  text-align: center;
+  padding: 0.45em 0;
+  min-height: 44px;
+  font-size: 0.82em;
+  color: var(--asub);
+  cursor: pointer;
+}
+
+.mfee b {
+  display: block;
+  font-size: 1.05em;
+  color: var(--aink);
+}
+
+.mfee button.on b {
+  font-weight: 700;
+}
+
+.mfee button:not(.on) b {
+  color: var(--asub);
+}
+
+.mfee button:disabled {
+  cursor: progress;
+}
+
+@media (max-width: 639px) {
+  .fee-pc {
+    display: none;
+  }
+  .fee-sp {
+    display: block;
+  }
+}
