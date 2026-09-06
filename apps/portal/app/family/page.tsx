@@ -3,8 +3,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getGuardianSession } from "../../lib/session";
 import { CopyButton } from "./copy-button";
+import { UnlinkButton } from "./unlink-button";
 
-// 家族の設定(REQUIREMENTS §4.2-9。ワイヤー14): 子どもごとの招待コードと連携済みの家族(続柄のみ)
+// 家族の設定(REQUIREMENTS §4.2-9。ワイヤー14): 子どもごとの招待コードと連携済みの家族(続柄のみ)。
+// 自分の行からは連携を解除できる(family-links/plan.md。最後の保護者は API が断る)
+
+export const dynamic = "force-dynamic";
 
 export default async function FamilyPage() {
   const session = await getGuardianSession();
@@ -36,13 +40,20 @@ export default async function FamilyPage() {
               style={{ listStyle: "none", margin: 0, padding: 0 }}
             >
               {child.guardians.map((g) => (
-                <li key={g.guardianId} className="row">
+                <li
+                  key={g.guardianId}
+                  className={g.isMe ? "row unlink" : "row"}
+                >
                   <span>
                     {g.isMe
                       ? `あなた(${RELATION_LABELS[g.relation]})`
                       : RELATION_LABELS[g.relation]}
                   </span>
-                  {!g.isMe && <span className="linked">連携済み</span>}
+                  {g.isMe ? (
+                    <UnlinkButton childId={child.id} childName={child.name} />
+                  ) : (
+                    <span className="linked">連携済み</span>
+                  )}
                 </li>
               ))}
             </ul>
