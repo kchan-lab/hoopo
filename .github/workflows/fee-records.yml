@@ -1,12 +1,14 @@
 # 月次の fee_record 自動生成ジョブ(Issue #15 / fees/plan.md 設計判断5)。
-# 毎月1日の 00:10 JST に、全チームの有効な部員へ当月の「未」レコードを冪等に作る
+# 毎月1日の 09:10 JST に、全チームの有効な部員へ当月の「未」レコードを冪等に作る
+# (schedule は UTC 基準。JST の 1日 00:00〜08:59 は UTC では前月末日になるため、日付が
+#  ずれない 09:00 JST 以降を選ぶ)
 # (DB 関数 generate_current_fee_records。SECURITY DEFINER なのでアプリロールで呼べる)。
 # 接続文字列は Supabase ping と同じシークレットを流用する(hoopo_app 系ロール)
 name: Fee records
 
 on:
   schedule:
-    - cron: "10 15 1 * *" # 毎月1日 00:10 JST(Asia/Tokyo)
+    - cron: "10 0 1 * *" # 毎月1日 09:10 JST(Asia/Tokyo)= UTC 1日 00:10
   workflow_dispatch:
 
 jobs:
@@ -29,10 +31,11 @@ jobs:
               echo "::notice::${env_name}: 接続文字列が未設定のためスキップ"
               continue
             fi
-            if n=$(psql "$url" -tAc "select public.generate_current_fee_records()" 2>&1); then
+            # stderr は接続情報を含みうるため捨てる(supabase-ping.yml と同じ方針)。stdout は件数のみ
+            if n=$(psql "$url" -tAc "select public.generate_current_fee_records()" 2>/dev/null); then
               echo "${env_name}: ${n} 件作成"
             else
-              echo "::error::${env_name}: 生成に失敗しました: ${n}"
+              echo "::error::${env_name}: 生成に失敗しました(接続情報・プロジェクトの状態を確認)"
               failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
             fi
           done
