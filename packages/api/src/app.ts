@@ -7,6 +7,12 @@ import {
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
+import {
+  getAttendanceSheet,
+  getUnansweredSummary,
+  submitAttendance,
+} from "./attendances-guardian";
+import { parseSubmitAttendance } from "./attendances-shared";
 import { type AuthEnv, requireGuardian } from "./guard";
 import {
   getNextPractice,
@@ -198,6 +204,47 @@ export function createApi(deps: ApiDeps) {
     return practice
       ? c.json({ practice })
       : c.json({ error: "練習が見つかりません" }, 404);
+  });
+
+  // ---- 参加予定の提出(attendance/plan.md 4a。ロジックは attendances-guardian.ts) ----
+
+  // 提出画面の初期表示。お子さん・月内の練習・回答済みの内容をまとめて返す
+  app.get("/attendance", guardian, async (c) => {
+    const session = c.get("session");
+    const month = parseMonth(c.req.query("month") ?? monthOf(todayInTokyo()));
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    return c.json(await getAttendanceSheet(session.teamId, session.sub, month));
+  });
+
+  // ホームの未提出アラート用。パラメータ付きルートを足すときは必ずこれより後に定義する
+  app.get("/attendance/summary", guardian, async (c) => {
+    const session = c.get("session");
+    const month = parseMonth(c.req.query("month") ?? monthOf(todayInTokyo()));
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    return c.json(
+      await getUnansweredSummary(session.teamId, session.sub, month),
+    );
+  });
+
+  // お子さん単位の一括保存(設計判断2)。status=null は未回答に戻す
+  app.put("/attendance", guardian, async (c) => {
+    const parsed = parseSubmitAttendance(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const result = await submitAttendance(
+      session.teamId,
+      session.sub,
+      parsed.value,
+    );
+    if (!result.ok) {
+      // 自分の子でない childId は存在を漏らさず 404 にする
+      return result.reason === "not_found"
+        ? c.json({ error: "お子さんが見つかりません" }, 404)
+        : c.json({ error: "練習が見つかりません" }, 400);
+    }
+    return c.json({ saved: result.saved });
   });
 
   return app;
