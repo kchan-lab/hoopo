@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { Icon, type IconName } from "./icons";
 
-// タブバー(DESIGN_GUIDELINES §1.3): ホーム / 月謝 / 日程(中央の黒丸) / チーム / 提出。
-// 未実装のタブはリンクにせず無効表示(チーム #28)
+// タブバー(DESIGN_GUIDELINES §1.3): ホーム / 月謝 / 日程(中央の黒丸) / チーム / 提出
 
 type TabKey = "home" | "yen" | "cal" | "team" | "send";
 
-const TABS: { key: TabKey; label: string; icon: IconName; href?: string }[] = [
+const TABS: { key: TabKey; label: string; icon: IconName; href: string }[] = [
   { key: "home", label: "ホーム", icon: "home", href: "/" },
   { key: "yen", label: "月謝", icon: "yen", href: "/fees" },
   { key: "cal", label: "日程", icon: "cal", href: "/schedule" },
-  { key: "team", label: "チーム", icon: "team" },
+  { key: "team", label: "チーム", icon: "team", href: "/team" },
   { key: "send", label: "提出", icon: "send", href: "/attendance" },
 ];
 
@@ -34,7 +33,7 @@ export function TabBar({ active }: { active: TabKey }) {
               {t.label}
             </>
           );
-        return t.href ? (
+        return (
           <Link
             key={t.key}
             href={t.href}
@@ -43,15 +42,6 @@ export function TabBar({ active }: { active: TabKey }) {
           >
             {inner}
           </Link>
-        ) : (
-          <span
-            key={t.key}
-            className={`${cls} soon`}
-            aria-disabled="true"
-            title="準備中"
-          >
-            {inner}
-          </span>
         );
       })}
     </nav>
