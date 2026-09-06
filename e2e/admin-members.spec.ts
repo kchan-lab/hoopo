@@ -37,7 +37,7 @@ async function loginAsCoach(page: Page) {
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page.locator("main")).toContainText("ログインしました", {
+  await expect(page.locator("main")).toContainText("ダッシュボード", {
     timeout: 15000,
   });
 }
@@ -86,6 +86,6 @@ test("モバイルではハンバーガーからドロワーで画面を切り�
   test.skip(!isMobile, "モバイルのみ");
   await loginAsCoach(page);
   await page.getByRole("button", { name: "メニューを開く" }).click();
-  await page.getByRole("link", { name: "認定管理" }).click();
+  await page.getByRole("link", { name: "認定管理", exact: true }).click();
   await expect(page.locator(".ah b")).toContainText("認定管理");
 });
