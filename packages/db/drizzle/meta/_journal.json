@@ -43,6 +43,13 @@
       "when": 1788727235288,
       "tag": "0005_year_rollovers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788729173193,
+      "tag": "0006_coaches_line_login",
+      "breakpoints": true
     }
   ]
 }
