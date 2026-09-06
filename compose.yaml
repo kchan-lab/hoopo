@@ -24,7 +24,11 @@ services:
   # 依存インストールを一度だけ行う one-shot サービス(#68)。
   # portal / admin / playwright が同時に pnpm install を走らせると共有の node_modules
   # ボリューム上で競合して片方が落ちるため、ここで直列化してから各サービスを起動する。
-  # `docker compose up` は終了済みの one-shot も再実行するので、依存を追加したら up し直せばよい
+  # `docker compose up` は終了済みの one-shot も再実行する(Compose v2.40 で実測。念のため
+  # 依存追加時は `--force-recreate deps` 付きの手順を docs/LOCAL_DEV.md に置く)。
+  # 注意: ここで入れた node_modules は playwright サービス(別イメージ)とも共有する。
+  # ネイティブビルドを伴う依存を足すと ABI 不一致で playwright 側が壊れうるので、
+  # その場合は playwright 用に別ボリュームへ分ける
   deps:
     <<: *app-base
     command: pnpm install --frozen-lockfile

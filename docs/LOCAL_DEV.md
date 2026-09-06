@@ -83,7 +83,8 @@ make up
 
 - 初回はイメージビルドとコンテナ内 `pnpm install` が走るため数分かかる
 - ソースは bind mount しているので、編集は即座にホットリロードされる
-- 依存を追加したら `docker compose up -d portal admin`(one-shot の `deps` サービスが `pnpm install` を一度だけ実行してから各サービスを起動する。`restart` では deps が走らないので注意)
+- 依存を追加したら `docker compose up -d --force-recreate deps portal admin`(one-shot の `deps` サービスが `pnpm install` を一度だけ実行してから各サービスを起動する。`up -d` だけでも終了済みの deps は再実行される(Compose v2.40 で実測)が、確実に走らせるため `--force-recreate deps` を付ける。`restart` では deps が走らない)
+- 依存にネイティブビルド(node-gyp 等)を伴うものを足すときは注意: deps が入れた node_modules は E2E の playwright コンテナ(別イメージ)とも共有しており、ABI 不一致で壊れる可能性がある
 - Supabase CLI は devDependency で導入済み(バージョン固定)。CLI が専用の Docker コンテナ群を
   起動するため、アプリの compose.yaml には含めていない
 - `.env` は `make up` で supabase を選ぶと `.env.example` から自動生成され、空の
