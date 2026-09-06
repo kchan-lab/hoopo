@@ -15,7 +15,7 @@ import { TabBar } from "../../tab-bar";
 export const dynamic = "force-dynamic";
 
 // 練習の詳細(REQUIREMENTS §4.2-5。ワイヤー7)。フル画面、左上シェブロンで日程へ戻る。
-// 「出場メンバーはこちら」(#29)と「参加予定を変更する」(#14)は無効表示
+// 「出場メンバーはこちら」(#29)は無効表示。「参加予定を変更する」はその月の提出画面(リスト)へ
 
 export default async function PracticePage({
   params,
@@ -92,15 +92,13 @@ export default async function PracticePage({
         >
           出場メンバーはこちら →(準備中)
         </button>
-        <button
-          type="button"
+        <Link
+          href={`/attendance?month=${monthOf(practice.heldOn)}&view=list`}
           className="cta"
           style={{ marginTop: 0 }}
-          disabled
-          title="参加予定の提出は準備中"
         >
-          この日の参加予定を変更する(準備中)
-        </button>
+          この日の参加予定を変更する
+        </Link>
       </main>
       <TabBar active="cal" />
     </>
