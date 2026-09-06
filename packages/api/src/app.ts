@@ -35,6 +35,7 @@ import {
   parseLink,
   parseRegistration,
   registerChildren,
+  unlinkChild,
 } from "./registration";
 import {
   createSessionToken,
@@ -182,6 +183,21 @@ export function createApi(deps: ApiDeps) {
   app.get("/family", guardian, async (c) => {
     const session = c.get("session");
     return c.json({ children: await getFamily(session.teamId, session.sub) });
+  });
+
+  // 自分の連携を解除(family-links/plan.md)。破壊的操作なので UI 側で二段階確認する。
+  // 最後の保護者は解除できない(子どもが誰からも見えなくなるため)
+  app.delete("/family-links/:childId", guardian, async (c) => {
+    const session = c.get("session");
+    const childId = c.req.param("childId");
+    if (!isUuid(childId)) return c.json({ error: "連携が見つかりません" }, 404);
+    const result = await unlinkChild(session.teamId, session.sub, childId);
+    if (!result.ok) {
+      return result.reason === "last_guardian"
+        ? c.json({ error: "最後の保護者は連携を解除できません" }, 409)
+        : c.json({ error: "連携が見つかりません" }, 404);
+    }
+    return c.body(null, 204);
   });
 
   // ---- 日程(practice-schedule/plan.md 3b)。チーム公開情報なので子ども未連携でも閲覧可 ----
