@@ -10,9 +10,9 @@ Issue: [#26](https://github.com/kchan-lab/hoopo/issues/26) / Plan: [plan.md](pla
 
 ## 6b-1: 発行 API + admin — #90 / feat/schedule-publish-admin(Opus サブエージェント)
 
-- [ ] `schedule-publish.ts`: getPublishStatus / publishSchedule、管理 API 2ルート
-- [ ] 日程管理画面: 「予定表を発行する」(二段階確認)、発行済み表示、プレビュー画像リンク。LINE 送信は無効のまま
-- [ ] Integration(発行 API+RLS)/ E2E(発行→発行済み表示)
+- [x] `schedule-publish.ts`: getPublishStatus / publishSchedule、管理 API 2ルート
+- [x] 日程管理画面: 「予定表を発行する」(二段階確認)、発行済み表示、プレビュー画像リンク。LINE 送信は無効のまま
+- [x] Integration(発行 API+RLS)/ E2E(発行→発行済み表示)
 - [ ] メインセッションで統合・検証 → PR(`Refs #26` + `Closes #90`)→ CI → merge commit
 
 ## 6b-2: 予定表画像 — #91 / feat/schedule-image(Opus サブエージェント)

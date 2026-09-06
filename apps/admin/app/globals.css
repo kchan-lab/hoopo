@@ -832,6 +832,31 @@ input {
   flex-wrap: wrap;
 }
 
+/* 予定表の発行(schedule-publish/plan.md 6b-1)。状況表示+二段階確認 */
+.pubcard .pubstat {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  margin-top: 0.35em;
+}
+
+.pubcard .pubwarn {
+  font-size: 0.82em;
+  color: var(--asub);
+}
+
+.pubcard .pfoot {
+  margin: 0.7em 0 0;
+  align-items: center;
+}
+
+/* 確認文が長いので、はみ出さずに折り返させる */
+.pubcard .confirm {
+  flex: 1;
+  justify-content: flex-start;
+}
+
 @media (max-width: 639px) {
   .pgrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
