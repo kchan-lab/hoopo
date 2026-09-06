@@ -10,9 +10,9 @@ Issue: [#25](https://github.com/kchan-lab/hoopo/issues/25) / Plan: [plan.md](pla
 
 ## 6a-1: 管理のお知らせ管理 — #86 / feat/announcements-admin(Opus サブエージェント)
 
-- [ ] `announcements-coach.ts`: list / create / update / delete、管理 API 4ルート
-- [ ] お知らせ管理画面(一覧+フォーム、公開/下書き、二段階確認の削除)、ナビに「お知らせ」
-- [ ] Integration(管理 API+RLS)/ E2E(作成→公開→編集→削除)
+- [x] `announcements-coach.ts`: list / create / update / delete、管理 API 4ルート
+- [x] お知らせ管理画面(一覧+フォーム、公開/下書き、二段階確認の削除)、ナビに「お知らせ」
+- [x] Integration(管理 API+RLS)/ E2E(作成→公開→編集→削除)
 - [ ] メインセッションで統合・検証 → PR(`Refs #25` + `Closes #86`)→ CI → merge commit
 
 ## 6a-2: 保護者のお知らせ一覧・詳細 — #87 / feat/announcements-portal(Opus サブエージェント)
