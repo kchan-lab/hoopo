@@ -24,7 +24,7 @@ const NAV: NavItem[] = [
   { key: "sched", label: "日程管理", icon: "cal", href: "/schedule" },
   { key: "fee", label: "月謝管理", icon: "yen", href: "/fees" },
   { key: "mem", label: "部員管理", icon: "team", href: "/members" },
-  { key: "news", label: "お知らせ", icon: "note", href: "/announcements" },
+  { key: "news", label: "お知らせ", icon: "megaphone", href: "/announcements" },
 ];
 
 function activeKey(pathname: string): string {
