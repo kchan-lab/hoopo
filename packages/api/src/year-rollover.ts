@@ -1,21 +1,22 @@
-import {
-  children,
-  withTeam,
-  type YearRolloverSnapshot,
-  yearRollovers,
-} from "@hoopo/db";
+import { children, type TeamTx, withTeam, yearRollovers } from "@hoopo/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import {
+  buildRestoreGroups,
+  buildSnapshot,
+  countGraduating,
+  GRADUATION_GRADE,
+  isUndoable,
+  partitionMembers,
+  type RolloverSnapshot,
+  undoDeadline,
+} from "./year-rollover-shared";
 
 // 年度更新(year-rollover/plan.md。REQUIREMENTS §5.2・§7)。
 // 全部員の学年+1、6年生は卒団アーカイブ(学年は据え置き)。破壊的操作なので実行ログを
 // year_rollovers に残し、実行前の学年・アーカイブ状態を snapshot から 24 時間以内に1回だけ戻せる。
-// 猶予中に手で直した学年・卒団は取り消しで上書きされる(設計判断1。UI に明記)
-
-/** 取り消し猶予(24時間・1回。設計判断2) */
-export const UNDO_GRACE_MS = 24 * 60 * 60 * 1000;
-
-/** 卒団する学年。学年は据え置きで archived=true にする(§7) */
-const GRADUATION_GRADE = 6;
+// 猶予中に手で直した学年・卒団は取り消しで上書きされる(設計判断1。UI に明記)。
+// 純ロジック(振り分け・snapshot・猶予判定)は year-rollover-shared.ts
+// (UNDO_GRACE_MS などの定数もそちら。@hoopo/api / @hoopo/api/year-rollover-shared から import する)
 
 export interface YearRolloverLatest {
   id: string;
@@ -23,6 +24,8 @@ export interface YearRolloverLatest {
   undoneAt: string | null;
   /** 取り消せるか(未取り消し かつ executed_at から 24 時間以内) */
   undoable: boolean;
+  /** 取り消せる期限(ISO)。取り消せないときは null */
+  undoDeadline: string | null;
   affected: number;
   archived: number;
 }
@@ -59,16 +62,15 @@ const targetCondition = and(
   eq(children.status, "active"),
 );
 
-function isUndoable(executedAt: Date, undoneAt: Date | null, now: Date) {
-  return (
-    undoneAt === null && executedAt.getTime() + UNDO_GRACE_MS > now.getTime()
-  );
-}
-
-/** snapshot は実行前の状態なので、卒団した人数 = 実行前に 6 年生だった人数 */
-function countArchived(snapshot: YearRolloverSnapshot): number {
-  return Object.values(snapshot).filter((s) => s.grade === GRADUATION_GRADE)
-    .length;
+/**
+ * チーム単位で年度更新を直列化する。
+ * PostgreSQL の既定は READ COMMITTED なので、コーチが2つのタブから同時に押すと
+ * 両方が「猶予中の実行なし」を読んでしまい、二重に学年が上がりうる(TOCTOU)。
+ * トランザクション終了で自動解放される advisory lock を最初に取り、
+ * 同じチームの実行・取り消しを待たせる(他チームは別のキーなので影響しない)
+ */
+async function lockTeam(tx: TeamTx, teamId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${teamId}))`);
 }
 
 /**
@@ -98,17 +100,26 @@ export async function getYearRolloverStatus(
       .from(children)
       .where(targetCondition);
 
+    let latestStatus: YearRolloverLatest | null = null;
+    if (latest) {
+      const undoable = isUndoable(latest.executedAt, latest.undoneAt, now);
+      latestStatus = {
+        id: latest.id,
+        executedAt: latest.executedAt.toISOString(),
+        undoneAt: latest.undoneAt?.toISOString() ?? null,
+        undoable,
+        // 期限は UI の文言(「取り消せるのは M/D HH:mm まで」)に使う。
+        // クライアントで猶予を再計算しないようサーバーで確定させる
+        undoDeadline: undoable
+          ? undoDeadline(latest.executedAt).toISOString()
+          : null,
+        affected: Object.keys(latest.snapshot).length,
+        archived: countGraduating(latest.snapshot),
+      };
+    }
+
     return {
-      latest: latest
-        ? {
-            id: latest.id,
-            executedAt: latest.executedAt.toISOString(),
-            undoneAt: latest.undoneAt?.toISOString() ?? null,
-            undoable: isUndoable(latest.executedAt, latest.undoneAt, now),
-            affected: Object.keys(latest.snapshot).length,
-            archived: countArchived(latest.snapshot),
-          }
-        : null,
+      latest: latestStatus,
       preview: {
         total: counts?.total ?? 0,
         willArchive: counts?.willArchive ?? 0,
@@ -126,6 +137,9 @@ export async function executeYearRollover(
   now: Date = new Date(),
 ): Promise<ExecuteYearRolloverResult> {
   return withTeam(teamId, async (tx): Promise<ExecuteYearRolloverResult> => {
+    // 最新の実行ログを読む前にチームを直列化する(同時押しによる二重実行を防ぐ)
+    await lockTeam(tx, teamId);
+
     const [latest] = await tx
       .select({
         executedAt: yearRollovers.executedAt,
@@ -149,16 +163,8 @@ export async function executeYearRollover(
     if (targets.length === 0) return { ok: false, reason: "no_members" };
 
     // 実行前の状態を丸ごと残す。取り消しはここからの復元だけで完結させる(設計判断1)
-    const snapshot: YearRolloverSnapshot = {};
-    for (const t of targets) {
-      snapshot[t.id] = { grade: t.grade, archived: t.archived };
-    }
-    const graduating = targets
-      .filter((t) => t.grade === GRADUATION_GRADE)
-      .map((t) => t.id);
-    const promoting = targets
-      .filter((t) => t.grade !== GRADUATION_GRADE)
-      .map((t) => t.id);
+    const snapshot: RolloverSnapshot = buildSnapshot(targets);
+    const { promoting, graduating } = partitionMembers(targets);
 
     // 6年生: 学年は据え置きで卒団アーカイブ(§7)
     if (graduating.length > 0) {
@@ -209,6 +215,9 @@ export async function undoYearRollover(
   now: Date = new Date(),
 ): Promise<UndoYearRolloverResult> {
   return withTeam(teamId, async (tx): Promise<UndoYearRolloverResult> => {
+    // 実行と同じロック。二重取り消し・実行との競合を待たせる
+    await lockTeam(tx, teamId);
+
     const [latest] = await tx
       .select({
         id: yearRollovers.id,
@@ -223,28 +232,21 @@ export async function undoYearRollover(
       return { ok: false, reason: "nothing_to_undo" };
     }
 
-    // 同じ(学年, アーカイブ状態)ごとにまとめて戻す(1件ずつの UPDATE を避ける)
-    const groups = new Map<string, { grade: number; ids: string[] }>();
-    for (const [childId, before] of Object.entries(latest.snapshot)) {
-      const key = `${before.grade}:${before.archived}`;
-      const group = groups.get(key);
-      if (group) group.ids.push(childId);
-      else groups.set(key, { grade: before.grade, ids: [childId] });
-    }
-
+    // 同じ学年ごとにまとめて戻す(1件ずつの UPDATE を避ける)。
+    // 実行の対象は archived=false の部員だけなので snapshot の archived は常に false。
+    // よって復元は archived=false / archived_at=null で固定でよい(卒団を取り消すと
+    // archived_at も実行前どおり未設定に戻る)
     let restored = 0;
-    for (const [key, group] of groups) {
-      const wasArchived = key.endsWith(":true");
+    for (const group of buildRestoreGroups(latest.snapshot)) {
       const rows = await tx
         .update(children)
         .set({
           grade: group.grade,
-          archived: wasArchived,
-          // 卒団を取り消すときは archived_at も消す(実行前は未設定だったため)
-          ...(wasArchived ? {} : { archivedAt: null }),
+          archived: false,
+          archivedAt: null,
           updatedAt: now,
         })
-        .where(inArray(children.id, group.ids))
+        .where(inArray(children.id, group.childIds))
         .returning({ id: children.id });
       restored += rows.length;
     }
