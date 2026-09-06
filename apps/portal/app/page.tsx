@@ -53,6 +53,9 @@ export default async function Home() {
               <span className="dot" aria-hidden="true" />
               家族から招待を受けた方
             </h2>
+            <p className="help">
+              すでにご家族がお子さんを登録している場合は、新しく登録せず招待コードで連携してください(二重登録を防ぐため)
+            </p>
             <InviteForm />
           </section>
           <div className="divider">または</div>

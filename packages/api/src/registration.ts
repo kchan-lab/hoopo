@@ -7,7 +7,7 @@ import {
   withInviteCodeRetry,
   withTeam,
 } from "@hoopo/db";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type {
   Gender,
   LinkInput,
@@ -188,6 +188,56 @@ export async function linkChildByInviteCode(
       child: { id: child.id, name: child.name },
       alreadyLinked: false,
     };
+  });
+}
+
+export type UnlinkResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "last_guardian" };
+
+// 自分の連携を解除する(family-links/plan.md 設計判断1・2)。
+// 物理削除にして、コーチによる無効化(revoked)と区別する(再連携は招待コードで可能)。
+// 最後の active な保護者は解除できない(子どもが誰からも見えなくなるのを防ぐ)
+export async function unlinkChild(
+  teamId: string,
+  guardianId: string,
+  childId: string,
+): Promise<UnlinkResult> {
+  return withTeam(teamId, async (tx) => {
+    // 父と母が同時に解除すると両方が「他に保護者がいる」と判定して孤児化しうる(TOCTOU)ため、
+    // 子ども単位のトランザクション内アドバイザリロックで直列化する(READ COMMITTED でも安全)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${childId}))`);
+    // 自分の active な連携だけが対象(他チーム・未連携・無効化済みは存在を漏らさず not_found)
+    const mine = await tx.query.guardianChildren.findFirst({
+      where: and(
+        eq(guardianChildren.guardianId, guardianId),
+        eq(guardianChildren.childId, childId),
+        eq(guardianChildren.status, "active"),
+      ),
+      columns: { childId: true },
+    });
+    if (!mine) return { ok: false, reason: "not_found" };
+    const others = await tx
+      .select({ guardianId: guardianChildren.guardianId })
+      .from(guardianChildren)
+      .where(
+        and(
+          eq(guardianChildren.childId, childId),
+          eq(guardianChildren.status, "active"),
+          ne(guardianChildren.guardianId, guardianId),
+        ),
+      )
+      .limit(1);
+    if (others.length === 0) return { ok: false, reason: "last_guardian" };
+    await tx
+      .delete(guardianChildren)
+      .where(
+        and(
+          eq(guardianChildren.guardianId, guardianId),
+          eq(guardianChildren.childId, childId),
+        ),
+      );
+    return { ok: true };
   });
 }
 
