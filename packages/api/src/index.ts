@@ -74,5 +74,6 @@ export {
   type SessionRole,
   verifySessionToken,
 } from "./session";
+export * from "./team";
 export * from "./tokyo-date";
 export { isUuid } from "./uuid";
