@@ -144,11 +144,16 @@ test("提出した参加予定が出欠マトリクスと欠席者管理に反�
 
   const rowA = page.locator(".amatrix tbody tr", { hasText: nameA });
   const rowB = page.locator(".amatrix tbody tr", { hasText: nameB });
-  // 列の並びは日付順なので、1列目=5日、2列目=12日(0列目は部員名)
-  await expect(rowA.locator("td").nth(1)).toHaveText("○");
-  await expect(rowA.locator("td").nth(2)).toHaveText("−");
-  await expect(rowB.locator("td").nth(1)).toContainText("△");
-  await expect(rowB.locator("td").nth(2)).toHaveText("−");
+  // 同じ月に他のテストの練習が混ざっても崩れないよう、列は見出しの日付から引く(0列目は部員名)
+  const headers = await head.locator("td").allTextContents();
+  const col1 = headers.indexOf(label(DAY1));
+  const col2 = headers.indexOf(label(DAY2));
+  expect(col1).toBeGreaterThan(0);
+  expect(col2).toBeGreaterThan(0);
+  await expect(rowA.locator("td").nth(col1)).toHaveText("○");
+  await expect(rowA.locator("td").nth(col2)).toHaveText("−");
+  await expect(rowB.locator("td").nth(col1)).toContainText("△");
+  await expect(rowB.locator("td").nth(col2)).toHaveText("−");
 
   // △ をタップするとコメントが読める(ネイティブの details。開くまでは隠れている)
   await expect(rowB.locator("details")).not.toHaveAttribute("open", "");
