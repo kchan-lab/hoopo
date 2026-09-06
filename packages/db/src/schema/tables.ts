@@ -5,6 +5,7 @@ import {
   date,
   foreignKey,
   index,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -368,4 +369,27 @@ export const lineups = pgTable(
     ),
     index("lineups_team_id_idx").on(t.teamId),
   ],
+);
+
+// 年度更新の実行ログ(REQUIREMENTS §5.2・§7)。破壊的操作は確認ダイアログ+実行ログ(CLAUDE.md)。
+// snapshot に更新前の学年・アーカイブ状態を持ち、取り消し猶予(24時間)内はそこから復元する
+export interface YearRolloverSnapshot {
+  [childId: string]: { grade: number; archived: boolean };
+}
+
+export const yearRollovers = pgTable(
+  "year_rollovers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    executedAt: timestamp("executed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+    snapshot: jsonb("snapshot").$type<YearRolloverSnapshot>().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("year_rollovers_team_executed_idx").on(t.teamId, t.executedAt)],
 );

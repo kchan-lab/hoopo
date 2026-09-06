@@ -14,6 +14,7 @@ import {
   practiceMenus,
   practices,
   teams,
+  yearRollovers,
 } from "./tables";
 
 // RLS ポリシー(plan.md 設計判断2c):
@@ -56,3 +57,5 @@ export const feeRecordsPolicy = teamPolicy("fee_records").link(feeRecords);
 export const announcementsPolicy =
   teamPolicy("announcements").link(announcements);
 export const lineupsPolicy = teamPolicy("lineups").link(lineups);
+export const yearRolloversPolicy =
+  teamPolicy("year_rollovers").link(yearRollovers);
