@@ -8,6 +8,12 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import {
+  ANNOUNCEMENT_LIMIT_DEFAULT,
+  getPublishedAnnouncement,
+  listPublishedAnnouncements,
+  parseAnnouncementLimit,
+} from "./announcements-guardian";
+import {
   getAttendanceSheet,
   getUnansweredSummary,
   submitAttendance,
@@ -261,6 +267,35 @@ export function createApi(deps: ApiDeps) {
     return c.json(
       await getFeeSheet(session.teamId, session.sub, year, monthOf(today)),
     );
+  });
+
+  // ---- お知らせ(announcements/plan.md 6a-2。ロジックは announcements-guardian.ts) ----
+
+  // 公開済みを新しい順に。ホームは limit=5、一覧ページは 50。/:id より先に定義する
+  app.get("/announcements", guardian, async (c) => {
+    const limit = parseAnnouncementLimit(
+      c.req.query("limit") ?? String(ANNOUNCEMENT_LIMIT_DEFAULT),
+    );
+    if (limit === null)
+      return c.json({ error: "limit は 1〜50 で指定してください" }, 400);
+    const session = c.get("session");
+    return c.json({
+      announcements: await listPublishedAnnouncements(session.teamId, limit),
+    });
+  });
+
+  // 詳細(本文)。下書き・他チームは存在を漏らさず 404
+  app.get("/announcements/:id", guardian, async (c) => {
+    const session = c.get("session");
+    if (!isUuid(c.req.param("id")))
+      return c.json({ error: "お知らせが見つかりません" }, 404);
+    const announcement = await getPublishedAnnouncement(
+      session.teamId,
+      c.req.param("id"),
+    );
+    return announcement
+      ? c.json({ announcement })
+      : c.json({ error: "お知らせが見つかりません" }, 404);
   });
 
   return app;
