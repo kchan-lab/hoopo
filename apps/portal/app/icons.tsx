@@ -40,6 +40,12 @@ const PATHS = {
       <path d="M8.5 10h7M8.5 13.5h7" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15z" />
+      <path d="M10 20.5a2 2 0 004 0" />
+    </>
+  ),
   chevl: <path d="M14.5 6l-6 6 6 6" />,
   chevr: <path d="M9.5 6l6 6-6 6" />,
 } as const;

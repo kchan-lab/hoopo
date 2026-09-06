@@ -773,3 +773,163 @@ textarea.inbox {
 .tb.center.on .orb {
   background: var(--accent);
 }
+
+/* ---- 参加予定の提出: 一括チップ・提出行(ワイヤー10) ---- */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--deep);
+  background: var(--tint);
+  border: 0;
+  border-radius: 99px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.chip.ghost {
+  background: transparent;
+  border: 1px solid var(--hair);
+  color: var(--sub);
+}
+.sub-list {
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.sbr {
+  padding: 10px 13px;
+}
+.sbr + .sbr {
+  border-top: 1px solid var(--hair);
+}
+.sbr .top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sbr .d {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sbr .p {
+  font-size: 10.5px;
+  color: var(--sub);
+}
+.sbr select {
+  margin-left: auto;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: #f1ede6;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  padding: 5px 6px;
+  max-width: 132px;
+}
+.sbr input {
+  margin-top: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 11.5px;
+  background: #fbf8f3;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  padding: 7px 9px;
+  color: var(--ink);
+}
+.sbr input::placeholder {
+  color: var(--faint);
+}
+.cta small {
+  font-weight: 500;
+  opacity: 0.7;
+  font-size: 11px;
+  margin-left: 6px;
+}
+/* お子さん切替(2人以上のときだけ)。seg2 をリンクで組む */
+.seg2.links a {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+  border-radius: 9px;
+}
+.seg2.links a[aria-current="true"] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- 提出カレンダー(4状態。DESIGN §1.3 提出ビュー。ワイヤー11) ---- */
+.cell button {
+  display: flex;
+  min-width: 44px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.cell.s-none i {
+  border: 1.5px solid var(--accent);
+  color: var(--deep);
+}
+.cell.s-full i {
+  background: var(--accent);
+  color: #fff;
+}
+.cell.s-part i {
+  background: var(--tint);
+  border: 1.5px solid var(--accent);
+  color: var(--deep);
+}
+/* 色だけに頼らないよう、不参加は打消線も併せる(DESIGN §3) */
+.cell.s-abs i {
+  background: #e7e1d8;
+  color: #9a8f82;
+  text-decoration: line-through;
+}
+.legend .sw.full {
+  background: var(--accent);
+}
+.legend .sw.part {
+  background: var(--tint);
+  border: 1.5px solid var(--accent);
+}
+.legend .sw.abs {
+  background: #e7e1d8;
+}
+.legend .sw.none {
+  border: 1.5px solid var(--accent);
+}
+
+/* ---- ホームの未提出アラート(ワイヤー4) ---- */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--tint);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--deep);
+  font-weight: 500;
+}
+.notice .go {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}

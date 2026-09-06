@@ -2,7 +2,9 @@ import {
   formatDateLabel,
   formatTimeShort,
   getNextPractice,
+  getUnansweredSummary,
   listChildrenForGuardian,
+  monthOf,
   todayInTokyo,
 } from "@hoopo/api";
 import Link from "next/link";
@@ -61,7 +63,15 @@ export default async function Home() {
   }
 
   const first = children[0];
-  const next = await getNextPractice(session.teamId, todayInTokyo());
+  const today = todayInTokyo();
+  const month = monthOf(today);
+  const next = await getNextPractice(session.teamId, today);
+  // 今月に未回答があれば提出へ誘導する(ワイヤー4。件数は練習 × お子さん)
+  const summary = await getUnansweredSummary(
+    session.teamId,
+    session.sub,
+    month,
+  );
   return (
     <>
       <header className="sc-head">
@@ -98,6 +108,13 @@ export default async function Home() {
             <span className="help">予定はまだ登録されていません</span>
           </div>
         )}
+        {summary.unanswered > 0 && (
+          <Link href="/attendance" className="notice">
+            <Icon name="bell" />
+            {Number(month.slice(5))}月分の参加予定が未提出です
+            <span className="go">提出へ →</span>
+          </Link>
+        )}
         <div className="label">お子さん</div>
         <ul
           className="news"
@@ -121,9 +138,7 @@ export default async function Home() {
           家族の設定
           <small>招待コードの共有・連携済みの家族</small>
         </Link>
-        <p className="sync">
-          練習日程・出欠・月謝は順次利用できるようになります
-        </p>
+        <p className="sync">月謝・チームは順次利用できるようになります</p>
         <div className="powered">
           powered by <b>hoopo</b>
         </div>
