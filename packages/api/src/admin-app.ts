@@ -21,6 +21,7 @@ import {
   parsePracticeInput,
   updatePractice,
 } from "./practices";
+import { getPublishStatus, publishSchedule } from "./schedule-publish";
 import {
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,
@@ -184,6 +185,36 @@ export function createAdminApi(deps: AdminApiDeps) {
     return done
       ? c.body(null, 204)
       : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // ---- 予定表の発行(schedule-publish/plan.md 6b-1。ロジックは schedule-publish.ts) ----
+
+  // 月の発行状況(?month=YYYY-MM。省略時は Tokyo の今月)
+  app.get("/schedule/status", coach, async (c) => {
+    const session = c.get("session");
+    const month = parseMonth(c.req.query("month") ?? monthOf(todayInTokyo()));
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    return c.json(await getPublishStatus(session.teamId, month));
+  });
+
+  // 発行(確認は UI 側の二段階確認)。再発行も同じルートで上書きする(plan.md 設計判断1)。
+  // 実行ログは published_at そのもの(設計判断5)。LINE 送信と通数は 6c
+  app.post("/schedule/publish", coach, async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const month = parseMonth(
+      body && typeof body.month === "string" ? body.month : null,
+    );
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    const session = c.get("session");
+    const result = await publishSchedule(session.teamId, month);
+    if (!result.ok) return c.json({ error: "この月には練習がありません" }, 400);
+    return c.json({
+      month: result.month,
+      published: result.published,
+      publishedAt: result.publishedAt,
+    });
   });
 
   // ---- 出欠管理・欠席者管理(attendance/plan.md 4b。ロジックは attendances-coach.ts) ----
