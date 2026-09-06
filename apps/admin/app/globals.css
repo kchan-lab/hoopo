@@ -347,11 +347,43 @@ input {
   text-align: left;
 }
 
-/* ---- ホーム(1b はプレースホルダのみ) ---- */
-.amain-wrap {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 1.5em 1.2em;
+/* ---- ダッシュボード(ワイヤーフレーム PC-2 / SP-3) ---- */
+/* 3カードを並べる格子。幅が足りなければ自動で折り返す(モバイルは1〜2列) */
+.agrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.7em;
+  margin-bottom: 0.7em;
+}
+
+/* 格子の中では .acard + .acard の縦マージンを打ち消し、行の高さをそろえる */
+.agrid .acard + .acard {
+  margin-top: 0;
+}
+
+/* カードから該当画面への遷移リンク。タップ領域は 44px を確保する(DESIGN §3) */
+.acard .go {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--asub);
+}
+
+/* 次回参加人数の内訳(○△×−)。桁がそろうよう等幅数字にする */
+.acard .brk {
+  margin-top: 0.35em;
+  font-size: 0.85em;
+  color: var(--asub);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ログアウトは数字の邪魔をしないよう最下部・右寄せ */
+.dfoot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.2em;
 }
 
 /* ---- 画面骨格: PC=左サイドバー / モバイル=ドロワー(§5.1、ワイヤーフレーム .aapp/.aside/.ai/.amain) ---- */

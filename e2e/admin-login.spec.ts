@@ -19,7 +19,7 @@ test("メール+パスワードでログインし、ログアウトできる", a
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
   // 管理トップへ遷移し、セッションが確立される
-  await expect(page.locator("main")).toContainText("ログインしました", {
+  await expect(page.locator("main")).toContainText("ダッシュボード", {
     timeout: 15000,
   });
   const session = (await page.context().cookies()).find(
@@ -29,7 +29,7 @@ test("メール+パスワードでログインし、ログアウトできる", a
 
   // リロードしてもログイン状態が維持される
   await page.reload();
-  await expect(page.locator("main")).toContainText("ログインしました");
+  await expect(page.locator("main")).toContainText("ダッシュボード");
 
   // ログアウトでログイン画面へ戻り、以後トップは開けない
   await page.getByRole("button", { name: "ログアウト" }).click();

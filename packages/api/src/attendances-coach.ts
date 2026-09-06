@@ -40,6 +40,8 @@ export interface AbsenteeEntry {
 
 export interface Absentees {
   practice: Practice;
+  /** 同じトランザクションで数えた有効な部員数(参加 = memberTotal − absent − partial − unanswered) */
+  memberTotal: number;
   absent: AbsenteeEntry[];
   partial: AbsenteeEntry[];
   unanswered: AbsenteeEntry[];
@@ -151,6 +153,12 @@ export async function getAbsentees(
       else if (answer.status === "partial")
         partial.push({ child, comment: answer.comment });
     }
-    return { practice, absent, partial, unanswered };
+    return {
+      practice,
+      memberTotal: members.length,
+      absent,
+      partial,
+      unanswered,
+    };
   });
 }
