@@ -19,8 +19,9 @@ Issue: [#14](https://github.com/kchan-lab/hoopo/issues/14) / Plan: [plan.md](pla
 
 ## 4b: 管理の出欠・欠席者 — #77 / feat/attendance-admin(Opus サブエージェント)
 
-- [ ] `attendances-coach.ts`: getAttendanceMatrix / getAbsentees
-- [ ] 管理 API: `GET /attendance-matrix` / `GET /absentees`
-- [ ] 出欠管理画面(マトリクス・△のコメント)、欠席者管理画面(日付ピル・3グループ)、ナビ有効化
-- [ ] Integration(管理 API+RLS)/ E2E(API で提出→マトリクス・欠席者に反映)
+- [x] `attendances-coach.ts`: getAttendanceMatrix / getAbsentees
+- [x] 管理 API: `GET /attendance-matrix` / `GET /absentees`
+- [x] 出欠管理画面(マトリクス・△のコメント)、欠席者管理画面(日付ピル・3グループ)、ナビ有効化
+- [x] Integration(管理 API+RLS)/ E2E(API で提出→マトリクス・欠席者に反映)を作成
+      (E2E は 4a の `PUT /api/attendance` に依存するため、実行はメインセッションで統合後)
 - [ ] メインセッションで統合・検証 → PR(`Closes #14` + `Closes #77`)→ CI → merge commit
