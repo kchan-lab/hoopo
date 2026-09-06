@@ -108,6 +108,7 @@ interface StatusBody {
     executedAt: string;
     undoneAt: string | null;
     undoable: boolean;
+    undoDeadline: string | null;
     affected: number;
     archived: number;
   } | null;
@@ -242,6 +243,11 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
       affected: 3,
       archived: 1,
     });
+    // 取り消せる間は期限(実行時刻 + 24時間)を返す。UI はこれをそのまま表示する
+    const executedAt = new Date(status.latest?.executedAt ?? "").getTime();
+    expect(
+      new Date(status.latest?.undoDeadline ?? "").getTime() - executedAt,
+    ).toBe(24 * 60 * 60 * 1000);
     expect(status.preview).toEqual({ total: 2, willArchive: 1 });
   });
 
@@ -295,7 +301,12 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
     const status = (await (
       await coach.get("/members/year-rollover")
     ).json()) as StatusBody;
-    expect(status.latest).toMatchObject({ undoneAt: null, undoable: false });
+    expect(status.latest).toMatchObject({
+      undoneAt: null,
+      undoable: false,
+      // 取り消せないときは期限も返さない
+      undoDeadline: null,
+    });
 
     expect((await coach.post("/members/year-rollover/undo")).status).toBe(409);
     // 学年は戻らない

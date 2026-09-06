@@ -7,10 +7,8 @@ import { useState } from "react";
 
 // 年度更新(year-rollover/plan.md。REQUIREMENTS §5.2)。
 // 破壊的操作なので行内の二段階確認にする(CLAUDE.md 開発ルール。ネイティブ confirm() は使わない)。
-// 実行後は猶予(24時間)内だけ「取り消す」を出し、猶予中は再実行させない(設計判断2・3)
-
-/** 取り消し猶予(24時間。API の UNDO_GRACE_MS と同じ) */
-const UNDO_GRACE_MS = 24 * 60 * 60 * 1000;
+// 実行後は猶予(24時間)内だけ「取り消す」を出し、猶予中は再実行させない(設計判断2・3)。
+// 猶予の期限は API の latest.undoDeadline をそのまま表示する(猶予をクライアントで再計算しない)
 
 /** "9/6 15:04"(Asia/Tokyo 固定。CLAUDE.md 開発ルール) */
 function formatAt(iso: string): string {
@@ -36,6 +34,7 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
 
   const { latest, preview } = status;
   const undoable = latest?.undoable === true;
+  const deadline = latest?.undoDeadline ?? null;
 
   async function run(path: string, failure: string) {
     setBusy(true);
@@ -110,11 +109,11 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
       {latest !== null && undoable && (
         <div className="acard yrcard">
           <span className="yrmsg">
-            {`年度更新を実行しました(${formatAt(latest.executedAt)})。取り消せるのは ${formatAt(
-              new Date(
-                new Date(latest.executedAt).getTime() + UNDO_GRACE_MS,
-              ).toISOString(),
-            )} まで(猶予中に手で直した学年・卒団は取り消しで上書きされます)`}
+            {`年度更新を実行しました(${formatAt(latest.executedAt)})。${
+              deadline === null
+                ? "取り消せます"
+                : `取り消せるのは ${formatAt(deadline)} まで`
+            }(猶予中に手で直した学年・卒団は取り消しで上書きされます)`}
           </span>
           {mode === "undo" ? (
             <fieldset className="confirm">
