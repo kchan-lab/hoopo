@@ -46,12 +46,16 @@ async function insertChild(
   name: string,
   grade: number,
   code: string,
-  options: { archived?: boolean; status?: "active" | "revoked" } = {},
+  options: {
+    archived?: boolean;
+    status?: "active" | "revoked";
+    nicknameKana?: string | null;
+  } = {},
 ): Promise<void> {
   await owner`
     INSERT INTO children (team_id, name, nickname_kana, grade, gender, invite_code, status, archived)
-    VALUES (${team}, ${name}, ${"はな"}, ${grade}, 'female', ${code},
-            ${options.status ?? "active"}, ${options.archived ?? false})`;
+    VALUES (${team}, ${name}, ${options.nicknameKana === undefined ? "はな" : options.nicknameKana},
+            ${grade}, 'female', ${code}, ${options.status ?? "active"}, ${options.archived ?? false})`;
 }
 
 type MembersBody = {
@@ -79,7 +83,10 @@ beforeEach(async () => {
   // 学年降順→名前。同学年は「一郎 < 二郎」で名前順を検証する
   await insertChild(teamId, "粉浜 二郎", 4, "TEAM000002");
   await insertChild(teamId, "粉浜 太郎", 6, "TEAM000001");
-  await insertChild(teamId, "粉浜 一郎", 4, "TEAM000003");
+  // 呼び名なし(null)の部員も一覧に出る
+  await insertChild(teamId, "粉浜 一郎", 4, "TEAM000003", {
+    nicknameKana: null,
+  });
   // 卒団アーカイブ済み・無効化済みは名簿に出さない
   await insertChild(teamId, "粉浜 卒郎", 6, "TEAM000004", { archived: true });
   await insertChild(teamId, "粉浜 無郎", 5, "TEAM000005", {
@@ -110,6 +117,9 @@ describe("保護者のチーム名簿 API", () => {
       ["粉浜 二郎", 4],
     ]);
     expect(body.members[0]?.nicknameKana).toBe("はな");
+    expect(
+      body.members.find((m) => m.name === "粉浜 一郎")?.nicknameKana,
+    ).toBeNull();
   });
 
   it("他チームのセッションでは自チームの部員だけが見える", async () => {
