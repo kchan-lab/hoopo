@@ -3,6 +3,9 @@ export { type ApiDeps, createApi } from "./app";
 export * from "./attendances-coach";
 export * from "./attendances-guardian";
 export * from "./attendances-shared";
+export * from "./fees-coach";
+export * from "./fees-guardian";
+export * from "./fees-shared";
 export {
   type AuthEnv,
   principalExists,
