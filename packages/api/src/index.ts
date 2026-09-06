@@ -59,6 +59,8 @@ export {
   type RegistrationInput,
   type Relation,
   registerChildren,
+  type UnlinkResult,
+  unlinkChild,
   WEEKDAY_LABELS,
 } from "./registration";
 export * from "./schedule-image";
