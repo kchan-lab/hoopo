@@ -169,6 +169,20 @@ a {
   color: var(--faint);
   flex: none;
 }
+/* お知らせの行(6a): タップで詳細へ。長いタイトルは1行で省略する */
+.news .t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 一覧ページへの導線(「すべて見る →」) */
+.more {
+  align-self: flex-end;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--deep);
+}
 .pill {
   font-size: 10.5px;
   font-weight: 600;
@@ -453,6 +467,22 @@ textarea.inbox {
   font-weight: 700;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- お知らせの詳細(6a) ---- */
+.article .ttl {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 2px 0 0;
+}
+/* 本文はプレーンテキスト。改行だけ反映する(plan.md 設計判断4) */
+.article .body {
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .kv {
   display: flex;
