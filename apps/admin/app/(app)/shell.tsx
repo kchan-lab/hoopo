@@ -22,7 +22,7 @@ const NAV: NavItem[] = [
   { key: "abs", label: "欠席者管理", icon: "note", href: "/absentees" },
   { key: "cert", label: "認定管理", icon: "lock", href: "/registrations" },
   { key: "sched", label: "日程管理", icon: "cal", href: "/schedule" },
-  { key: "fee", label: "月謝管理", icon: "yen" },
+  { key: "fee", label: "月謝管理", icon: "yen", href: "/fees" },
   { key: "mem", label: "部員管理", icon: "team", href: "/members" },
 ];
 

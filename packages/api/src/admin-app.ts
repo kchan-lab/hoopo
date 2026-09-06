@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { getAbsentees, getAttendanceMatrix } from "./attendances-coach";
+import { getFeeGrid, setFeeStatus } from "./fees-coach";
+import { parseFeeToggle, parseYear } from "./fees-shared";
 import { type AuthEnv, requireCoach } from "./guard";
 import {
   listMembers,
@@ -205,6 +207,33 @@ export function createAdminApi(deps: AdminApiDeps) {
     const result = await getAbsentees(session.teamId, practiceId);
     return result
       ? c.json(result)
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // ---- 月謝管理(fees/plan.md 5b。ロジックは fees-coach.ts) ----
+
+  // 部員×1〜12月の封筒グリッド(?year=YYYY。省略時は Tokyo の今年)
+  app.get("/fee-grid", coach, async (c) => {
+    const session = c.get("session");
+    const today = todayInTokyo();
+    const year = parseYear(c.req.query("year") ?? today.slice(0, 4));
+    if (year === null)
+      return c.json({ error: "year は西暦4桁で指定してください" }, 400);
+    return c.json(await getFeeGrid(session.teamId, year, monthOf(today)));
+  });
+
+  // セル1つの 済⇄未。現金の受領時に押す操作なので確認は挟まない(plan.md 設計判断3)
+  app.put("/fee-records", coach, async (c) => {
+    const parsed = parseFeeToggle(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const result = await setFeeStatus(
+      session.teamId,
+      parsed.value,
+      monthOf(todayInTokyo()),
+    );
+    return result.ok
+      ? c.json({ month: result.month })
       : c.json({ error: "対象が見つかりません" }, 404);
   });
 
