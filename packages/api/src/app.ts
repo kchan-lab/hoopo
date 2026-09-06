@@ -41,6 +41,7 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
 } from "./session";
+import { listTeamMembers } from "./team";
 import { monthOf, todayInTokyo } from "./tokyo-date";
 import { isUuid } from "./uuid";
 
@@ -296,6 +297,14 @@ export function createApi(deps: ApiDeps) {
     return announcement
       ? c.json({ announcement })
       : c.json({ error: "お知らせが見つかりません" }, 404);
+  });
+
+  // ---- チーム名簿(team-roster/plan.md 7a。ロジックは team.ts) ----
+
+  // 全メンバー一覧。日程と同じくチームの公開情報なので子ども未連携でも閲覧可(設計判断3)
+  app.get("/team/members", guardian, async (c) => {
+    const session = c.get("session");
+    return c.json({ members: await listTeamMembers(session.teamId) });
   });
 
   return app;
