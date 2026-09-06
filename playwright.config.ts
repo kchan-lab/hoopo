@@ -23,10 +23,19 @@ export default defineConfig({
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: /admin-year-rollover/,
     },
     {
       name: "mobile",
       use: { ...devices["iPhone 15"] },
+      testIgnore: /admin-year-rollover/,
+    },
+    // 年度更新は共有 DB の全部員の学年を動かすため、他のスペックがすべて終わってから単独で回す
+    {
+      name: "rollover",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /admin-year-rollover/,
+      dependencies: ["desktop", "mobile"],
     },
   ],
 });
