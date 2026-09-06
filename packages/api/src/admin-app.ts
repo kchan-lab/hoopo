@@ -10,6 +10,7 @@ import {
 } from "./announcements-coach";
 import { parseAnnouncementInput } from "./announcements-shared";
 import { getAbsentees, getAttendanceMatrix } from "./attendances-coach";
+import { getDashboard } from "./dashboard";
 import { getFeeGrid, setFeeStatus } from "./fees-coach";
 import { parseFeeToggle, parseYear } from "./fees-shared";
 import { type AuthEnv, requireCoach } from "./guard";
@@ -246,6 +247,14 @@ export function createAdminApi(deps: AdminApiDeps) {
     return result
       ? c.json(result)
       : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // ---- ダッシュボード(admin-dashboard/plan.md 7c。ロジックは dashboard.ts) ----
+
+  // 提出率・次回参加人数・月謝未提出・未提出の部員を Tokyo の今日基準でまとめて返す
+  app.get("/dashboard", coach, async (c) => {
+    const session = c.get("session");
+    return c.json(await getDashboard(session.teamId, todayInTokyo()));
   });
 
   // ---- 月謝管理(fees/plan.md 5b。ロジックは fees-coach.ts) ----
