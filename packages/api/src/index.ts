@@ -60,6 +60,9 @@ export {
   registerChildren,
   WEEKDAY_LABELS,
 } from "./registration";
+export * from "./schedule-image";
+export * from "./schedule-publish";
+export * from "./schedule-shared";
 export {
   ADMIN_SESSION_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,

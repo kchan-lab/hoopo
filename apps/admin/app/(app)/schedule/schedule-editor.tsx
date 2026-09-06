@@ -1,7 +1,7 @@
 "use client";
 
-import type { Practice } from "@hoopo/api";
-import { addMonths, formatDateLabel } from "@hoopo/api/tokyo-date";
+import type { Practice, PublishStatus } from "@hoopo/api";
+import { addMonths, formatDateLabel, TOKYO_TZ } from "@hoopo/api/tokyo-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +10,26 @@ import { useState } from "react";
 // - 行は「表示」と「編集」を切り替え、保存は行単位(POST / PUT)
 // - 練習メニューは編集フォームに同梱し、保存時に全置換(plan.md 設計判断2)
 // - 削除は行内の二段階確認(破壊的操作。#67 と同じ流儀)
+// - 発行(schedule-publish/plan.md 6b-1)も二段階確認。LINE 送信と通数は 6c(#27)まで無効
+
+// 管理画面から保護者アプリの画像を開くための URL(ホストが分かれるため env で結ぶ。設計判断6)。
+// NEXT_PUBLIC_ はクライアントコンポーネントにビルド時へ埋め込まれる
+const PORTAL_URL =
+  process.env.NEXT_PUBLIC_PORTAL_URL?.replace(/\/+$/, "") ?? "";
+
+/** ISO → "9/6 10:00"(Asia/Tokyo 固定。CLAUDE.md 開発ルール) */
+function formatPublishedAt(iso: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TOKYO_TZ,
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("month")}/${get("day")} ${get("hour")}:${get("minute")}`;
+}
 
 interface MenuDraft {
   key: number;
@@ -48,10 +68,12 @@ export function ScheduleEditor({
   month,
   monthLabel,
   initialPractices,
+  publishStatus,
 }: {
   month: string;
   monthLabel: string;
   initialPractices: Practice[];
+  publishStatus: PublishStatus;
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -59,6 +81,34 @@ export function ScheduleEditor({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmPublish, setConfirmPublish] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  async function publish() {
+    setBusy(true);
+    setPublishError(null);
+    try {
+      const res = await fetch("/api/schedule/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month }),
+      });
+      if (!res.ok) {
+        const b = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setPublishError(b?.error ?? "発行できませんでした");
+        setBusy(false);
+        return;
+      }
+      setConfirmPublish(false);
+      setBusy(false);
+      router.refresh();
+    } catch {
+      setPublishError("発行できませんでした");
+      setBusy(false);
+    }
+  }
 
   function startEdit(p: Practice | null) {
     setEditingId(p?.id ?? "new");
@@ -132,6 +182,15 @@ export function ScheduleEditor({
       setBusy(false);
     }
   }
+
+  const publishedAt = publishStatus.publishedAt;
+  // 発行後に追加した練習の数(published_at が付いていない残り)
+  const unpublished = publishStatus.total - publishStatus.published;
+  // 再発行のたびにキャッシュを避けたいので ?v=<publishedAt> を付ける(plan.md 設計判断4)
+  const previewUrl =
+    publishedAt !== null && PORTAL_URL !== ""
+      ? `${PORTAL_URL}/api/schedule/${month}.png?v=${encodeURIComponent(publishedAt)}`
+      : null;
 
   const update = (patch: Partial<Draft>) =>
     setDraft((d) => (d ? { ...d, ...patch } : d));
@@ -389,15 +448,98 @@ export function ScheduleEditor({
         )}
       </div>
 
-      <div className="pfoot">
-        <button
-          type="button"
-          className="abtn fill"
-          disabled
-          title="予定表の発行は #26 / #27 で実装"
-        >
-          予定表を発行してLINEへ送信(準備中)
-        </button>
+      <div className="acard pubcard">
+        <div className="k">予定表の発行</div>
+        <div className="pubstat">
+          {publishedAt === null ? (
+            <span className="pill">未発行</span>
+          ) : (
+            <span className="pill">
+              {`発行済み ${formatPublishedAt(publishedAt)}(Asia/Tokyo)`}
+              {unpublished > 0 &&
+                `(${publishStatus.published}/${publishStatus.total} 件)`}
+            </span>
+          )}
+          {publishedAt !== null && unpublished > 0 && (
+            <span className="pubwarn">{`未発行の練習が ${unpublished} 件あります`}</span>
+          )}
+        </div>
+        {publishError !== null && (
+          <p className="lgerr" role="alert">
+            {publishError}
+          </p>
+        )}
+        <div className="pfoot">
+          {confirmPublish ? (
+            <fieldset className="confirm">
+              <legend className="sr-only">発行の確認</legend>
+              <span className="q">
+                {`${monthLabel}の予定表を発行します。よろしいですか?(LINE への送信は 6c で有効化)`}
+              </span>
+              <button
+                type="button"
+                className="abtn"
+                onClick={() => setConfirmPublish(false)}
+                disabled={busy}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                className="abtn fill"
+                onClick={publish}
+                disabled={busy}
+              >
+                発行する
+              </button>
+            </fieldset>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="abtn fill"
+                onClick={() => {
+                  setPublishError(null);
+                  setConfirmPublish(true);
+                }}
+                disabled={busy || publishStatus.total === 0}
+                title={
+                  publishStatus.total === 0
+                    ? "この月には練習がありません"
+                    : undefined
+                }
+              >
+                {publishedAt === null
+                  ? "予定表を発行する"
+                  : "予定表を再発行する"}
+              </button>
+              <button
+                type="button"
+                className="abtn"
+                disabled
+                title="LINE 送信と通数カウンターは #27(6c)で実装"
+              >
+                LINE へ送信(6c で有効化)
+              </button>
+              {publishedAt !== null &&
+                (previewUrl === null ? (
+                  <span className="anote" style={{ margin: 0 }}>
+                    予定表画像のリンクは NEXT_PUBLIC_PORTAL_URL
+                    未設定のため出せません
+                  </span>
+                ) : (
+                  <a
+                    className="abtn"
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    予定表画像を確認する
+                  </a>
+                ))}
+            </>
+          )}
+        </div>
       </div>
       <div className="acard">
         <div className="k">今月のLINE通数</div>
