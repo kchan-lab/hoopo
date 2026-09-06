@@ -1,9 +1,12 @@
 import {
   formatDateLabel,
+  formatShortDate,
   formatTimeShort,
   getNextPractice,
   getUnansweredSummary,
+  HOME_ANNOUNCEMENT_LIMIT,
   listChildrenForGuardian,
+  listPublishedAnnouncements,
   monthOf,
   todayInTokyo,
 } from "@hoopo/api";
@@ -65,11 +68,12 @@ export default async function Home() {
   const first = children[0];
   const today = todayInTokyo();
   const month = monthOf(today);
-  // 次回の練習と今月の未回答件数は独立したクエリなので並列に取る
+  // 次回の練習・今月の未回答件数・お知らせは独立したクエリなので並列に取る
   // (未回答があれば提出へ誘導する。ワイヤー4。件数は練習 × お子さん)
-  const [next, summary] = await Promise.all([
+  const [next, summary, announcements] = await Promise.all([
     getNextPractice(session.teamId, today),
     getUnansweredSummary(session.teamId, session.sub, month),
+    listPublishedAnnouncements(session.teamId, HOME_ANNOUNCEMENT_LIMIT),
   ]);
   return (
     <>
@@ -137,6 +141,30 @@ export default async function Home() {
           家族の設定
           <small>招待コードの共有・連携済みの家族</small>
         </Link>
+        <div className="label">お知らせ</div>
+        {announcements.length === 0 ? (
+          <p className="help">お知らせはまだありません</p>
+        ) : (
+          <>
+            <div className="news">
+              {announcements.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/announcements/${a.id}`}
+                  className="row"
+                >
+                  <span className="t">{a.title}</span>
+                  <time dateTime={a.publishedAt}>
+                    {formatShortDate(a.publishedAt)}
+                  </time>
+                </Link>
+              ))}
+            </div>
+            <Link href="/announcements" className="more">
+              すべて見る →
+            </Link>
+          </>
+        )}
         <p className="sync">チームは順次利用できるようになります</p>
         <div className="powered">
           powered by <b>hoopo</b>
