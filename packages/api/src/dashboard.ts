@@ -68,8 +68,7 @@ export async function getDashboard(
   ]);
 
   // 提出率: 未回答は行を持たないので、null でないセルを数える(attendances-coach と同じ規約)
-  const memberCount = matrix.rows.length;
-  const total = memberCount * matrix.practices.length;
+  const total = matrix.rows.length * matrix.practices.length;
   let answered = 0;
   const unansweredMembers: DashboardUnansweredMember[] = [];
   for (const row of matrix.rows) {
@@ -89,8 +88,8 @@ export async function getDashboard(
   }
   const rate = total === 0 ? 0 : Math.round((answered / total) * 100);
 
-  // 次回参加人数: 欠席者管理と同じ内訳を使い、参加(full)は差分で求める
-  // (次回練習が翌月でも部員数は月に依存しないので matrix の行数をそのまま使える)
+  // 次回参加人数: 欠席者管理と同じ内訳を使い、参加(full)は同じトランザクションで数えた
+  // 部員数(memberTotal)からの差分で求める(別クエリの部員数と食い違わない)
   let nextPractice: DashboardNextPractice | null = null;
   if (practice) {
     const detail = await getAbsentees(teamId, practice.id);
@@ -100,7 +99,7 @@ export async function getDashboard(
       const unanswered = detail.unanswered.length;
       nextPractice = {
         practice: detail.practice,
-        full: Math.max(0, memberCount - absent - partial - unanswered),
+        full: Math.max(0, detail.memberTotal - absent - partial - unanswered),
         partial,
         absent,
         unanswered,
