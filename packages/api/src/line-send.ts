@@ -12,9 +12,11 @@ import {
   withTeam,
 } from "@hoopo/db";
 import type { LineMessagingClient } from "@hoopo/line";
-import { desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { getAbsentees } from "./attendances-coach";
 import {
   buildAnnouncementMessages,
+  buildReminderMessages,
   buildScheduleMessages,
   canSend,
   computeLineUsage,
@@ -24,8 +26,15 @@ import {
   type OutgoingMessage,
   trimTrailingSlash,
 } from "./line-shared";
+import { listPracticesByMonth } from "./practices";
 import { getPublishStatus } from "./schedule-publish";
-import { formatMonthLabel, monthOf, todayInTokyo } from "./tokyo-date";
+import {
+  addDays,
+  formatDateLabel,
+  formatMonthLabel,
+  monthOf,
+  todayInTokyo,
+} from "./tokyo-date";
 
 /** 通数メーター(GET /line/usage)の応答。memberCount は groupLinked のときだけ取りに行く */
 export interface LineUsageSummary extends LineUsage {
@@ -49,8 +58,12 @@ export type LineSendFailureReason =
   | "not_published"
   /** お知らせが下書き、または通知なし */
   | "not_sendable"
-  /** お知らせが見つからない */
+  /** お知らせ・練習が見つからない */
   | "not_found"
+  /** 終了した練習にはリマインドを送れない(attendance-reminder/plan.md「API 契約」) */
+  | "past_practice"
+  /** 未回答の部員が 0 人(通数の無駄打ちをしない。同 plan.md 設計判断3) */
+  | "no_target"
   /** teams.line_group_id が未設定(Bot がグループに未招待) */
   | "no_group"
   /** 今月の残り通数が足りない(送信前に止める。plan.md 設計判断3) */
@@ -372,4 +385,220 @@ export async function sendAnnouncementToLine(
     },
     deps,
   );
+}
+
+// ---- 出欠リマインド(#20。attendance-reminder/plan.md) ----
+
+/** Tokyo のその日の 00:00 の瞬間。「当日(JST)に送ったか」の判定に使う */
+function dayStartInstant(date: string): Date {
+  return new Date(`${date}T00:00:00+09:00`);
+}
+
+/** 未回答の部員がいる日付の材料を1つに束ねる(1 日 = 1 行 = ref 1 件) */
+interface ReminderTarget {
+  heldOn: string;
+  /** その日のいずれかの練習に未回答の部員の実数(同じ子を二重に数えない) */
+  unanswered: number;
+}
+
+/**
+ * 出欠リマインドの手動送信(§6 必須通知2)。
+ * 未来(今日以降)の練習で、未回答が 1 人以上のときだけ送る。
+ * 個人名は載せない(グループ宛て 1 通。絶対原則3・4)
+ */
+export async function sendAttendanceReminderToLine(
+  teamId: string,
+  practiceId: string,
+  deps: LineSendDeps,
+): Promise<LineSendResult> {
+  const now = deps.now ?? new Date();
+  const data = await getAbsentees(teamId, practiceId);
+  if (!data) {
+    return {
+      ok: false,
+      reason: "not_found",
+      error: "対象が見つかりません",
+      message: null,
+    };
+  }
+  // 当日はまだ送れる(朝の練習前に押せる)。終了した練習だけを弾く
+  if (data.practice.heldOn < todayInTokyo(now)) {
+    return {
+      ok: false,
+      reason: "past_practice",
+      error: "終了した練習には送れません",
+      message: null,
+    };
+  }
+  if (data.unanswered.length === 0) {
+    return {
+      ok: false,
+      reason: "no_target",
+      error: "未回答の部員はいません",
+      message: null,
+    };
+  }
+  return sendToGroup(
+    teamId,
+    {
+      kind: "reminder",
+      // ref は held_on(YYYY-MM-DD)。同じ日への再送・ジョブとの重複判定に使う
+      ref: data.practice.heldOn,
+      messages: buildReminderMessages({
+        dates: [
+          {
+            label: formatDateLabel(data.practice.heldOn),
+            unanswered: data.unanswered.length,
+          },
+        ],
+        liffUrl: deps.liffUrl,
+      }),
+    },
+    deps,
+  );
+}
+
+/** 定期ジョブの結果(plan.md「API 契約」)。skipped が付くときは push もログも起きていない */
+export interface AttendanceReminderJobResult {
+  sent: boolean;
+  /** 送信対象になった開催日(YYYY-MM-DD) */
+  dates: string[];
+  /** 未提出の部員の実数(dates 全体の合計) */
+  unanswered: number;
+  skipped?: "already_sent" | "no_target" | "quota";
+}
+
+/** その日の練習のうち未回答がいるものを束ねる。同じ子を複数の練習で二重に数えない */
+async function collectReminderTarget(
+  teamId: string,
+  heldOn: string,
+): Promise<ReminderTarget | null> {
+  // 日付指定の一覧は無いので、その月ぶんを引いて当日だけに絞る(1 日 1 回のジョブなので十分)
+  const practices = await listPracticesByMonth(teamId, monthOf(heldOn));
+  const onDay = practices.filter((p) => p.heldOn === heldOn);
+  if (onDay.length === 0) return null;
+  // 同日の練習ぶんは並列に引く(直列 await の N+1 を避ける)
+  const results = await Promise.all(
+    onDay.map((p) => getAbsentees(teamId, p.id)),
+  );
+  const childIds = new Set<string>();
+  for (const data of results) {
+    if (!data) continue;
+    for (const e of data.unanswered) childIds.add(e.child.id);
+  }
+  return childIds.size === 0 ? null : { heldOn, unanswered: childIds.size };
+}
+
+/**
+ * 当日(JST)に同じ練習日(ref)へ送った reminder の時刻(無ければ null)。
+ * 欠席者管理の確認文言で「本日すでに送信済み」を出すために使う(手動送信は止めない。コーチの明示操作)
+ */
+export async function reminderSentTodayAt(
+  teamId: string,
+  heldOn: string,
+  now: Date = new Date(),
+): Promise<string | null> {
+  const today = todayInTokyo(now);
+  const rows = await withTeam(teamId, (tx) =>
+    tx
+      .select({ sentAt: lineMessages.sentAt })
+      .from(lineMessages)
+      .where(
+        and(
+          eq(lineMessages.kind, "reminder"),
+          eq(lineMessages.ref, heldOn),
+          eq(lineMessages.status, "sent"),
+          gte(lineMessages.sentAt, monthStartInstant(monthOf(today))),
+        ),
+      )
+      .orderBy(desc(lineMessages.sentAt))
+      .limit(5),
+  );
+  const hit = rows.find((r) => todayInTokyo(r.sentAt) === today);
+  return hit ? hit.sentAt.toISOString() : null;
+}
+
+/** 当日(JST)に同じ ref の reminder を送信済みか(二重送信の防止。plan.md 設計判断1) */
+async function alreadyRemindedToday(
+  teamId: string,
+  ref: string,
+  today: string,
+): Promise<boolean> {
+  const rows = await withTeam(teamId, (tx) =>
+    tx
+      .select({ id: lineMessages.id })
+      .from(lineMessages)
+      .where(
+        and(
+          eq(lineMessages.kind, "reminder"),
+          eq(lineMessages.ref, ref),
+          eq(lineMessages.status, "sent"),
+          gte(lineMessages.sentAt, dayStartInstant(today)),
+        ),
+      )
+      .limit(1),
+  );
+  return rows.length > 0;
+}
+
+/**
+ * 定期ジョブ本体(plan.md 設計判断1: 2 日前・1 日 1 通まで)。
+ * 対象は「今日(Asia/Tokyo)+2 日」に開催で未回答が 1 人以上ある練習。
+ * 同じ日に複数の練習があってもまとめて 1 通(ref = held_on)。
+ * 枠不足は送らず・ログも残さずスキップする(絶対原則3)。
+ * 未連携・push 失敗などの異常は例外にして Actions 側で ::error にする(黙って握りつぶさない)
+ */
+export async function runAttendanceReminderJob(
+  teamId: string,
+  deps: LineSendDeps,
+  // 既定は deps.now(テスト用の固定時刻)→ 現在時刻。ジョブの「今日」と通数の集計基準をそろえる
+  now: Date = deps.now ?? new Date(),
+): Promise<AttendanceReminderJobResult> {
+  const today = todayInTokyo(now);
+  const heldOn = addDays(today, 2);
+  const target = await collectReminderTarget(teamId, heldOn);
+  if (!target) {
+    return { sent: false, dates: [], unanswered: 0, skipped: "no_target" };
+  }
+  if (await alreadyRemindedToday(teamId, target.heldOn, today)) {
+    return {
+      sent: false,
+      dates: [target.heldOn],
+      unanswered: target.unanswered,
+      skipped: "already_sent",
+    };
+  }
+  const result = await sendToGroup(
+    teamId,
+    {
+      kind: "reminder",
+      ref: target.heldOn,
+      messages: buildReminderMessages({
+        dates: [
+          {
+            label: formatDateLabel(target.heldOn),
+            unanswered: target.unanswered,
+          },
+        ],
+        liffUrl: deps.liffUrl,
+      }),
+    },
+    { ...deps, now },
+  );
+  if (result.ok) {
+    return {
+      sent: true,
+      dates: [target.heldOn],
+      unanswered: target.unanswered,
+    };
+  }
+  if (result.reason === "quota") {
+    return {
+      sent: false,
+      dates: [target.heldOn],
+      unanswered: target.unanswered,
+      skipped: "quota",
+    };
+  }
+  throw new Error(result.error);
 }

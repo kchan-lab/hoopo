@@ -1,0 +1,90 @@
+# 出欠リマインドの定期ジョブ(Issue #20 / attendance-reminder/plan.md 設計判断1・2)。
+# 毎日 19:00 JST に各環境の admin を叩き、2 日後に開催で未回答が 1 人以上ある練習があれば
+# LINE グループへ 1 通だけ送る(通数 = 送信回数 × グループ人数。CLAUDE.md 絶対原則3)。
+# DB 直ではなくアプリの API を叩くのは、通数チェックと送信ログを必ず通すため(設計判断2)。
+# シークレット未設定の環境はスキップするため、stg/prod が揃う前でもグリーンで完走する。
+# - <ENV>_ADMIN_URL: 管理アプリの origin(例 https://admin.example.com。末尾スラッシュなし)
+# - <ENV>_CRON_SECRET: Vercel の環境変数 CRON_SECRET と同じ値(両方に同じ値を置く)
+# - DISCORD_WEBHOOK_URL: 失敗通知先(#10 で設定。未設定時は Actions の失敗表示のみ)
+name: Attendance reminder
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # 19:00 JST(Asia/Tokyo)= UTC 10:00
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      STG_URL: ${{ secrets.STG_ADMIN_URL }}
+      STG_SECRET: ${{ secrets.STG_CRON_SECRET }}
+      PROD_URL: ${{ secrets.PROD_ADMIN_URL }}
+      PROD_SECRET: ${{ secrets.PROD_CRON_SECRET }}
+    steps:
+      - name: Send attendance reminders
+        id: remind
+        run: |
+          failed_envs=""
+          quota_envs=""
+          for env_name in STG PROD; do
+            url_var="${env_name}_URL"
+            secret_var="${env_name}_SECRET"
+            url="${!url_var}"
+            secret="${!secret_var}"
+            if [ -z "$url" ] || [ -z "$secret" ]; then
+              echo "::notice::${env_name}: ADMIN_URL / CRON_SECRET が未設定のためスキップ"
+              continue
+            fi
+            # stderr は URL・トークンを含みうるため捨てる(supabase-ping.yml と同じ方針)。
+            # 応答の JSON(sent / dates / unanswered / skipped)だけを実行ログに残す
+            if body=$(curl -fsS -X POST \
+              -H "Authorization: Bearer ${secret}" \
+              -H "Content-Type: application/json" \
+              "${url}/api/jobs/attendance-reminder" 2>/dev/null); then
+              echo "${env_name}: ${body}"
+              # 通数不足のスキップは 200 だが、その練習は二度と自動では送られない(2 日前の 1 回きり)ので
+              # warning として目立たせ、Discord にも知らせる(plan.md 設計判断3 の運用上の補足)
+              if printf '%s' "$body" | grep -q '"skipped":"quota"'; then
+                echo "::warning::${env_name}: LINE 通数が足りずリマインドを送れませんでした(手動送信を検討)"
+                quota_envs="${quota_envs}${quota_envs:+, }${env_name}"
+              fi
+            else
+              echo "::error::${env_name}: リマインドの実行に失敗しました(CRON_SECRET・デプロイ状態を確認)"
+              failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
+            fi
+          done
+          echo "failed=${failed_envs}" >> "$GITHUB_OUTPUT"
+          echo "quota=${quota_envs}" >> "$GITHUB_OUTPUT"
+          [ -z "$failed_envs" ] || exit 1
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILED: ${{ steps.remind.outputs.failed }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL が未設定のため通知をスキップ(#10 で設定)"
+            exit 0
+          fi
+          curl -fsS -H "Content-Type: application/json" \
+            -d "{\"content\":\"⚠️ 出欠リマインドの送信が失敗しました(対象: ${FAILED:-不明}): ${RUN_URL}\"}" \
+            "$WEBHOOK" \
+            || echo "::warning::Discord への通知送信に失敗しました"
+      - name: Notify Discord on quota skip
+        if: success() && steps.remind.outputs.quota != ''
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          QUOTA: ${{ steps.remind.outputs.quota }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL が未設定のため通知をスキップ(#10 で設定)"
+            exit 0
+          fi
+          curl -fsS -H "Content-Type: application/json" \
+            -d "{\"content\":\"⚠️ LINE 通数が足りず出欠リマインドを送れませんでした(対象: ${QUOTA})。手動送信を検討してください: ${RUN_URL}\"}" \
+            "$WEBHOOK" \
+            || echo "::warning::Discord への通知送信に失敗しました"

@@ -974,6 +974,35 @@ a.abtn {
   font-size: 0.85em;
 }
 
+/* グループ見出しの行(見出し+「リマインドを送る」)。狭い画面では折り返す */
+.ghead {
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+/* 出欠リマインドの送信(#20)。確認文が長いので幅いっぱいで折り返させる */
+.ghead .remind {
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ghead .remind .lgerr,
+.ghead .remind .anote {
+  margin: 0;
+  flex-basis: 100%;
+  font-size: 0.82em;
+}
+
+.ghead .remind .confirm {
+  justify-content: flex-end;
+}
+
 /* 出欠マトリクス: 列は練習日ぶんだけ増えるので横スクロールを許可する(DESIGN §2.3) */
 .ascroll {
   overflow-x: auto;

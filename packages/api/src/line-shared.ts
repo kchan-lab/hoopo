@@ -112,6 +112,33 @@ export function buildAnnouncementMessages(input: {
   ];
 }
 
+/** リマインド 1 行ぶんの材料。label は "9/6 (日)"(formatDateLabel) */
+export interface ReminderDate {
+  label: string;
+  unanswered: number;
+}
+
+/**
+ * 出欠リマインド(§6 必須通知2。attendance-reminder/plan.md「API 契約」)。
+ * グループ宛て 1 通なので個人名は載せず、日付と未提出人数だけを出す(絶対原則4)。
+ * 同じ日に複数の練習があっても行はまとめて 1 通にする(絶対原則3)
+ */
+export function buildReminderMessages(input: {
+  dates: ReminderDate[];
+  liffUrl: string;
+}): OutgoingMessage[] {
+  const lines = input.dates.map(
+    (d) =>
+      `${d.label} の練習の出欠がまだ提出されていない方は、提出をお願いします(未提出 ${d.unanswered} 人)。`,
+  );
+  return [
+    {
+      type: "text",
+      text: `${lines.join("\n")}\n提出はこちらから\n${joinUrl(input.liffUrl, "/attendance")}`,
+    },
+  ];
+}
+
 /** 送信ログ 1 行の表示用(実行ログ。§5.2 破壊的操作は確認+実行ログ) */
 export interface LineMessageLogEntry {
   id: string;
