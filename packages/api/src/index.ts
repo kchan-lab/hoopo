@@ -10,6 +10,7 @@ export { type ApiDeps, createApi } from "./app";
 export * from "./attendances-coach";
 export * from "./attendances-guardian";
 export * from "./attendances-shared";
+export * from "./audit-shared";
 export { type CoachAccount, getCoachAccount } from "./coach-account";
 export * from "./dashboard";
 export * from "./fees-coach";

@@ -13,8 +13,9 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_team_id_teams_id_fk" FOREIGN
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_performed_by_coaches_id_fk" FOREIGN KEY ("performed_by") REFERENCES "public"."coaches"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_logs_team_created_idx" ON "audit_logs" USING btree ("team_id","created_at");--> statement-breakpoint
 CREATE POLICY "audit_logs_team_isolation" ON "audit_logs" AS PERMISSIVE FOR ALL TO "hoopo_app" USING (team_id = (select nullif(current_setting('app.team_id', true), '')::uuid)) WITH CHECK (team_id = (select nullif(current_setting('app.team_id', true), '')::uuid));--> statement-breakpoint
--- 新テーブルは 0001 に倣って個別に GRANT する(ALTER DEFAULT PRIVILEGES は使わない)
-GRANT SELECT, INSERT, UPDATE, DELETE ON "audit_logs" TO hoopo_app;
+-- 実行ログは追記専用。アプリロールには SELECT / INSERT だけを付与し、書き換え・削除はアプリから不可能にする
+-- (0001 に倣って個別に GRANT。ALTER DEFAULT PRIVILEGES は使わない)
+GRANT SELECT, INSERT ON "audit_logs" TO hoopo_app;
 --> statement-breakpoint
 -- 所有者にも RLS を効かせる(0001 と同じ方針)
 ALTER TABLE "audit_logs" FORCE ROW LEVEL SECURITY;

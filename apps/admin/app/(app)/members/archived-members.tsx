@@ -1,7 +1,7 @@
 "use client";
 
 import type { ArchivedMemberRow } from "@hoopo/api";
-import { TOKYO_TZ } from "@hoopo/api/tokyo-date";
+import { formatDateTokyo } from "@hoopo/api/audit-shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -9,18 +9,6 @@ import { useState } from "react";
 // 破壊的操作なので行内の二段階確認にする(CLAUDE.md 開発ルール。ネイティブ confirm() は使わない)。
 // 削除できるのは卒団済みだけ(設計判断1)、物理削除で元に戻せない(判断4)、
 // 紐づきが無くなった保護者も一緒に消える(判断2)ことを確認文で明示する
-
-/** "2026/3/31"(Asia/Tokyo 固定。CLAUDE.md 開発ルール) */
-function formatDate(iso: string): string {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TOKYO_TZ,
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).formatToParts(new Date(iso));
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return `${get("year")}/${get("month")}/${get("day")}`;
-}
 
 export function ArchivedMembers({ members }: { members: ArchivedMemberRow[] }) {
   const router = useRouter();
@@ -64,7 +52,7 @@ export function ArchivedMembers({ members }: { members: ArchivedMemberRow[] }) {
             <b>{m.name}</b>
             <span>
               {m.grade}年 / 卒団{" "}
-              {m.archivedAt === null ? "−" : formatDate(m.archivedAt)}
+              {m.archivedAt === null ? "−" : formatDateTokyo(m.archivedAt)}
             </span>
             {confirmId === m.id ? (
               <fieldset className="confirm">

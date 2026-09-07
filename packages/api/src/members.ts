@@ -8,6 +8,7 @@ import {
   withTeam,
 } from "@hoopo/db";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { AUDIT_LOG_DEFAULT_LIMIT, clampAuditLimit } from "./audit-shared";
 import type { Gender, Relation } from "./registration-shared";
 import { isUuid } from "./uuid";
 
@@ -357,12 +358,10 @@ export interface AuditLogRow {
 /** 破壊的操作の実行ログ(新しい順)。部員管理の下に「実行ログ」として出す */
 export async function listAuditLogs(
   teamId: string,
-  limit = 20,
+  limit = AUDIT_LOG_DEFAULT_LIMIT,
 ): Promise<AuditLogRow[]> {
-  // 画面から渡る値なので 1〜50 に丸める(NaN は既定の 20 として扱う)
-  const take = Number.isFinite(limit)
-    ? Math.min(50, Math.max(1, Math.trunc(limit)))
-    : 20;
+  // 画面から渡る値なので 1〜50 に丸める(audit-shared.ts。Unit で担保)
+  const take = clampAuditLimit(limit);
   return withTeam(teamId, async (tx) => {
     const rows = await tx
       .select({

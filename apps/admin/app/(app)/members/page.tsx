@@ -1,5 +1,5 @@
 import {
-  type AuditLogRow,
+  describeAuditLog,
   getYearRolloverStatus,
   listArchivedMembers,
   listAuditLogs,
@@ -29,18 +29,6 @@ const logFmt = new Intl.DateTimeFormat("ja-JP", {
   hour: "2-digit",
   minute: "2-digit",
 });
-
-// ログに名前は残さない(設計判断3)ので、内容は学年・人数だけで組み立てる
-function logText(log: AuditLogRow): string {
-  if (log.action === "child_deleted") {
-    const removed =
-      typeof log.detail.removedGuardians === "number"
-        ? log.detail.removedGuardians
-        : 0;
-    return `部員データを削除(保護者 ${removed} 人分も削除)`;
-  }
-  return log.action;
-}
 
 export default async function MembersPage() {
   const session = await getCoachSession();
@@ -86,7 +74,7 @@ export default async function MembersPage() {
             logs.map((log) => (
               <div className="arow" key={log.id}>
                 <b>{logFmt.format(new Date(log.createdAt))}</b>
-                <span>{logText(log)}</span>
+                <span>{describeAuditLog(log)}</span>
               </div>
             ))
           )}
