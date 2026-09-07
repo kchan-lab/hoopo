@@ -1,5 +1,9 @@
 import { closeAppDb } from "@hoopo/db";
-import { createFakeIdTokenVerifier, lineUserIdLookup } from "@hoopo/line";
+import {
+  createFakeIdTokenVerifier,
+  createFakeLineMessagingClient,
+  lineUserIdLookup,
+} from "@hoopo/line";
 import postgres from "postgres";
 import {
   afterAll,
@@ -64,6 +68,10 @@ function adminApi(team = teamId) {
       exchangeCode,
       fake: true,
     },
+    // LINE グループ送信(6c-1)はこのテストの対象外。型を満たす最小の依存だけ渡す
+    line: { client: createFakeLineMessagingClient() },
+    portalUrl: "http://portal.test",
+    liffUrl: "https://liff.line.me/1234567890-abcdefgh",
   });
 }
 

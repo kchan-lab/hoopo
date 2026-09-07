@@ -118,3 +118,14 @@ describe("メッセージ本文", () => {
     );
   });
 });
+
+describe("trimTrailingSlash", () => {
+  it("末尾のスラッシュを何個でも落とし、途中のスラッシュは残す", async () => {
+    const { trimTrailingSlash } = await import("./line-shared");
+    expect(trimTrailingSlash("https://a.example///")).toBe("https://a.example");
+    expect(trimTrailingSlash("https://a.example/x")).toBe(
+      "https://a.example/x",
+    );
+    expect(trimTrailingSlash("")).toBe("");
+  });
+});

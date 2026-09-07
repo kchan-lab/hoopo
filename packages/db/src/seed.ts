@@ -42,9 +42,12 @@ await owner`
 // SKC の id は固定にする — ローカルの TEAM_ID env(LIFF ログインのテナント解決。
 // .claude/plans/liff-login/plan.md 設計判断4)と一致させて E2E を安定させるため
 const SKC_TEAM_ID = "00000000-0000-4000-8000-000000000001";
+// LINE グループ ID もローカルは固定値にする(本来は Webhook の join で入る。line-send/plan.md 6c-2)。
+// これが無いと LINE_FAKE=1 でも「未連携」になり、送信導線の E2E が通らない
+const SKC_LINE_GROUP_ID = `C${"0".repeat(32)}`;
 const [skcRow] = await owner`
-  INSERT INTO teams (id, name, short_name, team_color)
-  VALUES (${SKC_TEAM_ID}, 'SKC粉浜・北粉浜ミニバスケットボール', 'SKC粉浜', '#F97316')
+  INSERT INTO teams (id, name, short_name, team_color, line_group_id)
+  VALUES (${SKC_TEAM_ID}, 'SKC粉浜・北粉浜ミニバスケットボール', 'SKC粉浜', '#F97316', ${SKC_LINE_GROUP_ID})
   RETURNING id
 `;
 const [otherRow] = await owner`

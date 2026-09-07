@@ -34,10 +34,10 @@ test("お知らせを下書き保存・公開・下書きに戻す・削除で�
   await expect(card.locator(".pill").first()).toHaveText("下書き");
   await expect(card).toContainText("粉浜小学校の体育館");
 
-  // 公開する(LINE 通知フラグも保存だけされる)
+  // 公開する(LINE 通知フラグを立てる。実送信は admin-line-send.spec.ts)
   await card.getByRole("button", { name: "編集" }).click();
   await page
-    .getByLabel("公開時に LINE へ通知する(6c で有効化・現在は保存のみ)")
+    .getByLabel("LINE へ通知する(公開後に「LINE へ送信」を押します)")
     .check();
   // 下書きを編集中なので主ボタンは「公開する」(公開済みの編集時は「更新して公開」)
   await page.getByRole("button", { name: "公開する", exact: true }).click();
