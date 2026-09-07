@@ -6,6 +6,7 @@ import type {
   Practice,
   PublishStatus,
 } from "@hoopo/api";
+import { trimTrailingSlash } from "@hoopo/api/line-shared";
 import { addMonths, formatDateLabel, TOKYO_TZ } from "@hoopo/api/tokyo-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,8 +23,7 @@ import { LineMessageLog, LineMeter } from "../line-meter";
 
 // 管理画面から保護者アプリの画像を開くための URL(ホストが分かれるため env で結ぶ。設計判断6)。
 // NEXT_PUBLIC_ はクライアントコンポーネントにビルド時へ埋め込まれる
-const PORTAL_URL =
-  process.env.NEXT_PUBLIC_PORTAL_URL?.replace(/\/+$/, "") ?? "";
+const PORTAL_URL = trimTrailingSlash(process.env.NEXT_PUBLIC_PORTAL_URL ?? "");
 
 /** ISO → "9/6 10:00"(Asia/Tokyo 固定。CLAUDE.md 開発ルール) */
 function formatPublishedAt(iso: string): string {
