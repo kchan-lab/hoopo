@@ -477,13 +477,45 @@ async function collectReminderTarget(
   const practices = await listPracticesByMonth(teamId, monthOf(heldOn));
   const onDay = practices.filter((p) => p.heldOn === heldOn);
   if (onDay.length === 0) return null;
+  // 同日の練習ぶんは並列に引く(直列 await の N+1 を避ける)
+  const results = await Promise.all(
+    onDay.map((p) => getAbsentees(teamId, p.id)),
+  );
   const childIds = new Set<string>();
-  for (const p of onDay) {
-    const data = await getAbsentees(teamId, p.id);
+  for (const data of results) {
     if (!data) continue;
     for (const e of data.unanswered) childIds.add(e.child.id);
   }
   return childIds.size === 0 ? null : { heldOn, unanswered: childIds.size };
+}
+
+/**
+ * 当日(JST)に同じ練習日(ref)へ送った reminder の時刻(無ければ null)。
+ * 欠席者管理の確認文言で「本日すでに送信済み」を出すために使う(手動送信は止めない。コーチの明示操作)
+ */
+export async function reminderSentTodayAt(
+  teamId: string,
+  heldOn: string,
+  now: Date = new Date(),
+): Promise<string | null> {
+  const today = todayInTokyo(now);
+  const rows = await withTeam(teamId, (tx) =>
+    tx
+      .select({ sentAt: lineMessages.sentAt })
+      .from(lineMessages)
+      .where(
+        and(
+          eq(lineMessages.kind, "reminder"),
+          eq(lineMessages.ref, heldOn),
+          eq(lineMessages.status, "sent"),
+          gte(lineMessages.sentAt, monthStartInstant(monthOf(today))),
+        ),
+      )
+      .orderBy(desc(lineMessages.sentAt))
+      .limit(5),
+  );
+  const hit = rows.find((r) => todayInTokyo(r.sentAt) === today);
+  return hit ? hit.sentAt.toISOString() : null;
 }
 
 /** 当日(JST)に同じ ref の reminder を送信済みか(二重送信の防止。plan.md 設計判断1) */

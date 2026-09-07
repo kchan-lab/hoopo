@@ -27,6 +27,7 @@ jobs:
         id: remind
         run: |
           failed_envs=""
+          quota_envs=""
           for env_name in STG PROD; do
             url_var="${env_name}_URL"
             secret_var="${env_name}_SECRET"
@@ -43,12 +44,19 @@ jobs:
               -H "Content-Type: application/json" \
               "${url}/api/jobs/attendance-reminder" 2>/dev/null); then
               echo "${env_name}: ${body}"
+              # 通数不足のスキップは 200 だが、その練習は二度と自動では送られない(2 日前の 1 回きり)ので
+              # warning として目立たせ、Discord にも知らせる(plan.md 設計判断3 の運用上の補足)
+              if printf '%s' "$body" | grep -q '"skipped":"quota"'; then
+                echo "::warning::${env_name}: LINE 通数が足りずリマインドを送れませんでした(手動送信を検討)"
+                quota_envs="${quota_envs}${quota_envs:+, }${env_name}"
+              fi
             else
               echo "::error::${env_name}: リマインドの実行に失敗しました(CRON_SECRET・デプロイ状態を確認)"
               failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
             fi
           done
           echo "failed=${failed_envs}" >> "$GITHUB_OUTPUT"
+          echo "quota=${quota_envs}" >> "$GITHUB_OUTPUT"
           [ -z "$failed_envs" ] || exit 1
       - name: Notify Discord on failure
         if: failure()
@@ -63,5 +71,20 @@ jobs:
           fi
           curl -fsS -H "Content-Type: application/json" \
             -d "{\"content\":\"⚠️ 出欠リマインドの送信が失敗しました(対象: ${FAILED:-不明}): ${RUN_URL}\"}" \
+            "$WEBHOOK" \
+            || echo "::warning::Discord への通知送信に失敗しました"
+      - name: Notify Discord on quota skip
+        if: success() && steps.remind.outputs.quota != ''
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          QUOTA: ${{ steps.remind.outputs.quota }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL が未設定のため通知をスキップ(#10 で設定)"
+            exit 0
+          fi
+          curl -fsS -H "Content-Type: application/json" \
+            -d "{\"content\":\"⚠️ LINE 通数が足りず出欠リマインドを送れませんでした(対象: ${QUOTA})。手動送信を検討してください: ${RUN_URL}\"}" \
             "$WEBHOOK" \
             || echo "::warning::Discord への通知送信に失敗しました"

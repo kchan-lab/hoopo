@@ -28,6 +28,7 @@ export function ReminderSender({
   today,
   unanswered,
   usage,
+  sentTodayAt,
 }: {
   practiceId: string;
   heldOn: string;
@@ -35,6 +36,8 @@ export function ReminderSender({
   today: string;
   unanswered: number;
   usage: LineUsageSummary;
+  /** 本日すでに同じ練習日へ送っていればその時刻(ISO)。自動ジョブとの二重送信に気づかせる */
+  sentTodayAt: string | null;
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -102,6 +105,11 @@ export function ReminderSender({
           {/* 通数 = 送信回数 × グループ人数。必ず消費と残りを見せる(絶対原則3) */}
           <span className="q">
             {`グループ ${memberCount ?? "?"} 人に送信します(${memberCount ?? "?"} 通消費・残り ${Math.max(0, usage.remaining - (memberCount ?? 0))} 通)`}
+            {sentTodayAt !== null && (
+              <b>
+                {` 本日 ${new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" }).format(new Date(sentTodayAt))} にこの練習日へ送信済みです。もう一度送りますか?`}
+              </b>
+            )}
           </span>
           <button
             type="button"
