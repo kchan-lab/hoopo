@@ -483,7 +483,7 @@ export function createAdminApi(deps: AdminApiDeps) {
     const session = c.get("session");
     const result = await undoYearRollover(session.teamId, new Date());
     return result.ok
-      ? c.json({ restored: result.restored })
+      ? c.json({ restored: result.restored, missing: result.missing })
       : c.json({ error: "取り消せる年度更新がありません" }, 409);
   });
 

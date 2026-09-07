@@ -37,6 +37,7 @@ const adminApi = (team = teamId) =>
 interface CoachClient {
   get: (path: string) => Promise<Response>;
   del: (path: string) => Promise<Response>;
+  post: (path: string) => Promise<Response>;
 }
 
 async function coachClient(
@@ -58,6 +59,8 @@ async function coachClient(
       app.request(path, { method: "GET", headers: { Cookie: cookie } }),
     del: async (path) =>
       app.request(path, { method: "DELETE", headers: { Cookie: cookie } }),
+    post: async (path) =>
+      app.request(path, { method: "POST", headers: { Cookie: cookie } }),
   };
 }
 
@@ -351,5 +354,23 @@ describe("実行ログ(GET /audit-logs)", () => {
       expect(res.status).toBe(200);
       expect(((await res.json()) as LogsBody).logs).toHaveLength(1);
     }
+  });
+});
+
+describe("年度更新の取り消しとの相互作用", () => {
+  it("猶予中に削除した部員は取り消しで戻らず、件数差(missing)で返る", async () => {
+    // 在籍中の 6 年生を年度更新で卒団させ(snapshot に入る)、猶予中にそのデータを削除する
+    const sixth = await insertChild(teamId, "卒団 予定", 6, "UNDO000001");
+    const c = await coachClient(adminApi());
+    const run = await c.post("/members/year-rollover");
+    expect(run.status).toBe(201);
+    const del = await c.del(`/members/${sixth}`);
+    expect(del.status).toBe(204);
+
+    const undo = await c.post("/members/year-rollover/undo");
+    expect(undo.status).toBe(200);
+    const body = (await undo.json()) as { restored: number; missing: number };
+    expect(body.missing).toBe(1);
+    expect(await childExists(sixth)).toBe(false);
   });
 });
