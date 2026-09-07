@@ -10,6 +10,7 @@ import {
   feeRecords,
   guardianChildren,
   guardians,
+  lineMessages,
   lineups,
   practiceMenus,
   practices,
@@ -59,3 +60,5 @@ export const announcementsPolicy =
 export const lineupsPolicy = teamPolicy("lineups").link(lineups);
 export const yearRolloversPolicy =
   teamPolicy("year_rollovers").link(yearRollovers);
+export const lineMessagesPolicy =
+  teamPolicy("line_messages").link(lineMessages);
