@@ -11,6 +11,7 @@
     "./fees-shared": "./src/fees-shared.ts",
     "./announcements-shared": "./src/announcements-shared.ts",
     "./schedule-shared": "./src/schedule-shared.ts",
+    "./lineups-shared": "./src/lineups-shared.ts",
     "./year-rollover-shared": "./src/year-rollover-shared.ts"
   },
   "scripts": {
