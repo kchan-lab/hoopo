@@ -12,7 +12,7 @@ import {
   withTeam,
 } from "@hoopo/db";
 import type { LineMessagingClient } from "@hoopo/line";
-import { desc, eq, gte } from "drizzle-orm";
+import { desc, eq, gte, sql } from "drizzle-orm";
 import {
   buildAnnouncementMessages,
   buildScheduleMessages,
@@ -22,6 +22,7 @@ import {
   type LineMessageLogEntry,
   type LineUsage,
   type OutgoingMessage,
+  trimTrailingSlash,
 } from "./line-shared";
 import { getPublishStatus } from "./schedule-publish";
 import { formatMonthLabel, monthOf, todayInTokyo } from "./tokyo-date";
@@ -112,15 +113,43 @@ async function loadUsageRows(tx: TeamTx, month: string) {
     .where(gte(lineMessages.sentAt, monthStartInstant(month)));
 }
 
+/** グループ参加人数の短期キャッシュ(画面表示用)。表示のたびに LINE API を叩かない */
+const MEMBER_COUNT_TTL_MS = 5 * 60 * 1000;
+const memberCountCache = new Map<
+  string,
+  { count: number; expiresAt: number }
+>();
+
+async function fetchMemberCount(
+  client: LineMessagingClient,
+  groupId: string,
+  now: Date,
+  options: { fresh: boolean },
+): Promise<number | null> {
+  const cached = memberCountCache.get(groupId);
+  if (!options.fresh && cached && cached.expiresAt > now.getTime()) {
+    return cached.count;
+  }
+  const result = await client.getGroupMemberCount(groupId);
+  if (!result.ok) return null;
+  memberCountCache.set(groupId, {
+    count: result.count,
+    expiresAt: now.getTime() + MEMBER_COUNT_TTL_MS,
+  });
+  return result.count;
+}
+
 /**
  * 通数とグループ連携の状態。groupId は送信手続きだけが使う(応答には出さない)。
  * LINE API 呼び出しは withTeam の外で行う
- * (client.ts の注記: トランザクション内で DB 以外の I/O をしない)
+ * (client.ts の注記: トランザクション内で DB 以外の I/O をしない)。
+ * 表示用(fresh=false)は参加人数を数分キャッシュし、送信時(fresh=true)は必ず取り直す
  */
 async function loadContext(
   teamId: string,
   client: LineMessagingClient,
   now: Date,
+  options: { fresh: boolean } = { fresh: false },
 ): Promise<{ groupId: string | null; usage: LineUsageSummary }> {
   const month = monthOf(todayInTokyo(now));
   const { groupId, rows } = await withTeam(teamId, async (tx) => {
@@ -132,11 +161,10 @@ async function loadContext(
     };
   });
   const usage = computeLineUsage(rows, now);
-  let memberCount: number | null = null;
-  if (groupId !== null) {
-    const result = await client.getGroupMemberCount(groupId);
-    memberCount = result.ok ? result.count : null;
-  }
+  const memberCount =
+    groupId === null
+      ? null
+      : await fetchMemberCount(client, groupId, now, options);
   return {
     groupId,
     usage: { ...usage, groupLinked: groupId !== null, memberCount },
@@ -180,7 +208,12 @@ async function sendToGroup(
   deps: LineSendDeps,
 ): Promise<LineSendResult> {
   const now = deps.now ?? new Date();
-  const { groupId, usage } = await loadContext(teamId, deps.client, now);
+  const { groupId, usage: preview } = await loadContext(
+    teamId,
+    deps.client,
+    now,
+    { fresh: true },
+  );
   if (groupId === null) {
     return {
       ok: false,
@@ -189,7 +222,7 @@ async function sendToGroup(
       message: null,
     };
   }
-  if (usage.memberCount === null) {
+  if (preview.memberCount === null) {
     return {
       ok: false,
       reason: "member_count",
@@ -197,44 +230,67 @@ async function sendToGroup(
       message: null,
     };
   }
-  const recipientCount = usage.memberCount;
-  const allowed = canSend(usage, recipientCount);
-  if (!allowed.ok) {
-    return { ok: false, reason: "quota", error: allowed.reason, message: null };
-  }
+  const recipientCount = preview.memberCount;
 
-  const push = await deps.client.pushToGroup(groupId, input.messages);
-  const [row] = await withTeam(teamId, (tx) =>
-    tx
+  // 通数チェックとログの記録は同じトランザクションで行い、チーム単位のアドバイザリロックで
+  // 同時送信(二重クリック・複数タブ)を直列化する。push はトランザクションの外に出したいので、
+  // 先に sent 行を「予約」してから送り、失敗したら failed に更新する
+  // (途中で落ちても sent が残る=枠を多めに数える安全側。§6 の 200 通超過を起こさない)
+  const month = monthOf(todayInTokyo(now));
+  const reserved = await withTeam(teamId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${teamId}))`);
+    const usage = computeLineUsage(await loadUsageRows(tx, month), now);
+    const allowed = canSend(usage, recipientCount);
+    if (!allowed.ok) {
+      return { ok: false as const, error: allowed.reason, usage };
+    }
+    const [row] = await tx
       .insert(lineMessages)
       .values({
         teamId,
         kind: input.kind,
         ref: input.ref,
         recipientCount,
-        status: push.ok ? "sent" : "failed",
-        // 失敗理由はクライアントが要約した文言だけ(応答本文は持ち込まない)
-        error: push.ok ? null : push.reason,
+        status: "sent",
         sentAt: now,
       })
-      .returning(logColumns),
-  );
-  if (!row) throw new Error("LINE 送信ログの記録に失敗しました");
-  const message = toLogEntry(row);
+      .returning(logColumns);
+    if (!row) throw new Error("LINE 送信ログの記録に失敗しました");
+    return { ok: true as const, row, usage };
+  });
+  if (!reserved.ok) {
+    return { ok: false, reason: "quota", error: reserved.error, message: null };
+  }
+
+  const push = await deps.client.pushToGroup(groupId, input.messages);
   if (!push.ok) {
+    const [row] = await withTeam(teamId, (tx) =>
+      tx
+        .update(lineMessages)
+        // 失敗理由はクライアントが要約した文言だけ(応答本文は持ち込まない)
+        .set({ status: "failed", error: push.reason })
+        .where(eq(lineMessages.id, reserved.row.id))
+        .returning(logColumns),
+    );
     return {
       ok: false,
       reason: "push_failed",
       error: "LINE への送信に失敗しました",
-      message,
+      message: toLogEntry(row ?? reserved.row),
     };
   }
   // 送信直後のメーターを返す(画面が取り直さなくても最新の n/200 を出せる)
-  const used = usage.used + recipientCount;
+  const used = reserved.usage.used + recipientCount;
   return {
     ok: true,
-    message,
-    usage: { ...usage, used, remaining: Math.max(0, usage.quota - used) },
+    message: toLogEntry(reserved.row),
+    usage: {
+      ...reserved.usage,
+      groupLinked: true,
+      memberCount: recipientCount,
+      used,
+      remaining: Math.max(0, reserved.usage.quota - used),
+    },
   };
 }
 
@@ -257,7 +313,7 @@ export async function sendScheduleToLine(
       message: null,
     };
   }
-  const base = deps.portalUrl.replace(/\/+$/, "");
+  const base = trimTrailingSlash(deps.portalUrl);
   const imageUrl = `${base}/api/schedule/${month}.png?v=${encodeURIComponent(status.publishedAt)}`;
   return sendToGroup(
     teamId,

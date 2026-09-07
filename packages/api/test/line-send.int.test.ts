@@ -247,6 +247,24 @@ describe("LINE 送信 API", () => {
     expect(await logRows(teamId)).toHaveLength(2);
   });
 
+  it("同時に 2 回送っても枠は 1 回分しか使えない(アドバイザリロックで直列化)", async () => {
+    const client = createFakeLineMessagingClient();
+    const c = await coachClient(adminApi(client));
+    await publishedPractice(c);
+    // 残り 12 通 = ちょうど 1 回分
+    await owner`INSERT INTO line_messages (team_id, kind, ref, recipient_count, status)
+      VALUES (${teamId}, 'schedule', '2026-08', 188, 'sent')`;
+
+    const results = await Promise.all([
+      c("/line/send/schedule", "POST", { month: MONTH }),
+      c("/line/send/schedule", "POST", { month: MONTH }),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(client.pushes).toHaveLength(1);
+    const usage = (await (await c("/line/usage", "GET")).json()) as Usage;
+    expect(usage.used).toBe(200);
+  });
+
   it("push が失敗すると failed のログを残して 502", async () => {
     const client = createFakeLineMessagingClient({ failNext: true });
     const c = await coachClient(adminApi(client));
