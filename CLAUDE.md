@@ -45,7 +45,7 @@ apps/admin         … 管理者向け (Next.js)
 packages/api       … Hono ルート定義(将来SDK/横展開の中核)
 packages/db        … Drizzle スキーマ・マイグレーション・RLSポリシー
 packages/ui        … 共有UIプリミティブ(テーマはアプリ側で注入)
-packages/line      … LINE/LIFF クライアント(署名検証・通数計算含む)
+packages/line      … LINE/LIFF クライアント(ID トークン検証・Webhook 署名検証・暗号化・グループ宛て送信。通数計算は packages/api の line-shared)
 docs/              … REQUIREMENTS.md / DESIGN_GUIDELINES.md ほか
 .github/workflows  … CI/CD・定期ジョブ
 ```

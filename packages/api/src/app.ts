@@ -100,10 +100,11 @@ export function createApi(deps: ApiDeps) {
         } else if (event.type === "leave") {
           await clearLineGroupId(deps.teamId, event.groupId);
         }
-      } catch {
+      } catch (error) {
         // 他チームが同じグループを連携済み(line_group_id は一意)等でも 200 を返して
-        // LINE の再送を止める。詳細は groupId を含みうるので出さない
-        console.error("LINE webhook のグループ連携に失敗しました");
+        // LINE の再送を止める。原因究明のためエラー種別・スタックは出す(groupId 自体は
+        // 例外メッセージに含まれない: Drizzle/pg の一意制約違反は制約名だけを持つ)
+        console.error("LINE webhook のグループ連携に失敗しました", error);
       }
     }
     // 処理結果によらず 200(LINE は非 2xx を再送する。再送させても結果は変わらない)
