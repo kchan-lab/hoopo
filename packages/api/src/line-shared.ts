@@ -68,7 +68,10 @@ export type OutgoingMessage =
 
 /** 末尾のスラッシュを落として結合する(liffUrl は https://liff.line.me/<id> または portal の URL) */
 export function joinUrl(base: string, path: string): string {
-  return `${base.replace(/\/+$/, "")}${path}`;
+  // 正規表現(/\/+$/)は CodeQL が多項式時間を警告するため、末尾を素直に削る
+  let end = base.length;
+  while (end > 0 && base.charAt(end - 1) === "/") end--;
+  return `${base.slice(0, end)}${path}`;
 }
 
 /** 予定表発行の通知(§6 必須通知1): 画像+短文の 1 push */
