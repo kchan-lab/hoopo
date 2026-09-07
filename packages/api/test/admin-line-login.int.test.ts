@@ -163,9 +163,11 @@ describe("GET /auth/line/start", () => {
     expect(location).toContain(`code=fake%3AU${"c".repeat(32)}`);
   });
 
-  it("mode=link は未ログインだと 401", async () => {
+  it("mode=link は未ログインだとログイン画面へ戻す(生 JSON を出さない)", async () => {
     const res = await adminApi().request("/auth/line/start?mode=link");
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/login");
+    expect(res.headers.get("set-cookie")).toBeNull();
   });
 });
 

@@ -56,17 +56,22 @@ export async function createLineOAuthToken(
   payload: LineOAuthState,
   secretHex: string,
 ): Promise<string> {
-  return signPayload(payload, secretHex);
+  return signPayload(payload, secretHex, "line_oauth");
 }
 
-// 署名不一致・期限切れ・形式不正はすべて null(= state 不一致として扱う)
+// 署名不一致・期限切れ・形式不正・typ 不一致(セッショントークンの流用)はすべて null
+// (= state 不一致として扱う)
 export async function verifyLineOAuthToken(
   token: string,
   secretHex: string,
   options: { now?: Date } = {},
 ): Promise<LineOAuthState | null> {
   const now = options.now ?? new Date();
-  const payload = await verifySignedPayload<LineOAuthState>(token, secretHex);
+  const payload = await verifySignedPayload<LineOAuthState>(
+    token,
+    secretHex,
+    "line_oauth",
+  );
   if (
     !payload ||
     typeof payload.state !== "string" ||
