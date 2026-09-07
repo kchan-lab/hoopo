@@ -16,6 +16,9 @@ export {
   requireCoach,
   requireGuardian,
 } from "./guard";
+export * from "./lineups-coach";
+export * from "./lineups-guardian";
+export * from "./lineups-shared";
 export {
   listMembers,
   listRegistrations,
