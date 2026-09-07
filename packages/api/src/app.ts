@@ -3,6 +3,8 @@ import {
   encryptLineUserId,
   type IdTokenVerifier,
   lineUserIdLookup,
+  parseWebhookEvents,
+  verifyLineSignature,
 } from "@hoopo/line";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -22,6 +24,7 @@ import { parseSubmitAttendance } from "./attendances-shared";
 import { getFeeSheet } from "./fees-guardian";
 import { parseYear } from "./fees-shared";
 import { type AuthEnv, requireGuardian } from "./guard";
+import { clearLineGroupId, setLineGroupId } from "./line-group";
 import { getLineup } from "./lineups-guardian";
 import {
   getNextPractice,
@@ -58,11 +61,54 @@ export interface ApiDeps {
   hmacKey: string;
   /** ローカル(http)では false。Vercel 上は true */
   secureCookie: boolean;
+  /**
+   * Messaging API のチャネルシークレット(Webhook の署名検証用。line-send/plan.md 6c-2)。
+   * 実チャネル(#9)が未取得のローカルでは null にし、その場合 /line/webhook は 503 を返す
+   */
+  lineChannelSecret: string | null;
 }
 
 export function createApi(deps: ApiDeps) {
   const app = new Hono<AuthEnv>();
   const guardian = requireGuardian(deps);
+
+  // ---- LINE Messaging API の Webhook(line-send/plan.md 6c-2) ----
+
+  // LINE プラットフォームからの呼び出しなのでセッション認証は無い(認証は署名検証そのもの)。
+  // 認証付きルートより先に定義する。登録する URL は <portal の origin>/api/line/webhook。
+  // 用途は groupId の取得だけで、イベント本文・userId は保存もログ出力もしない(絶対原則4)
+  app.post("/line/webhook", async (c) => {
+    if (!deps.lineChannelSecret) {
+      // 未設定のまま検証を素通りさせない(fail-closed)
+      return c.json({ error: "LINE_CHANNEL_SECRET が未設定です" }, 503);
+    }
+    // 署名は「受信したままのボディ」に対する HMAC なので、必ず生テキストで読む
+    const rawBody = await c.req.text();
+    const verified = await verifyLineSignature(
+      rawBody,
+      c.req.header("x-line-signature"),
+      deps.lineChannelSecret,
+    );
+    if (!verified) {
+      return c.json({ error: "署名が不正です" }, 401);
+    }
+    for (const event of parseWebhookEvents(rawBody)) {
+      if (!event.groupId) continue;
+      try {
+        if (event.type === "join") {
+          await setLineGroupId(deps.teamId, event.groupId);
+        } else if (event.type === "leave") {
+          await clearLineGroupId(deps.teamId, event.groupId);
+        }
+      } catch {
+        // 他チームが同じグループを連携済み(line_group_id は一意)等でも 200 を返して
+        // LINE の再送を止める。詳細は groupId を含みうるので出さない
+        console.error("LINE webhook のグループ連携に失敗しました");
+      }
+    }
+    // 処理結果によらず 200(LINE は非 2xx を再送する。再送させても結果は変わらない)
+    return c.json({ ok: true });
+  });
 
   // LIFF の ID トークンを検証し、guardian を find-or-create してセッションを張る
   app.post("/auth/line", async (c) => {

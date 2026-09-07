@@ -29,6 +29,7 @@ function api(team = teamId) {
     encryptionKey: ENC_KEY,
     hmacKey: HMAC_KEY,
     secureCookie: false,
+    lineChannelSecret: null,
   });
 }
 

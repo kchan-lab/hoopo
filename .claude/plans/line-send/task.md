@@ -12,10 +12,10 @@ Issue: [#27](https://github.com/kchan-lab/hoopo/issues/27) / Plan: [plan.md](pla
 
 - [ ] `line-send.ts`: usage / messages / sendSchedule / sendAnnouncement、管理 API 4 ルート、Integration
 - [ ] 日程管理・お知らせ管理の「LINE へ送信」(二段階確認・送信ログ)、ダッシュボードのメーター、E2E
-- [ ] メインセッションで検証 → PR(`Refs #27` + `Closes #107`)→ CI → merge commit
+- [ ] メインセッションで検証 → PR(`Closes #27` + `Closes #107`)→ CI → merge commit
 
 ## 6c-2: Webhook・送信クライアント — #108 / feat/line-send-webhook(Opus サブエージェント)
 
-- [ ] `packages/line`: webhook.ts(署名検証・イベント解析)、messaging-http.ts(push・参加人数)、Unit
-- [ ] portal `POST /line/webhook` + `line-group.ts`(join/leave で teams.line_group_id)、Integration
-- [ ] メインセッションで検証 → PR(`Closes #27` + `Closes #108`)→ CI → merge commit
+- [x] `packages/line`: webhook.ts(署名検証・イベント解析)、messaging-http.ts(push・参加人数)、Unit
+- [x] portal `POST /line/webhook` + `line-group.ts`(join/leave で teams.line_group_id)、Integration
+- [x] メインセッションで検証(Integration 173)→ PR(`Refs #27` + `Closes #108`)→ CI → merge commit
