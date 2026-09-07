@@ -88,3 +88,23 @@ test("管理ログイン画面にプライバシーポリシーのリンクが�
   // 保護者アプリ側の公開ページ(NEXT_PUBLIC_PORTAL_URL)を指す
   await expect(link).toHaveAttribute("href", /\/privacy$/);
 });
+
+test("登録前(はじめての方)と登録画面からもプライバシーポリシーへ行ける", async ({
+  page,
+  context,
+}) => {
+  // ログインだけ済ませ、お子さん未登録の状態でホームを開く
+  const login = await context.request.post(`${urls.portal}/api/auth/line`, {
+    data: { idToken: `fake:U${randomBytes(16).toString("hex")}` },
+  });
+  expect(login.ok()).toBe(true);
+  await page.goto(urls.portal);
+  await expect(page.locator("h1")).toContainText("はじめての方");
+  await page.getByRole("link", { name: "プライバシーポリシー" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+
+  await page.goto(`${urls.portal}/register`);
+  await expect(
+    page.getByRole("link", { name: "プライバシーポリシー" }),
+  ).toBeVisible();
+});
