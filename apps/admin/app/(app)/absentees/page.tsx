@@ -8,6 +8,7 @@ import {
   listPracticesByMonth,
   monthOf,
   parseMonth,
+  reminderSentTodayAt,
   todayInTokyo,
   weekdayLabel,
 } from "@hoopo/api";
@@ -93,6 +94,10 @@ export default async function AbsenteesPage({
     getLineUsage(session.teamId, lineClient()),
     listLineMessages(session.teamId, 5),
   ]);
+  // 自動ジョブ(19:00)が同じ練習日へ送った直後に手動で送ると二重になるので、確認文言で知らせる
+  const sentTodayAt = data
+    ? await reminderSentTodayAt(session.teamId, data.practice.heldOn)
+    : null;
   const monthNumber = Number(month.slice(5));
 
   return (
@@ -154,6 +159,7 @@ export default async function AbsenteesPage({
                       today={today}
                       unanswered={data.unanswered.length}
                       usage={lineUsage}
+                      sentTodayAt={sentTodayAt}
                     />
                   }
                 />
