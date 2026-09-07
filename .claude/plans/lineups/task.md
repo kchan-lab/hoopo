@@ -9,9 +9,9 @@ Issue: [#29](https://github.com/kchan-lab/hoopo/issues/29) / Plan: [plan.md](pla
 
 ## 7b-1: 管理のチーム編成 — #101 / feat/lineups-admin(Opus サブエージェント)
 
-- [ ] `lineups-coach.ts`: getLineupForCoach / saveLineup、管理 API 2ルート、Integration
-- [ ] 日程管理の各行に「編成」→ /lineups/[practiceId](5枠セレクト+ベンチ、保存)、E2E
-- [ ] メインセッションで検証 → PR(`Refs #29` + `Closes #101`)→ CI → merge commit
+- [x] `lineups-coach.ts`: getLineupForCoach / saveLineup、管理 API 2ルート、Integration
+- [x] 日程管理の各行に「編成」→ /lineups/[practiceId](5枠セレクト+ベンチ、保存)、E2E
+- [x] メインセッションで検証(Integration 149 / E2E 63+2)→ PR(`Refs #29` + `Closes #101`)→ CI → merge commit
 
 ## 7b-2: 保護者の出場メンバー 2D — #102 / feat/lineups-portal(Opus サブエージェント)
 
