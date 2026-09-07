@@ -1278,3 +1278,14 @@ textarea.afld {
   font-size: 0.82em;
   color: var(--asub);
 }
+
+/* ログインカード下のプライバシーポリシー(保護者アプリ側の公開ページへ)。
+ * 色はモノトーンの補助色のみ(絶対原則6) */
+.lgin .privacy {
+  margin-top: 1.4em;
+}
+
+.lgin .privacy a {
+  color: var(--asub);
+  text-decoration: underline;
+}

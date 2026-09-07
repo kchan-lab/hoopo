@@ -171,6 +171,8 @@ export default async function Home() {
         <p className="sync">チームは順次利用できるようになります</p>
         <div className="powered">
           powered by <b>hoopo</b>
+          <span aria-hidden="true"> · </span>
+          <Link href="/privacy">プライバシーポリシー</Link>
         </div>
       </main>
       <TabBar active="home" />
