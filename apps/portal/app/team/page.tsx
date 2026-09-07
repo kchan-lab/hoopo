@@ -1,4 +1,5 @@
 import { listTeamMembers } from "@hoopo/api";
+import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
 import { AutoLogin } from "../auto-login";
 import { TabBar } from "../tab-bar";
@@ -52,6 +53,10 @@ export default async function TeamPage() {
             ))}
           </ul>
         )}
+        {/* ログイン不要の公開ページ(privacy-policy/plan.md 方針)。名簿の末尾に控えめに置く */}
+        <div className="legal-link">
+          <Link href="/privacy">プライバシーポリシー</Link>
+        </div>
       </main>
       <TabBar active="team" />
     </>

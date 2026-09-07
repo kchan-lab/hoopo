@@ -1255,3 +1255,36 @@ textarea.inbox {
   opacity: 0.45;
   cursor: default;
 }
+
+/* ---- プライバシーポリシー(privacy-policy/plan.md)。長文を読ませるログイン不要の公開ページ ---- */
+/* 見出し・本文のサイズは DESIGN_GUIDELINES §1.2(カード見出し 14–15/700、本文 13)に合わせる */
+.legal .ttl {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+.legal p,
+.legal ul {
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 6px 0 0;
+}
+.legal ul {
+  padding-left: 1.2em;
+}
+.legal li + li {
+  margin-top: 2px;
+}
+/* プライバシーポリシーへの導線(チーム画面の末尾)と、そこからホームへ戻る導線。
+ * 最下部に控えめに置く(オレンジは使わない) */
+.legal-link {
+  margin-top: auto;
+  padding-top: 16px;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--sub);
+}
+.legal-link a,
+.powered a {
+  text-decoration: underline;
+}
