@@ -1,3 +1,4 @@
+import { trimTrailingSlash } from "@hoopo/api/line-shared";
 import {
   createFakeLineMessagingClient,
   createLineMessagingClient,
@@ -29,7 +30,7 @@ export function lineClient(): LineMessagingClient {
 
 /** 予定表画像を載せる保護者アプリの URL(末尾スラッシュは落とす) */
 export function portalUrl(): string {
-  return (process.env.NEXT_PUBLIC_PORTAL_URL ?? "").replace(/\/+$/, "");
+  return trimTrailingSlash(process.env.NEXT_PUBLIC_PORTAL_URL ?? "");
 }
 
 /** LINE のメッセージから開く入口。LIFF 未取得(#9)のうちは保護者アプリの URL で代用する */
