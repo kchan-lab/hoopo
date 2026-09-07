@@ -10,6 +10,7 @@ import {
 } from "@hoopo/line";
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+import { liffUrl, lineClient, portalUrl } from "../../../lib/line";
 
 // Hono を Route Handler にマウントする(apps/portal と同パターン)。
 // 管理 API は Cookie・role を保護者 API と分離した createAdminApi を使う(絶対原則6)。
@@ -55,6 +56,11 @@ function buildDeps(): AdminApiDeps {
     encryptionKey: requireEnv("LINE_ID_ENCRYPTION_KEY"),
     hmacKey: requireEnv("LINE_ID_HMAC_KEY"),
     lineLogin: buildLineLoginDeps(),
+    // LINE グループ送信(line-send/plan.md 6c-1)。組み立ては lib/line.ts に集約し、
+    // 通数メーターを描くサーバーコンポーネントと同じクライアントを使う
+    line: { client: lineClient() },
+    portalUrl: portalUrl(),
+    liffUrl: liffUrl(),
   };
 }
 
