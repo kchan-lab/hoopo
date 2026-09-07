@@ -169,7 +169,8 @@ export function createAdminApi(deps: AdminApiDeps) {
     let coachId: string | undefined;
     if (mode === "link") {
       const session = await readSession(c, "coach", deps);
-      if (!session) return c.json({ error: "未ログインです" }, 401);
+      // 画面遷移(フルページ遷移の <a>)で呼ばれるので、生 JSON ではなくログイン画面へ返す
+      if (!session) return c.redirect("/login");
       coachId = session.sub;
     }
 

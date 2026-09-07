@@ -11,6 +11,7 @@ import {
   redirectUriFromCallback,
   verifyLineOAuthToken,
 } from "./line-login";
+import { createSessionToken, verifySessionToken } from "./session";
 
 const SECRET = "7".repeat(64);
 const NOW = new Date("2026-09-07T00:00:00Z");
@@ -89,6 +90,23 @@ describe("state Cookie(署名ペイロード)", () => {
     expect(
       await verifyLineOAuthToken(token, SECRET, { now: later }),
     ).toBeNull();
+  });
+
+  it("同じ鍵のセッショントークンとは相互に流用できない(typ で判別)", async () => {
+    const exp = Math.floor(NOW.getTime() / 1000) + 60;
+    const session = await createSessionToken(
+      { sub: "coach-1", role: "coach", teamId: "team-1", exp },
+      SECRET,
+    );
+    expect(
+      await verifyLineOAuthToken(session, SECRET, { now: NOW }),
+    ).toBeNull();
+
+    const oauth = await createLineOAuthToken(
+      createLineOAuthState("login", undefined, NOW),
+      SECRET,
+    );
+    expect(await verifySessionToken(oauth, SECRET, { now: NOW })).toBeNull();
   });
 });
 
