@@ -174,7 +174,7 @@ test("提出した参加予定が出欠マトリクスと欠席者管理に反�
   await expect(absent).not.toContainText(nameA);
   await expect(absent).not.toContainText(nameB);
 
-  // 12日は2人とも未回答。リマインドは #27 まで無効表示
+  // 12日は2人とも未回答。グループ宛ての「リマインドを送る」が出る(#20。送信は admin-reminder.spec.ts)
   const nextPill = page.getByRole("link", { name: label(DAY2), exact: true });
   await expect(nextPill).toHaveAttribute("href", new RegExp(p2));
   await nextPill.click();
@@ -183,8 +183,8 @@ test("提出した参加予定が出欠マトリクスと欠席者管理に反�
   await expect(unanswered).toContainText(`${nameA}(4年)`);
   await expect(unanswered).toContainText(`${nameB}(4年)`);
   await expect(
-    unanswered.getByRole("button", { name: "リマインド対象に含める" }).first(),
-  ).toBeDisabled();
+    unanswered.getByRole("button", { name: "リマインドを送る" }),
+  ).toBeVisible();
 });
 
 test("モバイルではドロワーから出欠管理へ移動できる", async ({

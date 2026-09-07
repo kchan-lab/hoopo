@@ -1,0 +1,99 @@
+# 日次バックアップ(Issue #20 / attendance-reminder/plan.md 設計判断4)。
+# 毎日 04:00 JST に pg_dump を取り、Cloudflare R2(S3 互換・無料枠 10GB)へ置く。
+# ランニングコストは原則ゼロ(CLAUDE.md 絶対原則1)なので保存先は R2 のみとし、
+# 自宅 Proxmox への複製は R2 から rclone で引く運用にする(手順は docs/DEVELOPMENT.md)。
+# 世代管理は R2 側のライフサイクルルール(30 日で削除)に任せ、ここでは消さない。
+# シークレット未設定の環境はスキップするため、接続情報が揃う前でもグリーンで完走する。
+# - <ENV>_BACKUP_DATABASE_URL: セッションモード(5432)の接続文字列。
+#   pg_dump は Supavisor のトランザクションモード(6543)では動かない(設計判断4)
+# - R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET: R2 の S3 互換 API
+# - DISCORD_WEBHOOK_URL: 失敗通知先(#10 で設定。未設定時は Actions の失敗表示のみ)
+name: Backup
+
+on:
+  schedule:
+    - cron: "0 19 * * *" # 04:00 JST(Asia/Tokyo)= UTC 前日 19:00
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PGCONNECT_TIMEOUT: "15"
+      STG_URL: ${{ secrets.STG_BACKUP_DATABASE_URL }}
+      PROD_URL: ${{ secrets.PROD_BACKUP_DATABASE_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      # R2 はリージョンを持たないが aws-cli が必須にするので auto を渡す
+      AWS_DEFAULT_REGION: auto
+    steps:
+      # ランナー同梱の pg_dump は古いことがあるため、Supabase(PostgreSQL 17)に合わせて入れ直す
+      - name: Install postgresql-client 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+      - name: Dump and upload to R2
+        id: backup
+        run: |
+          if [ -z "$R2_ACCOUNT_ID" ] || [ -z "$R2_BUCKET" ] \
+            || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::notice::R2 のシークレットが未設定のためバックアップをスキップ"
+            exit 0
+          fi
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          # 日付は Asia/Tokyo 固定(CLAUDE.md 開発ルール)
+          date_jst=$(TZ=Asia/Tokyo date +%F)
+          failed_envs=""
+          for env_name in STG PROD; do
+            url_var="${env_name}_URL"
+            url="${!url_var}"
+            if [ -z "$url" ]; then
+              echo "::notice::${env_name}: BACKUP_DATABASE_URL が未設定のためスキップ"
+              continue
+            fi
+            lower=$(echo "$env_name" | tr '[:upper:]' '[:lower:]')
+            file="${lower}-${date_jst}.dump"
+            # -Fc(カスタム形式)はそれ自体が圧縮される。所有者・権限は移行先で作り直すので落とす。
+            # stderr は接続情報を含みうるため捨てる(supabase-ping.yml と同じ方針)
+            if ! pg_dump -Fc --no-owner --no-privileges -f "$file" "$url" 2>/dev/null; then
+              echo "::error::${env_name}: pg_dump に失敗しました(接続文字列は 5432 のセッションモードか確認)"
+              failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
+              continue
+            fi
+            size=$(wc -c < "$file")
+            if aws s3 cp "$file" "s3://${R2_BUCKET}/hoopo/${lower}/${date_jst}.dump" \
+              --endpoint-url "$endpoint" >/dev/null 2>&1; then
+              echo "${env_name}: hoopo/${lower}/${date_jst}.dump (${size} bytes)"
+            else
+              echo "::error::${env_name}: R2 へのアップロードに失敗しました(バケット名・キーを確認)"
+              failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
+            fi
+            rm -f "$file"
+          done
+          echo "failed=${failed_envs}" >> "$GITHUB_OUTPUT"
+          [ -z "$failed_envs" ] || exit 1
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILED: ${{ steps.backup.outputs.failed }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL が未設定のため通知をスキップ(#10 で設定)"
+            exit 0
+          fi
+          curl -fsS -H "Content-Type: application/json" \
+            -d "{\"content\":\"⚠️ 日次バックアップが失敗しました(対象: ${FAILED:-不明}): ${RUN_URL}\"}" \
+            "$WEBHOOK" \
+            || echo "::warning::Discord への通知送信に失敗しました"

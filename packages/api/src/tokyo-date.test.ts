@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   addMonths,
   formatDateLabel,
   formatMonthLabel,
@@ -42,6 +43,15 @@ describe("Asia/Tokyo の日付処理", () => {
     expect(addMonths("2026-01", -1)).toBe("2025-12");
     expect(formatMonthLabel("2026-09")).toBe("2026年9月");
     expect(formatTimeShort("09:00")).toBe("9:00");
+  });
+
+  it("日数の加算は月・年をまたいでもうるう年でも正しい(リマインドの2日前判定)", () => {
+    expect(addDays("2026-09-05", 2)).toBe("2026-09-07");
+    expect(addDays("2026-09-30", 2)).toBe("2026-10-02");
+    expect(addDays("2026-12-31", 2)).toBe("2027-01-02");
+    expect(addDays("2028-02-27", 2)).toBe("2028-02-29");
+    expect(addDays("2026-03-01", -2)).toBe("2026-02-27");
+    expect(() => addDays("2026-9-6", 2)).toThrow();
   });
 
   it("カレンダー格子は日曜始まりで、必要な週数だけ返す", () => {

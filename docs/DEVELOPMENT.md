@@ -146,11 +146,64 @@ hotfix/xxx ───────────────────────
 - **DB のロールバックはしない(forward-fix)**。障害時はアプリを Vercel の過去デプロイ再昇格で
   戻し、DB は前方修正のマイグレーションで対処する(Free プランは PITR なし・down migration 非管理)
 
+## 運用ジョブ(GitHub Actions schedule)
+
+定期ジョブはすべて GitHub Actions の schedule で回す(常時課金のインフラを増やさない。CLAUDE.md 絶対原則1)。
+**シークレットが未設定の環境はスキップして成功で終わる**ので、stg/prod が揃う前でも CI はグリーンのままになる。
+
+| ワークフロー | 実行時刻(JST) | 役割 | 必要なシークレット |
+|---|---|---|---|
+| `supabase-ping.yml` | 毎日 06:23 | Supabase Free の自動一時停止対策 | `<ENV>_PING_DATABASE_URL` |
+| `fee-records.yml` | 毎月1日 09:10 | 当月の月謝レコードを生成 | `<ENV>_PING_DATABASE_URL` |
+| `attendance-reminder.yml` | 毎日 19:00 | 2日後の練習に未提出があればLINEグループへ1通 | `<ENV>_ADMIN_URL` / `<ENV>_CRON_SECRET` |
+| `backup.yml` | 毎日 04:00 | `pg_dump` → Cloudflare R2 へアップロード | `<ENV>_BACKUP_DATABASE_URL` / `R2_*` |
+
+`<ENV>` は `STG` / `PROD`。共通で `DISCORD_WEBHOOK_URL`(失敗通知先。未設定なら Actions の失敗表示のみ)を使う。
+
+### 出欠リマインド(attendance-reminder.yml)
+
+`POST <admin>/api/jobs/attendance-reminder` を `Authorization: Bearer <CRON_SECRET>` で叩く。
+DB 直ではなくアプリの API を通すのは、通数チェック(月200通)と送信ログを必ず経由させるため
+(`.claude/plans/attendance-reminder/plan.md` 設計判断2)。応答は
+`{ sent, dates, unanswered, skipped? }` で、`skipped` は `already_sent` / `no_target` / `quota`。
+
+- **対象**: 今日(Asia/Tokyo)+2日 に開催で、未提出の部員が1人以上いる練習。同じ日に複数コマあっても
+  まとめて **1通**(通数 = 送信回数 × グループ人数。絶対原則3)
+- **1日1通まで**: 当日(JST)に同じ開催日の `reminder` ログが `sent` で残っていればスキップ
+- **枠不足はスキップ**: 送らず、送信ログも残さない
+- 手動送信はコーチが管理画面の欠席者管理から行う(二段階確認で消費通数と残りを表示)
+
+設定する値:
+
+1. `CRON_SECRET` を生成する(`openssl rand -hex 32`)
+2. **Vercel** の admin プロジェクトの環境変数に `CRON_SECRET` を設定する(環境ごとに別の値)。
+   未設定なら `/api/jobs/*` は 503 を返して無効のままになる
+3. **GitHub Secrets** に同じ値を `STG_CRON_SECRET` / `PROD_CRON_SECRET` として設定し、
+   `STG_ADMIN_URL` / `PROD_ADMIN_URL`(末尾スラッシュなしの origin)も入れる
+
+### 日次バックアップ(backup.yml)
+
+`pg_dump -Fc --no-owner --no-privileges` の結果を Cloudflare R2(S3互換・無料枠10GB)へ
+`hoopo/<env>/<YYYY-MM-DD>.dump` として置く。
+
+- 接続文字列は **セッションモード(5432)** を使う。Supavisor のトランザクションモード(6543)では
+  `pg_dump` が動かない(plan.md 設計判断4)。読み取り専用ロールでよい
+- シークレット: `STG_BACKUP_DATABASE_URL` / `PROD_BACKUP_DATABASE_URL`、
+  `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`
+- **世代管理は R2 のライフサイクルルール(30日で削除)に任せる**。ワークフローは削除しない
+  (Cloudflare ダッシュボード → R2 → バケット → Settings → Object lifecycle rules)
+- **自宅 Proxmox への複製は R2 から rclone で引く**(Actions からは押し込まない)。
+  Proxmox 側で `rclone config` に R2 を S3 互換(`provider = Cloudflare`,
+  `endpoint = https://<account>.r2.cloudflarestorage.com`)として登録し、cron で
+  `rclone sync r2:<bucket>/hoopo /var/backups/hoopo --max-age 40d` を回す
+- 復元は `pg_restore --no-owner --no-privileges -d <接続文字列> <ファイル>`
+
 ## フェーズ3: 実戦投入
 
 - [ ] ステージングを自分+家族のLINEアカウントで1〜2週運用
 - [ ] LINEグループにはまず2〜3家庭で試験導入 → 問題なければ全体展開
-- [ ] 運用ジョブを有効化(GitHub Actions schedule): 未提出リマインド、日次バックアップ(pg_dump→R2+自宅Proxmox)、Supabase停止対策ping
+- [x] 運用ジョブを実装(GitHub Actions schedule): 未提出リマインド、日次バックアップ(pg_dump→R2+自宅Proxmox)、Supabase停止対策ping
+- [ ] 運用ジョブを有効化(上表のシークレットを stg/prod ぶん設定する。「運用ジョブ」節)
 - [ ] プライバシーポリシー掲示・卒団時の削除フロー確認
 
 ## Claude Code の回し方のコツ
