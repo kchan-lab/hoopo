@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { portalUrl } from "../../lib/line";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -59,6 +60,11 @@ export default async function LoginPage({
           <i />
         </div>
         <LoginForm />
+        {/* プライバシーポリシーは保護者アプリ側の公開ページ(privacy-policy/plan.md)。
+         * 管理画面にオレンジは持ち込まないのでモノトーンのまま(絶対原則6) */}
+        <p className="cap privacy">
+          <a href={`${portalUrl()}/privacy`}>プライバシーポリシー</a>
+        </p>
       </div>
     </main>
   );
