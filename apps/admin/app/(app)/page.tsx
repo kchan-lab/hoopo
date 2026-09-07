@@ -3,12 +3,15 @@ import {
   formatDateLabel,
   formatMonthLabel,
   getDashboard,
+  getLineUsage,
   monthOf,
   todayInTokyo,
 } from "@hoopo/api";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { lineClient } from "../../lib/line";
 import { getCoachSession } from "../../lib/session";
+import { LineMeter } from "./line-meter";
 import { LogoutButton } from "./logout-button";
 import { Shell } from "./shell";
 
@@ -17,14 +20,18 @@ export const dynamic = "force-dynamic";
 // 管理ダッシュボード(REQUIREMENTS §5.2。ワイヤー PC-2 / SP-3)。
 // 提出率・次回参加人数・月謝未提出の3カード + 未提出の部員一覧 + LINE通数メーター。
 // 数字は packages/api の getDashboard(Tokyo の今日基準)だけから作り、カードから各画面へ渡す。
-// LINE通数は送信ログが未設計なのでプレースホルダのまま(admin-dashboard/plan.md 設計判断2)
+// LINE通数は送信ログ(line_messages)の当月合計(line-send/plan.md 6c-1)
 
 export default async function DashboardPage() {
   const session = await getCoachSession();
   if (!session) redirect("/login");
   const today = todayInTokyo();
+  const [dashboard, lineUsage] = await Promise.all([
+    getDashboard(session.teamId, today),
+    getLineUsage(session.teamId, lineClient()),
+  ]);
   const { month, submission, nextPractice, fees, unansweredMembers } =
-    await getDashboard(session.teamId, today);
+    dashboard;
   const monthNumber = Number(month.slice(5));
 
   return (
@@ -114,18 +121,12 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        <div className="acard">
-          <div className="k">今月のLINE通数</div>
-          <div className="v">
-            − <small>/ 200通(無料枠)</small>
-          </div>
-          <div className="bar">
-            <i style={{ width: "0%" }} />
-          </div>
-          <p className="anote">
-            1回の送信でグループ人数分を消費します(カウンターは 6c で有効化)
-          </p>
-        </div>
+        {/* 通数メーター(n/200)は日程管理と共通の部品(DESIGN §2.3。バーは aink 単色) */}
+        <LineMeter usage={lineUsage}>
+          <Link className="go" href="/schedule">
+            日程管理へ
+          </Link>
+        </LineMeter>
 
         {/* 共有 PC を想定した明示的なログアウト(数字を邪魔しないよう最下部に置く) */}
         <div className="dfoot">

@@ -66,12 +66,16 @@ export type OutgoingMessage =
   | { type: "text"; text: string }
   | { type: "image"; originalContentUrl: string; previewImageUrl: string };
 
+/** 末尾のスラッシュを落とす。正規表現(/\/+$/)は CodeQL が多項式時間を警告するためループで削る */
+export function trimTrailingSlash(url: string): string {
+  let end = url.length;
+  while (end > 0 && url.charAt(end - 1) === "/") end--;
+  return url.slice(0, end);
+}
+
 /** 末尾のスラッシュを落として結合する(liffUrl は https://liff.line.me/<id> または portal の URL) */
 export function joinUrl(base: string, path: string): string {
-  // 正規表現(/\/+$/)は CodeQL が多項式時間を警告するため、末尾を素直に削る
-  let end = base.length;
-  while (end > 0 && base.charAt(end - 1) === "/") end--;
-  return `${base.slice(0, end)}${path}`;
+  return `${trimTrailingSlash(base)}${path}`;
 }
 
 /** 予定表発行の通知(§6 必須通知1): 画像+短文の 1 push */

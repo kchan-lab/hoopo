@@ -3,6 +3,7 @@ import {
   type AuthorizationCodeExchanger,
   encryptLineUserId,
   type IdTokenVerifier,
+  type LineMessagingClient,
   lineUserIdLookup,
 } from "@hoopo/line";
 import { and, eq } from "drizzle-orm";
@@ -34,6 +35,14 @@ import {
   redirectUriFromCallback,
   verifyLineOAuthToken,
 } from "./line-login";
+import {
+  getLineUsage,
+  type LineSendDeps,
+  type LineSendFailureReason,
+  listLineMessages,
+  sendAnnouncementToLine,
+  sendScheduleToLine,
+} from "./line-send";
 import { getLineupForCoach, saveLineup } from "./lineups-coach";
 import { parseLineupInput } from "./lineups-shared";
 import {
@@ -87,7 +96,26 @@ export interface AdminApiDeps {
   encryptionKey: string;
   hmacKey: string;
   lineLogin: AdminLineLoginDeps;
+  /** LINE グループ送信(line-send/plan.md 6c-1)。LINE_FAKE=1 ならフェイク */
+  line: { client: LineMessagingClient };
+  /** 予定表画像を載せる保護者アプリの URL(NEXT_PUBLIC_PORTAL_URL) */
+  portalUrl: string;
+  /** LINE のメッセージから開く入口。LIFF_ID があれば https://liff.line.me/<id> */
+  liffUrl: string;
 }
+
+// 送信失敗の理由 → HTTP ステータス(契約は line-send/plan.md「API 契約」)。
+// 未発行・送れないお知らせは操作の前提が整っていない 400、連携なし・枠不足は
+// 状態の衝突なので 409、LINE 側で失敗したものは 502
+const LINE_SEND_STATUS: Record<LineSendFailureReason, 400 | 404 | 409 | 502> = {
+  not_published: 400,
+  not_sendable: 400,
+  not_found: 404,
+  no_group: 409,
+  quota: 409,
+  member_count: 502,
+  push_failed: 502,
+};
 
 // LINE 連携の一意制約違反(別のコーチが同じ LINE を連携済み)だけを取り出す。
 // ドライバの例外は ORM に包まれることがあるので cause を数段たどる
@@ -620,6 +648,56 @@ export function createAdminApi(deps: AdminApiDeps) {
     return done
       ? c.body(null, 204)
       : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // ---- LINE グループ送信・通数(line-send/plan.md 6c-1。ロジックは line-send.ts) ----
+
+  const sendDeps: LineSendDeps = {
+    client: deps.line.client,
+    portalUrl: deps.portalUrl,
+    liffUrl: deps.liffUrl,
+  };
+
+  // 通数メーター(n/200)+ グループ連携の状態。memberCount は確認ダイアログの「n 人 × 1 通」用
+  app.get("/line/usage", coach, async (c) => {
+    const session = c.get("session");
+    return c.json(await getLineUsage(session.teamId, deps.line.client));
+  });
+
+  // 送信ログ(新しい順)。破壊的操作の実行ログ(CLAUDE.md 開発ルール)
+  app.get("/line/messages", coach, async (c) => {
+    const session = c.get("session");
+    const raw = Number(c.req.query("limit") ?? 10);
+    const limit = Number.isFinite(raw) ? raw : 10;
+    return c.json({ messages: await listLineMessages(session.teamId, limit) });
+  });
+
+  // 予定表の送信。確認は UI 側の二段階確認。発行済みの月だけ送れる(plan.md「API 契約」)。
+  // 同じ月への再送は許可する(再発行後の送り直し)
+  app.post("/line/send/schedule", coach, async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const month = parseMonth(
+      body && typeof body.month === "string" ? body.month : null,
+    );
+    if (!month)
+      return c.json({ error: "month は YYYY-MM 形式で指定してください" }, 400);
+    const session = c.get("session");
+    const result = await sendScheduleToLine(session.teamId, month, sendDeps);
+    return result.ok
+      ? c.json({ message: result.message, usage: result.usage }, 201)
+      : c.json({ error: result.error }, LINE_SEND_STATUS[result.reason]);
+  });
+
+  // お知らせの送信。公開済み かつ 通知あり のものだけ
+  app.post("/line/send/announcement", coach, async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const id = body && typeof body.id === "string" ? body.id : "";
+    if (!isUuid(id)) return c.json({ error: "対象が見つかりません" }, 404);
+    const session = c.get("session");
+    const result = await sendAnnouncementToLine(session.teamId, id, sendDeps);
+    return result.ok
+      ? c.json({ message: result.message, usage: result.usage }, 201)
+      : c.json({ error: result.error }, LINE_SEND_STATUS[result.reason]);
   });
 
   return app;

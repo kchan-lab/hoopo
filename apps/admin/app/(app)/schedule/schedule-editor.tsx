@@ -1,21 +1,29 @@
 "use client";
 
-import type { Practice, PublishStatus } from "@hoopo/api";
+import type {
+  LineMessageLogEntry,
+  LineUsageSummary,
+  Practice,
+  PublishStatus,
+} from "@hoopo/api";
+import { trimTrailingSlash } from "@hoopo/api/line-shared";
 import { addMonths, formatDateLabel, TOKYO_TZ } from "@hoopo/api/tokyo-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { LineMessageLog, LineMeter } from "../line-meter";
 
 // 月の練習一覧と行編集。API 契約は packages/api/admin-app.ts の /practices(CRUD)。
 // - 行は「表示」と「編集」を切り替え、保存は行単位(POST / PUT)
 // - 練習メニューは編集フォームに同梱し、保存時に全置換(plan.md 設計判断2)
 // - 削除は行内の二段階確認(破壊的操作。#67 と同じ流儀)
-// - 発行(schedule-publish/plan.md 6b-1)も二段階確認。LINE 送信と通数は 6c(#27)まで無効
+// - 発行(schedule-publish/plan.md 6b-1)も二段階確認
+// - LINE 送信(line-send/plan.md 6c-1)は発行済み かつ グループ連携済みのときだけ押せる。
+//   確認では消費通数と残りを必ず見せる(CLAUDE.md 絶対原則3。通数を意識させる)
 
 // 管理画面から保護者アプリの画像を開くための URL(ホストが分かれるため env で結ぶ。設計判断6)。
 // NEXT_PUBLIC_ はクライアントコンポーネントにビルド時へ埋め込まれる
-const PORTAL_URL =
-  process.env.NEXT_PUBLIC_PORTAL_URL?.replace(/\/+$/, "") ?? "";
+const PORTAL_URL = trimTrailingSlash(process.env.NEXT_PUBLIC_PORTAL_URL ?? "");
 
 /** ISO → "9/6 10:00"(Asia/Tokyo 固定。CLAUDE.md 開発ルール) */
 function formatPublishedAt(iso: string): string {
@@ -69,11 +77,15 @@ export function ScheduleEditor({
   monthLabel,
   initialPractices,
   publishStatus,
+  lineUsage,
+  lineMessages,
 }: {
   month: string;
   monthLabel: string;
   initialPractices: Practice[];
   publishStatus: PublishStatus;
+  lineUsage: LineUsageSummary;
+  lineMessages: LineMessageLogEntry[];
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -83,6 +95,40 @@ export function ScheduleEditor({
   const [error, setError] = useState<string | null>(null);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [confirmSend, setConfirmSend] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sentAt, setSentAt] = useState<string | null>(null);
+
+  // LINE へ送信(二段階確認の後段)。成否にかかわらずサーバー側に実行ログが残るので、
+  // 完了後は router.refresh() でメーターとログを取り直す
+  async function sendToLine() {
+    setBusy(true);
+    setSendError(null);
+    try {
+      const res = await fetch("/api/line/send/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month }),
+      });
+      const b = (await res.json().catch(() => null)) as {
+        error?: string;
+        message?: { sentAt: string };
+      } | null;
+      if (!res.ok) {
+        setSendError(b?.error ?? "送信できませんでした");
+        setBusy(false);
+        router.refresh();
+        return;
+      }
+      setSentAt(b?.message?.sentAt ?? new Date().toISOString());
+      setConfirmSend(false);
+      setBusy(false);
+      router.refresh();
+    } catch {
+      setSendError("送信できませんでした");
+      setBusy(false);
+    }
+  }
 
   async function publish() {
     setBusy(true);
@@ -191,6 +237,24 @@ export function ScheduleEditor({
     publishedAt !== null && PORTAL_URL !== ""
       ? `${PORTAL_URL}/api/schedule/${month}.png?v=${encodeURIComponent(publishedAt)}`
       : null;
+
+  // LINE 送信: 発行済み かつ グループ連携済み かつ 参加人数が取れているときだけ押せる。
+  // 押せない理由は必ず title に出す(未連携はメーター側にも文言が出る)
+  const memberCount = lineUsage.memberCount;
+  const sendBlockedReason =
+    publishedAt === null
+      ? "先に予定表を発行してください"
+      : !lineUsage.groupLinked
+        ? "LINE グループが未連携です(Bot をグループに招待してください)"
+        : memberCount === null
+          ? "グループの参加人数を取得できませんでした"
+          : lineUsage.remaining < memberCount
+            ? `今月の LINE 通数が足りません(残り ${lineUsage.remaining} 通、必要 ${memberCount} 通)`
+            : null;
+  // 再送は許可する(再発行後の送り直し)。何回目かを確認文言に出す(plan.md「API 契約」)
+  const sentTimes = lineMessages.filter(
+    (m) => m.kind === "schedule" && m.ref === month && m.status === "sent",
+  ).length;
 
   const update = (patch: Partial<Draft>) =>
     setDraft((d) => (d ? { ...d, ...patch } : d));
@@ -473,12 +537,20 @@ export function ScheduleEditor({
             {publishError}
           </p>
         )}
+        {sendError !== null && (
+          <p className="lgerr" role="alert">
+            {sendError}
+          </p>
+        )}
+        {sentAt !== null && sendError === null && (
+          <p className="pubwarn">{`送信しました ${formatPublishedAt(sentAt)}`}</p>
+        )}
         <div className="pfoot">
-          {confirmPublish ? (
+          {confirmPublish && (
             <fieldset className="confirm">
               <legend className="sr-only">発行の確認</legend>
               <span className="q">
-                {`${monthLabel}の予定表を発行します。よろしいですか?(LINE への送信は 6c で有効化)`}
+                {`${monthLabel}の予定表を発行します。よろしいですか?(LINE への送信は発行後に行います)`}
               </span>
               <button
                 type="button"
@@ -497,7 +569,34 @@ export function ScheduleEditor({
                 発行する
               </button>
             </fieldset>
-          ) : (
+          )}
+          {confirmSend && (
+            <fieldset className="confirm">
+              <legend className="sr-only">LINE 送信の確認</legend>
+              {/* 通数は「送信回数 × グループ人数」。必ず消費と残りを見せる(絶対原則3) */}
+              <span className="q">
+                {`グループ ${memberCount ?? "?"} 人に送信します(${memberCount ?? "?"} 通消費・残り ${Math.max(0, lineUsage.remaining - (memberCount ?? 0))} 通)`}
+                {sentTimes > 0 && `。この月は ${sentTimes + 1} 回目の送信です`}
+              </span>
+              <button
+                type="button"
+                className="abtn"
+                onClick={() => setConfirmSend(false)}
+                disabled={busy}
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                className="abtn fill"
+                onClick={sendToLine}
+                disabled={busy}
+              >
+                送信する
+              </button>
+            </fieldset>
+          )}
+          {!confirmPublish && !confirmSend && (
             <>
               <button
                 type="button"
@@ -520,10 +619,15 @@ export function ScheduleEditor({
               <button
                 type="button"
                 className="abtn"
-                disabled
-                title="LINE 送信と通数カウンターは #27(6c)で実装"
+                onClick={() => {
+                  setSendError(null);
+                  setSentAt(null);
+                  setConfirmSend(true);
+                }}
+                disabled={busy || sendBlockedReason !== null}
+                title={sendBlockedReason ?? undefined}
               >
-                LINE へ送信(6c で有効化)
+                LINE へ送信
               </button>
               {publishedAt !== null &&
                 (previewUrl === null ? (
@@ -545,18 +649,13 @@ export function ScheduleEditor({
           )}
         </div>
       </div>
-      <div className="acard">
-        <div className="k">今月のLINE通数</div>
-        <div className="v">
-          − <small>/ 200通(無料枠)</small>
+      {/* 通数メーター(n/200)+ 送信ログ(最新5件)。実行ログの可視化(CLAUDE.md 開発ルール) */}
+      <LineMeter usage={lineUsage}>
+        <div className="k" style={{ marginTop: "0.8em" }}>
+          送信ログ
         </div>
-        <div className="bar">
-          <i style={{ width: "0%" }} />
-        </div>
-        <p className="anote">
-          1回の送信でグループ人数分を消費します(カウンターは #27 で有効化)
-        </p>
-      </div>
+        <LineMessageLog messages={lineMessages} />
+      </LineMeter>
     </>
   );
 }
