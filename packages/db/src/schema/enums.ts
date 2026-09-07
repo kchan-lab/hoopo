@@ -19,3 +19,16 @@ export const feeStatus = pgEnum("fee_status", ["paid", "unpaid"]);
 
 // 出場メンバーの区分(§4.2-7)
 export const lineupRole = pgEnum("lineup_role", ["starter", "bench"]);
+
+// LINE 送信ログの種別(§6 必須通知: 予定表発行・リマインド、任意: お知らせ)。個別 push は存在しない
+export const lineMessageKind = pgEnum("line_message_kind", [
+  "schedule",
+  "announcement",
+  "reminder",
+]);
+
+// 送信ログの結果。通数は sent 行だけを数える
+export const lineMessageStatus = pgEnum("line_message_status", [
+  "sent",
+  "failed",
+]);
