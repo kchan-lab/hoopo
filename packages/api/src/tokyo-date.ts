@@ -90,6 +90,18 @@ export function addMonths(month: string, delta: number): string {
   return `${y}-${pad(mo)}`;
 }
 
+/**
+ * "YYYY-MM-DD" に日数を足す(Asia/Tokyo の暦日。attendance-reminder/plan.md 設計判断1 の
+ * 「2 日前」の判定に使う)。UTC の Date で計算するので夏時間・実行環境の TZ に影響されない
+ */
+export function addDays(date: string, delta: number): string {
+  const m = DATE_PATTERN.exec(date);
+  if (!m) throw new Error(`日付の形式が不正です: ${date}`);
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  d.setUTCDate(d.getUTCDate() + delta);
+  return toDateString(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+}
+
 export function formatMonthLabel(month: string): string {
   const m = MONTH_PATTERN.exec(month);
   if (!m) throw new Error(`年月の形式が不正です: ${month}`);

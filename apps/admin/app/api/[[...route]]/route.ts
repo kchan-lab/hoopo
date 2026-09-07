@@ -2,6 +2,8 @@ import {
   type AdminApiDeps,
   type AdminLineLoginDeps,
   createAdminApi,
+  createJobsApi,
+  type JobsApiDeps,
 } from "@hoopo/api";
 import {
   createFakeIdTokenVerifier,
@@ -64,11 +66,29 @@ function buildDeps(): AdminApiDeps {
   };
 }
 
+// 定期ジョブ(#20。attendance-reminder/plan.md 設計判断2)。GitHub Actions が
+// Authorization: Bearer <CRON_SECRET> で叩く。CRON_SECRET 未設定なら 503 を返して無効化する
+function buildJobsDeps(): JobsApiDeps {
+  return {
+    teamId: requireEnv("TEAM_ID"),
+    cronSecret: process.env.CRON_SECRET || null,
+    line: {
+      client: lineClient(),
+      portalUrl: portalUrl(),
+      liffUrl: liffUrl(),
+    },
+  };
+}
+
 let app: Hono | undefined;
 
 function getApp(): Hono {
   if (!app) {
-    app = new Hono().basePath("/api").route("/", createAdminApi(buildDeps()));
+    app = new Hono()
+      .basePath("/api")
+      // Cookie 認証の管理 API より先に、Bearer 認証のジョブ API を /api/jobs に載せる
+      .route("/jobs", createJobsApi(buildJobsDeps()))
+      .route("/", createAdminApi(buildDeps()));
   }
   return app;
 }

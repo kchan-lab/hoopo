@@ -3,6 +3,8 @@ import {
   addMonths,
   formatMonthLabel,
   getAbsentees,
+  getLineUsage,
+  listLineMessages,
   listPracticesByMonth,
   monthOf,
   parseMonth,
@@ -11,15 +13,20 @@ import {
 } from "@hoopo/api";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import { lineClient } from "../../../lib/line";
 import { getCoachSession } from "../../../lib/session";
+import { LineMessageLog, LineMeter } from "../line-meter";
 import { Shell } from "../shell";
+import { ReminderSender } from "./reminder-sender";
 
 export const dynamic = "force-dynamic";
 
 // 欠席者管理(REQUIREMENTS §5.2。ワイヤー PC-4 / SP-5)。
 // 練習日を日付ピルで選び、その日の 不参加 / 途中参加・早退 / 未回答 だけを見る。
-// 未回答の「リマインド対象に含める」は送信手段(LINE グループ1通)が入る #27 まで無効表示
-// (attendance/plan.md 設計判断7)
+// 未回答には「リマインドを送る」(#20。グループ宛て1通。個人宛て push は作らない=絶対原則3)。
+// 通数メーターと送信ログは日程管理と同じ LineMeter を再利用する
+// (attendance-reminder/plan.md「画面(admin 欠席者管理)」)
 
 function shortDate(date: string): string {
   const [, m, d] = date.split("-");
@@ -36,35 +43,29 @@ function pillLabel(date: string, selected: boolean): string {
 function Group({
   title,
   entries,
-  remindable = false,
+  action,
 }: {
   title: string;
   entries: AbsenteeEntry[];
-  remindable?: boolean;
+  /** 見出しの右に置く操作(未回答の「リマインドを送る」) */
+  action?: ReactNode;
 }) {
   return (
     <div className="acard">
       {/* 見出しの区切りはワイヤーどおり em ダッシュ */}
-      <div className="k">
-        {title} — {entries.length}人
+      <div className="ghead">
+        <div className="k">
+          {title} — {entries.length}人
+        </div>
+        {action}
       </div>
       {entries.map((e) => (
         <div key={e.child.id} className="arow">
           <b>
             {e.child.name}({e.child.grade}年)
           </b>
-          {remindable ? (
-            <button
-              type="button"
-              className="abtn"
-              disabled
-              title="LINE リマインドは #27 で実装"
-            >
-              リマインド対象に含める
-            </button>
-          ) : (
-            <span>{e.comment ?? "(コメントなし)"}</span>
-          )}
+          {/* グループ宛て 1 通なので個人名は送らない。ここは画面上の確認だけ */}
+          {action === undefined && <span>{e.comment ?? "(コメントなし)"}</span>}
         </div>
       ))}
     </div>
@@ -87,9 +88,11 @@ export default async function AbsenteesPage({
   const fallback = practices.find((p) => p.heldOn >= today) ?? practices[0];
   const selectedId =
     rawId && practices.some((p) => p.id === rawId) ? rawId : fallback?.id;
-  const data = selectedId
-    ? await getAbsentees(session.teamId, selectedId)
-    : null;
+  const [data, lineUsage, lineMessages] = await Promise.all([
+    selectedId ? getAbsentees(session.teamId, selectedId) : null,
+    getLineUsage(session.teamId, lineClient()),
+    listLineMessages(session.teamId, 5),
+  ]);
   const monthNumber = Number(month.slice(5));
 
   return (
@@ -141,7 +144,19 @@ export default async function AbsenteesPage({
               <>
                 <Group title="不参加" entries={data.absent} />
                 <Group title="途中参加・早退" entries={data.partial} />
-                <Group title="未回答" entries={data.unanswered} remindable />
+                <Group
+                  title="未回答"
+                  entries={data.unanswered}
+                  action={
+                    <ReminderSender
+                      practiceId={data.practice.id}
+                      heldOn={data.practice.heldOn}
+                      today={today}
+                      unanswered={data.unanswered.length}
+                      usage={lineUsage}
+                    />
+                  }
+                />
                 {data.absent.length === 0 &&
                   data.partial.length === 0 &&
                   data.unanswered.length === 0 && (
@@ -151,6 +166,13 @@ export default async function AbsenteesPage({
                   )}
               </>
             )}
+            {/* 通数メーター(n/200)+ 送信ログ。実行ログの可視化(CLAUDE.md 開発ルール) */}
+            <LineMeter usage={lineUsage}>
+              <div className="k" style={{ marginTop: "0.8em" }}>
+                送信ログ
+              </div>
+              <LineMessageLog messages={lineMessages} />
+            </LineMeter>
           </>
         )}
       </main>
