@@ -431,3 +431,26 @@ export const lineMessages = pgTable(
     check("line_messages_recipient_count_check", sql`${t.recipientCount} >= 0`),
   ],
 );
+
+// 破壊的操作の実行ログ(REQUIREMENTS §5.2・§9。CLAUDE.md 開発ルール)。まずは卒団後のデータ削除
+// (member-deletion/plan.md)。detail に名前・LINE ID など個人情報は入れない(削除の記録が保持にならないように)
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    // 例: child_deleted
+    action: text("action").notNull(),
+    // 対象の id(削除後も参照できるよう FK にしない)
+    targetId: uuid("target_id"),
+    detail: jsonb("detail").$type<Record<string, unknown>>().notNull(),
+    // 実行したコーチ(削除されたら NULL)
+    performedBy: uuid("performed_by").references(() => coaches.id, {
+      onDelete: "set null",
+    }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("audit_logs_team_created_idx").on(t.teamId, t.createdAt)],
+);

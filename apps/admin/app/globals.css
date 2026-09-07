@@ -1284,6 +1284,34 @@ textarea.afld {
   text-align: left;
 }
 
+/* ---- 卒団した部員のデータ削除(member-deletion/plan.md)。行内で二段階確認する ---- */
+/* 確認文が長いので、ボタンと同じ行に収めず折り返させる */
+.arow.gone {
+  flex-wrap: wrap;
+}
+
+.arow .confirm {
+  flex-basis: 100%;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  gap: 0.6em;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.arow .confirm .q {
+  flex: 1;
+  min-width: 12em;
+  font-size: 0.92em;
+  font-weight: 600;
+  color: var(--aink);
+  text-align: left;
+}
+
 /* ---- チーム編成(lineups/plan.md 7b-1) ---- */
 /* ベンチのチェックは人数が増えても縦に伸びすぎないよう、幅に応じて段組みする
  * (タップ領域 44px は .achk が持つ。DESIGN §3) */

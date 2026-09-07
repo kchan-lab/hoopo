@@ -52,6 +52,9 @@ import {
   MAX_FAILED_LOGINS,
 } from "./login-lockout-shared";
 import {
+  deleteArchivedMember,
+  listArchivedMembers,
+  listAuditLogs,
   listMembers,
   listRegistrations,
   parseRevoke,
@@ -483,8 +486,47 @@ export function createAdminApi(deps: AdminApiDeps) {
     const session = c.get("session");
     const result = await undoYearRollover(session.teamId, new Date());
     return result.ok
-      ? c.json({ restored: result.restored })
+      ? c.json({ restored: result.restored, missing: result.missing })
       : c.json({ error: "取り消せる年度更新がありません" }, 409);
+  });
+
+  // ---- 卒団後のデータ削除(member-deletion/plan.md。ロジックは members.ts) ----
+  // 注: `/members/:childId` はパラメータ付きなので、必ず上の固定パス群より後に置くこと
+
+  // 卒団した部員(アーカイブ済み)の一覧。削除の対象になる部員だけ
+  app.get("/members/archived", coach, async (c) => {
+    const session = c.get("session");
+    return c.json({ members: await listArchivedMembers(session.teamId) });
+  });
+
+  // 破壊的操作: 確認は UI 側の二段階確認。実行ログは audit_logs に残る(CLAUDE.md 開発ルール)。
+  // 削除できるのは卒団済みだけ(設計判断1)。関連行は FK CASCADE、孤立した保護者も消える(判断2)
+  app.delete("/members/:childId", coach, async (c) => {
+    const session = c.get("session");
+    const childId = c.req.param("childId");
+    if (!isUuid(childId)) return c.json({ error: "対象が見つかりません" }, 404);
+    const result = await deleteArchivedMember(
+      session.teamId,
+      childId,
+      session.sub,
+    );
+    if (result.ok) return c.body(null, 204);
+    return result.reason === "not_archived"
+      ? c.json(
+          {
+            error:
+              "在籍中の部員は削除できません(先に年度更新で卒団させてください)",
+          },
+          409,
+        )
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
+  // 破壊的操作の実行ログ(新しい順)。件数は 1〜50 に丸める
+  app.get("/audit-logs", coach, async (c) => {
+    const session = c.get("session");
+    const limit = Number(c.req.query("limit") ?? 20);
+    return c.json({ logs: await listAuditLogs(session.teamId, limit) });
   });
 
   // ---- 日程管理(practice-schedule/plan.md 3a。ロジックは practices.ts) ----

@@ -31,6 +31,7 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
   const [mode, setMode] = useState<Mode>("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const { latest, preview } = status;
   const undoable = latest?.undoable === true;
@@ -49,6 +50,17 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
         setBusy(false);
         return;
       }
+      // 取り消しで復元できなかった部員(猶予中に「卒団した部員のデータを削除」済み)は
+      // 戻らないので、件数差を伝える(member-deletion/plan.md との相互作用)
+      const body = (await res.json().catch(() => null)) as {
+        restored?: number;
+        missing?: number;
+      } | null;
+      setNotice(
+        body && typeof body.missing === "number" && body.missing > 0
+          ? `取り消しました(${body.restored ?? 0} 人を復元。削除済みの ${body.missing} 人は戻りません)`
+          : null,
+      );
       setMode("idle");
       setBusy(false);
       router.refresh();
@@ -155,6 +167,7 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
         </div>
       )}
 
+      {notice !== null && <p className="anotice">{notice}</p>}
       {error !== null && (
         <p className="lgerr" role="alert">
           {error}

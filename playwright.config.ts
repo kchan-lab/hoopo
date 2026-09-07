@@ -23,20 +23,23 @@ export default defineConfig({
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /admin-year-rollover/,
+      testIgnore: /admin-year-rollover|admin-member-deletion/,
     },
     {
       name: "mobile",
       use: { ...devices["iPhone 15"] },
       // LINE 連携はコーチ1行の line_user_id を書き換えるため、desktop / mobile の
       // 同時実行で潰し合う。desktop 側だけで通す(admin-line-login/plan.md)
-      testIgnore: /admin-year-rollover|admin-line-login/,
+      testIgnore: /admin-year-rollover|admin-member-deletion|admin-line-login/,
     },
-    // 年度更新は共有 DB の全部員の学年を動かすため、他のスペックがすべて終わってから単独で回す
+    // 年度更新は共有 DB の全部員の学年を動かすため、他のスペックがすべて終わってから単独で回す。
+    // 卒団後のデータ削除(member-deletion/plan.md)も卒団させるために年度更新を使うので同じ枠に入れ、
+    // このプロジェクト内はファイルをまたいでも直列にする(workers: 1)
     {
       name: "rollover",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /admin-year-rollover/,
+      testMatch: /admin-year-rollover|admin-member-deletion/,
+      workers: 1,
       dependencies: ["desktop", "mobile"],
     },
   ],
