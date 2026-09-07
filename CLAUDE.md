@@ -53,7 +53,7 @@ docs/              … REQUIREMENTS.md / DESIGN_GUIDELINES.md ほか
 ## 開発ルール
 
 - コミットは Conventional Commits。PRは小さく、CIグリーンが必須
-- ブランチは feat/xxx → dev(=stg) → main(=prod)。リリースは release-please によるタグ+ノート自動生成(詳細は `docs/DEVELOPMENT.md`)
+- ブランチは feat/xxx → development(=stg) → main(=prod)。リリースは release-please によるタグ+ノート自動生成(詳細は `docs/DEVELOPMENT.md`)
 - テストは**3層で全網羅**(Unit / Integration / E2E)。実装PRには対象層のテストを必ず含める。戦略の詳細は `docs/DEVELOPMENT.md` のテスト戦略に従う
 - LINEのチャネルシークレット等は必ずサーバー側のみ。Webhookは署名検証を必ず通す
 - 日付・曜日は `Asia/Tokyo` 固定で扱う(練習日は「日付+曜日」で保持)
