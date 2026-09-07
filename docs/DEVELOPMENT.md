@@ -13,7 +13,7 @@
 - [ ] pnpm workspaces でモノレポ骨格を作成: `apps/portal` `apps/admin` `packages/{api,db,ui,line}`
 - [ ] **docker compose でローカル環境を定義**: `portal`(localhost:8000)/`admin`(localhost:8001)の2サービス+共通devイメージ。DBは `supabase start`(Supabase CLIのローカルスタック=Dockerで起動、Postgres:54322 / Studio:54323)。LIFFの実機確認はhttpsが必要なため cloudflared 等のトンネルを併用
 - [ ] CIを先に通す(空プロジェクトでグリーンにする): Biome / tsc / Vitest / Playwright最小 + Renovate + CodeQL + secret scanning
-- [ ] main / dev ブランチを保護(直push禁止・CI必須)。1人開発でも feat/xxx → dev → main のPRフローで統一(Vercelプレビュー確認とAIレビューを挟むため。詳細は「ブランチ戦略・リリースフロー」)
+- [x] main / development ブランチを保護(直push禁止・CI必須)。1人開発でも feat/xxx → development → main のPRフローで統一(Vercelプレビュー確認とAIレビューを挟むため。詳細は「ブランチ戦略・リリースフロー」)
 - [ ] タスク管理は GitHub Projects。定型作業は `.claude/skills/` にSkillとしてコミット(gh CLIと組み合わせて運用)
 
 ポイント: 機能を書き始める前にCIが通る状態を作ると、以後Claude Codeの生成物すべてに自動の安全網がかかる。
@@ -44,7 +44,7 @@
 
 1. Issue起票 — 受入条件を REQUIREMENTS.md の節番号つきで書く
 2. Claude Code に Plan モードで実装計画を立てさせ、承認してから実装
-3. PR作成(dev宛て) — CIグリーン + Claude Code Action のAIレビュー
+3. PR作成(development宛て) — CIグリーン + Claude Code Action のAIレビュー
 4. Vercelプレビューを**スマホ実機**で確認
 5. マージ(仕様との差分に気づいたら、コードではなく先に REQUIREMENTS.md を直す)
 
@@ -94,30 +94,30 @@ docs/REQUIREMENTS.md §4.2-6 / docs/DESIGN_GUIDELINES.md §1.3(提出行・カ�
 
 - 実行: `pnpm test`(unit)/ `pnpm test:int`(integration)/ `pnpm test:e2e`(E2E)
 - CI: **PRごとに Unit + Integration のみ**を実行(E2EはPRのCIに含めない)。**ただしIntegrationは検証対象のRLS・スキーマがIssue #6で実装されるまで暫定的にCIジョブ自体を作らない**(空のIntegrationジョブは作らない方針)。Issue #6でスキーマ・RLSが揃い次第 `ci.yml` にIntegrationジョブを追加する
-- E2E: フロント系の実装をしたら、**コミット前にローカルでE2Eを回して確認する専用Skill(`e2e-check`)**で担保する(docker compose起動→対象導線のPlaywright実行→結果要約までをSkill化)。フルE2Eは **dev→mainのリリースPR** と nightly のCIで実行
+- E2E: フロント系の実装をしたら、**コミット前にローカルでE2Eを回して確認する専用Skill(`e2e-check`)**で担保する(docker compose起動→対象導線のPlaywright実行→結果要約までをSkill化)。フルE2Eは **development→mainのリリースPR** と nightly のCIで実行
 - カバレッジ方針: `packages/api` `packages/db` のロジックは80%を目安に計測。UIは数値を追わず、主要導線がE2Eで通ることを基準にする
 - 新機能の縦切り1本 = Unit(ロジック)+ Integration(API+RLS)+ E2E(導線1本)をセットでIssueの受入条件に含める
 
 ## ブランチ戦略・リリースフロー
 
 ```
-feat/xxx ──PR──▶ dev(=ステージング) ──リリースPR──▶ main(=本番) ──直後──▶ vX.Y.Z タグ + Release
-hotfix/xxx ─────────────────────────────────────────▶ main(緊急時のみ。devへback-merge)
+feat/xxx ──PR──▶ development(=ステージング) ──リリースPR──▶ main(=本番) ──直後──▶ vX.Y.Z タグ + Release
+hotfix/xxx ─────────────────────────────────────────────────▶ main(緊急時のみ。developmentへback-merge)
 ```
 
-- **feat/xxx**: Issue単位で作成し dev へPR。CIは Unit + Integration(Integrationのジョブ追加はIssue #6以降)、Vercelの使い捨てプレビューURLで確認
+- **feat/xxx**: Issue単位で作成し development へPR。CIは Unit + Integration(Integrationのジョブ追加はIssue #6以降)、Vercelの使い捨てプレビューURLで確認
 - **Vercel の関数リージョンは東京(hnd1)に固定**(`apps/*/vercel.json` の `regions`)。既定の iad1(米国東部)だと東京の Supabase との DB 往復ごとに約150ms かかり、画面遷移が数秒になる。stg 用プロジェクトの Production Branch は `development`、本番用は `main`(Vercel の Settings → Environments → Production → Branch Tracking)
-- **dev(ステージング)**: マージで固定のstgドメインへ自動デプロイ。DBは**2つ目のSupabase Freeプロジェクト(stg用)**を使い本番と完全分離(無料枠内)。`e2e-check` Skill・家族テストはここに対して実施
-- **main(本番)**: リリースしたいタイミングで dev→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーン確認 → 本番Supabaseへマイグレーション適用 → マージ(=Vercel本番デプロイ)。適用がマージより先(手順は「prod マイグレーション適用」)
+- **development(ステージング)**: マージで固定のstgドメインへ自動デプロイ。DBは**2つ目のSupabase Freeプロジェクト(stg用)**を使い本番と完全分離(無料枠内)。`e2e-check` Skill・家族テストはここに対して実施
+- **main(本番)**: リリースしたいタイミングで development→main の**リリースPR**を作成(Actionsで週次自動起票も可)。**このPRでのみフルE2EをCI実行**し、グリーン確認 → 本番Supabaseへマイグレーション適用 → マージ(=Vercel本番デプロイ)。適用がマージより先(手順は「prod マイグレーション適用」)
 - **タグ・リリースノート(release-please)**: Conventional Commits(`feat:`=minor / `fix:`=patch / `BREAKING CHANGE`=major)からバージョンを自動計算し、CHANGELOG込みの「release: vX.Y.Z」PRを常時維持。マージした瞬間にタグ打ち+GitHub Release発行+CHANGELOG更新が完了する。**タグはデプロイのトリガーではなく版の記録とロールバックの目印**(ロールバック自体はVercelの過去デプロイ再昇格で即時)
-- **リリース手順の実際**: dev→main のリリースPRは **merge commit** でマージする(squash すると個々の `feat:` / `fix:` が main の履歴から消え、release-please のバージョン計算が壊れる)。マージ後に release-please が「release: vX.Y.Z」PR を起票するのでそれをマージ → タグ+Release+CHANGELOG が完了。直後に main→dev の back-merge PR を出して CHANGELOG / version.txt を dev へ同期する
+- **リリース手順の実際**: development→main のリリースPRは **merge commit** でマージする(squash すると個々の `feat:` / `fix:` が main の履歴から消え、release-please のバージョン計算が壊れる)。マージ後に release-please が「release: vX.Y.Z」PR を起票するのでそれをマージ → タグ+Release+CHANGELOG が完了。直後に main→development の back-merge PR を出して CHANGELOG / version.txt を development へ同期する
 - **マージ方式は全 PR で merge commit に統一**(squash はリポジトリ設定で無効化、ルールセットでも不許可)。feat ブランチの各コミットがそのまま development / main の履歴に残り、release-please はその Conventional Commits を1件ずつ読んで CHANGELOG に載せる。したがって **ブランチ上のコミット件名がそのまま CHANGELOG の行になる**(`feat:` / `fix:` / `perf:` が載り、`docs:` / `chore:` / `ci:` / `refactor:` / `test:` は載らない)
 - **保護者向けお知らせは別物**: GitHub Releaseは開発者向け文面。`release-notes` Skillが `git log 前タグ..HEAD` と関連Issueを読み、保護者向けお知らせの下書き(です・ます調・専門用語なし)まで生成 → コーチが確認して掲載
 - リリース完了・CI失敗は Discord へWebhook通知
 
 ### prod マイグレーション適用(リリース手順)
 
-リリースPR(dev→main)の CI がグリーンになったら、**マージする前に**以下を実施する。
+リリースPR(development→main)の CI がグリーンになったら、**マージする前に**以下を実施する。
 マージすると Vercel の本番デプロイが自動で走り、人間のマイグレーション実行より先に新コードが
 本番に出うるため、「スキーマが先」を運用の速さではなく手順の順序で保証する。マイグレーションは
 後方互換(additive)原則なので、先に適用しても旧コードは影響を受けない。
