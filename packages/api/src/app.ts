@@ -22,6 +22,7 @@ import { parseSubmitAttendance } from "./attendances-shared";
 import { getFeeSheet } from "./fees-guardian";
 import { parseYear } from "./fees-shared";
 import { type AuthEnv, requireGuardian } from "./guard";
+import { getLineup } from "./lineups-guardian";
 import {
   getNextPractice,
   getPractice,
@@ -219,6 +220,18 @@ export function createApi(deps: ApiDeps) {
     return c.json({
       practice: await getNextPractice(session.teamId, todayInTokyo()),
     });
+  });
+
+  // 出場メンバー(lineups/plan.md 7b-2)。/:id より具体的なので先に定義する。
+  // 編成が無い練習でも 200(starters/bench が空)で返し、練習が無ければ 404
+  app.get("/practices/:id/lineup", guardian, async (c) => {
+    const session = c.get("session");
+    if (!isUuid(c.req.param("id")))
+      return c.json({ error: "練習が見つかりません" }, 404);
+    const lineup = await getLineup(session.teamId, c.req.param("id"));
+    return lineup
+      ? c.json(lineup)
+      : c.json({ error: "練習が見つかりません" }, 404);
   });
 
   app.get("/practices/:id", guardian, async (c) => {

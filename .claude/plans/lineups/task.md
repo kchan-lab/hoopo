@@ -15,6 +15,6 @@ Issue: [#29](https://github.com/kchan-lab/hoopo/issues/29) / Plan: [plan.md](pla
 
 ## 7b-2: 保護者の出場メンバー 2D — #102 / feat/lineups-portal(Opus サブエージェント)
 
-- [ ] `lineups-guardian.ts`: getLineup、保護者 API、練習詳細の hasLineup、Integration
-- [ ] /practices/[id]/lineup(コート SVG・チップ・ベンチ)、E2E
-- [ ] メインセッションで検証 → PR(`Closes #29` + `Closes #102`)→ CI → merge commit
+- [x] `lineups-guardian.ts`: getLineup / hasLineup、`GET /practices/:id/lineup`、Integration(`lineups-portal.int.test.ts`)
+- [x] /practices/[id]/lineup(コート SVG・チップ・ベンチ)、練習詳細のボタン出し分け、E2E(`e2e/lineup.spec.ts`。編成の保存は 7b-1 の管理 API に依存)
+- [x] メインセッションで検証(7b-1 と合わせて Integration 149 / E2E 63+2)→ PR(`Closes #29` + `Closes #102`)→ CI → merge commit
