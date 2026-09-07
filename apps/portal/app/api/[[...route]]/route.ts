@@ -29,6 +29,8 @@ function buildDeps(): ApiDeps {
     encryptionKey: requireEnv("LINE_ID_ENCRYPTION_KEY"),
     hmacKey: requireEnv("LINE_ID_HMAC_KEY"),
     secureCookie: process.env.VERCEL === "1",
+    // Webhook(POST /api/line/webhook)の署名検証用。未設定なら 503 で fail-closed(6c-2)
+    lineChannelSecret: process.env.LINE_CHANNEL_SECRET || null,
   };
 }
 
