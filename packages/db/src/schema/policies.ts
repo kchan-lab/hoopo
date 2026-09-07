@@ -4,6 +4,7 @@ import { hoopoApp } from "./roles";
 import {
   announcements,
   attendances,
+  auditLogs,
   childAvailabilities,
   children,
   coaches,
@@ -62,3 +63,4 @@ export const yearRolloversPolicy =
   teamPolicy("year_rollovers").link(yearRollovers);
 export const lineMessagesPolicy =
   teamPolicy("line_messages").link(lineMessages);
+export const auditLogsPolicy = teamPolicy("audit_logs").link(auditLogs);
