@@ -5,6 +5,7 @@ import {
   date,
   foreignKey,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -19,6 +20,8 @@ import {
   approvalStatus,
   attendanceStatus,
   feeStatus,
+  lineMessageKind,
+  lineMessageStatus,
   lineupRole,
 } from "./enums";
 
@@ -400,4 +403,28 @@ export const yearRollovers = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("year_rollovers_team_executed_idx").on(t.teamId, t.executedAt)],
+);
+
+// LINE 送信の実行ログ兼通数カウンター(REQUIREMENTS §6・§7)。グループ宛て 1 push = recipient_count 通。
+// 本文は保存しない(個人情報最小・再送はアプリが組み立てる)。当月の sent 行の合計が使用済み通数
+export const lineMessages = pgTable(
+  "line_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    kind: lineMessageKind("kind").notNull(),
+    // schedule なら YYYY-MM、announcement なら announcements.id(文字列)。何を送ったかの参照
+    ref: text("ref").notNull(),
+    recipientCount: integer("recipient_count").notNull(),
+    status: lineMessageStatus("status").notNull(),
+    error: text("error"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("line_messages_team_sent_idx").on(t.teamId, t.sentAt),
+    check("line_messages_recipient_count_check", sql`${t.recipientCount} >= 0`),
+  ],
 );
