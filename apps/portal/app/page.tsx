@@ -32,6 +32,10 @@ export default async function Home() {
         </header>
         <main className="sc-body">
           <AutoLogin />
+          {/* 登録前(ログイン前)でも読めるように置く(privacy-policy/plan.md 設計判断1) */}
+          <p className="legal-link">
+            <Link href="/privacy">プライバシーポリシー</Link>
+          </p>
         </main>
       </>
     );
@@ -63,6 +67,11 @@ export default async function Home() {
             お子さんを新しく登録する
             <small>登録画面(1/2)へ進みます</small>
           </Link>
+          {/* 登録前に方針を読めるようにする(privacy-policy/plan.md 設計判断1) */}
+          <p className="legal-link">
+            登録する情報の扱いは
+            <Link href="/privacy">プライバシーポリシー</Link>をご覧ください
+          </p>
         </main>
       </>
     );
