@@ -22,6 +22,7 @@ export {
   requireCoach,
   requireGuardian,
 } from "./guard";
+export { createJobsApi, type JobsApiDeps } from "./jobs-app";
 export * from "./line-group";
 export {
   buildAuthorizeUrl,

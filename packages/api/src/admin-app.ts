@@ -41,6 +41,7 @@ import {
   type LineSendFailureReason,
   listLineMessages,
   sendAnnouncementToLine,
+  sendAttendanceReminderToLine,
   sendScheduleToLine,
 } from "./line-send";
 import { getLineupForCoach, saveLineup } from "./lineups-coach";
@@ -116,6 +117,8 @@ const LINE_SEND_STATUS: Record<LineSendFailureReason, 400 | 404 | 409 | 502> = {
   not_published: 400,
   not_sendable: 400,
   not_found: 404,
+  past_practice: 400,
+  no_target: 400,
   no_group: 409,
   quota: 409,
   member_count: 502,
@@ -747,6 +750,25 @@ export function createAdminApi(deps: AdminApiDeps) {
     if (!isUuid(id)) return c.json({ error: "対象が見つかりません" }, 404);
     const session = c.get("session");
     const result = await sendAnnouncementToLine(session.teamId, id, sendDeps);
+    return result.ok
+      ? c.json({ message: result.message, usage: result.usage }, 201)
+      : c.json({ error: result.error }, LINE_SEND_STATUS[result.reason]);
+  });
+
+  // 出欠リマインドの手動送信(#20。attendance-reminder/plan.md「API 契約」)。
+  // 未来の練習で未回答が 1 人以上のときだけ送る。定期ジョブは createJobsApi 側
+  app.post("/line/send/reminder", coach, async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const practiceId =
+      body && typeof body.practiceId === "string" ? body.practiceId : "";
+    if (!isUuid(practiceId))
+      return c.json({ error: "対象が見つかりません" }, 404);
+    const session = c.get("session");
+    const result = await sendAttendanceReminderToLine(
+      session.teamId,
+      practiceId,
+      sendDeps,
+    );
     return result.ok
       ? c.json({ message: result.message, usage: result.usage }, 201)
       : c.json({ error: result.error }, LINE_SEND_STATUS[result.reason]);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAnnouncementMessages,
+  buildReminderMessages,
   buildScheduleMessages,
   canSend,
   computeLineUsage,
@@ -98,6 +99,39 @@ describe("メッセージ本文", () => {
         type: "text",
         text: "お知らせ「合宿のご案内」を公開しました。\nhttp://localhost:8000/announcements/00000000-0000-4000-8000-000000000123",
       },
+    ]);
+  });
+
+  it("リマインドは日付+未提出人数+提出リンクの1通(個人名は載せない)", () => {
+    const messages = buildReminderMessages({
+      dates: [{ label: "9/6 (日)", unanswered: 3 }],
+      liffUrl: "https://liff.line.me/1234567890-abcdefgh/",
+    });
+    expect(messages).toEqual([
+      {
+        type: "text",
+        text:
+          "9/6 (日) の練習の出欠がまだ提出されていない方は、提出をお願いします(未提出 3 人)。\n" +
+          "提出はこちらから\nhttps://liff.line.me/1234567890-abcdefgh/attendance",
+      },
+    ]);
+  });
+
+  it("複数日はまとめて1通(行を並べる。絶対原則3)", () => {
+    const messages = buildReminderMessages({
+      dates: [
+        { label: "9/6 (日)", unanswered: 3 },
+        { label: "9/7 (月)", unanswered: 1 },
+      ],
+      liffUrl: "http://localhost:8000",
+    });
+    expect(messages).toHaveLength(1);
+    const text = messages[0];
+    expect(text?.type === "text" && text.text.split("\n")).toEqual([
+      "9/6 (日) の練習の出欠がまだ提出されていない方は、提出をお願いします(未提出 3 人)。",
+      "9/7 (月) の練習の出欠がまだ提出されていない方は、提出をお願いします(未提出 1 人)。",
+      "提出はこちらから",
+      "http://localhost:8000/attendance",
     ]);
   });
 
