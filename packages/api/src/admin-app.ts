@@ -6,7 +6,7 @@ import {
   type LineMessagingClient,
   lineUserIdLookup,
 } from "@hoopo/line";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import {
@@ -45,7 +45,11 @@ import {
 } from "./line-send";
 import { getLineupForCoach, saveLineup } from "./lineups-coach";
 import { parseLineupInput } from "./lineups-shared";
-import { isLocked, nextLockoutState } from "./login-lockout-shared";
+import {
+  isLocked,
+  LOCKOUT_MS,
+  MAX_FAILED_LOGINS,
+} from "./login-lockout-shared";
 import {
   listMembers,
   listRegistrations,
@@ -174,26 +178,36 @@ export function createAdminApi(deps: AdminApiDeps) {
       return c.json({ error: LOGIN_FAILED }, 401);
     }
 
-    if (coach) {
-      // 成功はリセット、失敗は +1(5 回で 15 分ロック)。UPDATE は withTeam 内の 1 文
-      // (同時リクエストの厳密な直列化はしない。plan.md 方針)
-      const next = nextLockoutState(
-        {
-          failedLoginCount: coach.failedLoginCount,
-          lockedUntil: coach.lockedUntil,
-        },
-        ok && coach.passwordHash !== null,
-        now,
-      );
+    if (coach && ok) {
+      // 成功はカウンタとロックをリセット
       await withTeam(deps.teamId, (tx) =>
         tx
           .update(coaches)
-          .set({
-            failedLoginCount: next.failedLoginCount,
-            lockedUntil: next.lockedUntil,
-            updatedAt: now,
-          })
+          .set({ failedLoginCount: 0, lockedUntil: null, updatedAt: now })
           .where(eq(coaches.id, coach.id)),
+      );
+    } else if (coach) {
+      // 失敗は DB 側で原子的に +1 し、上限に達した時点で 15 分ロック(カウンタは 0 へ)。
+      // SELECT した値を JS で +1 して書き戻すと並列リクエストで lost update が起き、
+      // 並列度を上げるほどロックがかからなくなる(レビュー指摘)ため、1 文の UPDATE で行う。
+      // WHERE でロック中の行を除外し、ここでもロックを延長しない(設計判断1)
+      const nowIso = now.toISOString();
+      await withTeam(deps.teamId, (tx) =>
+        tx.execute(sql`
+          update coaches set
+            failed_login_count = case
+              when failed_login_count + 1 >= ${MAX_FAILED_LOGINS} then 0
+              else failed_login_count + 1
+            end,
+            locked_until = case
+              when failed_login_count + 1 >= ${MAX_FAILED_LOGINS}
+                then ${nowIso}::timestamptz + make_interval(secs => ${LOCKOUT_MS / 1000})
+              else locked_until
+            end,
+            updated_at = ${nowIso}::timestamptz
+          where id = ${coach.id}
+            and (locked_until is null or locked_until <= ${nowIso}::timestamptz)
+        `),
       );
     }
 

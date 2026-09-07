@@ -16,10 +16,9 @@ Issue: [#65](https://github.com/kchan-lab/hoopo/issues/65)
 2. `locked_until > now` ならロック中: **それでもハッシュ照合は 1 回行い**(応答時間を揃える)、結果によらず 401(同じ文言)。カウンタは増やさない(ロック延長で締め出しを長引かせない)
 3. 照合失敗: `failed_login_count + 1`。5 以上になったら `locked_until = now + 15 分`、`failed_login_count = 0`(ロック明けは 5 回からやり直し)→ 401
 4. 照合成功: `failed_login_count = 0, locked_until = null` → セッション発行
-更新は `withTeam` 内の UPDATE 1 文(`RETURNING` で新しい値を得る)。同時リクエストの厳密な直列化はしない(数回ずれても抑止目的は満たす)
+更新は `withTeam` 内の UPDATE 1 文。失敗時の +1 とロック確定は **SQL の CASE で原子的に**行う(SELECT した値を JS で +1 して書き戻すと並列リクエストで lost update が起き、並列度を上げるほどロックがかからなくなる。レビュー指摘で修正)
 
-定数は `packages/api/src/login-lockout-shared.ts`(DB 非依存): `MAX_FAILED_LOGINS = 5`, `LOCKOUT_MS = 15 * 60 * 1000`, `nextLockoutState(current, ok, now)` → `{ failedLoginCount, lockedUntil }`(Unit テスト)。
-ロック中の判定 `isLocked(lockedUntil, now)`。
+定数は `packages/api/src/login-lockout-shared.ts`(DB 非依存): `MAX_FAILED_LOGINS = 5`, `LOCKOUT_MS = 15 * 60 * 1000`、ロック中の判定 `isLocked(lockedUntil, now)`(Unit テスト)。状態遷移の正は admin-app.ts の UPDATE 文。
 
 ## 設計判断
 
@@ -36,4 +35,4 @@ Issue: [#65](https://github.com/kchan-lab/hoopo/issues/65)
 
 - 5 回失敗 → 6 回目は正しいパスワードでも 401 → 15 分後は入れる。成功でカウンタが 0 に戻る
 - 失敗応答の status / 文言がロックの有無で変わらない
-- Unit(状態遷移)/ Integration(5 回失敗→ロック→時間経過で解除→成功でリセット、LINE ログインは影響なし)がグリーン
+- Unit(ロック判定)/ Integration(5 回失敗→ロック→時間経過で解除→成功でリセット、並列 20 失敗でもロック、LINE ログインは影響なし)/ E2E(専用コーチで 5 回失敗→正しいパスワードでも同じ文言)がグリーン
