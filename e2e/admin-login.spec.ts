@@ -51,3 +51,26 @@ test("誤ったパスワードではエラーが表示されログインでき�
   );
   await expect(page).toHaveURL(/\/login$/);
 });
+
+// 試行回数制限(Issue #65)。専用の lockout@example.com を使い、他のテストのコーチをロックしない。
+// 15 分の経過は E2E では待てないので「5 回失敗すると正しいパスワードでも同じ文言で入れない」だけを確かめる
+// (解除・リセットは Integration で担保)。再実行時は既にロック中でも同じ結果になる
+test("5回続けて間違えると、正しいパスワードでも同じ文言で入れない", async ({
+  page,
+}) => {
+  await page.goto(`${urls.admin}/login`);
+  for (let i = 0; i < 5; i++) {
+    await page.getByLabel("メールアドレス").fill("lockout@example.com");
+    await page.getByLabel("パスワード").fill(`wrong-password-${i}`);
+    await page.getByRole("button", { name: "ログイン", exact: true }).click();
+    await expect(page.locator("main").getByRole("alert")).toContainText(
+      "メールアドレスまたはパスワードが違います",
+    );
+  }
+  await page.getByLabel("パスワード").fill("hoopo-dev-login");
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page.locator("main").getByRole("alert")).toContainText(
+    "メールアドレスまたはパスワードが違います",
+  );
+  await expect(page).toHaveURL(/\/login$/);
+});

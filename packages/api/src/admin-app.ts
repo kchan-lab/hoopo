@@ -6,7 +6,7 @@ import {
   type LineMessagingClient,
   lineUserIdLookup,
 } from "@hoopo/line";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import {
@@ -45,6 +45,11 @@ import {
 } from "./line-send";
 import { getLineupForCoach, saveLineup } from "./lineups-coach";
 import { parseLineupInput } from "./lineups-shared";
+import {
+  isLocked,
+  LOCKOUT_MS,
+  MAX_FAILED_LOGINS,
+} from "./login-lockout-shared";
 import {
   listMembers,
   listRegistrations,
@@ -153,13 +158,60 @@ export function createAdminApi(deps: AdminApiDeps) {
           eq(coaches.email, normalizedEmail),
           eq(coaches.authType, "email"),
         ),
-        columns: { id: true, passwordHash: true },
+        columns: {
+          id: true,
+          passwordHash: true,
+          failedLoginCount: true,
+          lockedUntil: true,
+        },
       }),
     );
     // コーチ不在でも必ずハッシュ照合を1回行い、応答時間で email の存在を推測させない
     // (ダミーは本物と同じ反復回数。password.ts の DUMMY_PASSWORD_HASH)
     const stored = coach?.passwordHash ?? DUMMY_PASSWORD_HASH;
     const ok = await verifyPassword(password, stored);
+    const now = new Date();
+
+    // ロック中(login-lockout/plan.md 方針2): 照合は済ませたうえで結果によらず 401。
+    // カウンタも locked_until も触らない = 攻撃者がロックを延長できない(設計判断1)
+    if (coach && isLocked(coach.lockedUntil, now)) {
+      return c.json({ error: LOGIN_FAILED }, 401);
+    }
+
+    if (coach && ok) {
+      // 成功はカウンタとロックをリセット
+      await withTeam(deps.teamId, (tx) =>
+        tx
+          .update(coaches)
+          .set({ failedLoginCount: 0, lockedUntil: null, updatedAt: now })
+          .where(eq(coaches.id, coach.id)),
+      );
+    } else if (coach) {
+      // 失敗は DB 側で原子的に +1 し、上限に達した時点で 15 分ロック(カウンタは 0 へ)。
+      // SELECT した値を JS で +1 して書き戻すと並列リクエストで lost update が起き、
+      // 並列度を上げるほどロックがかからなくなる(レビュー指摘)ため、1 文の UPDATE で行う。
+      // WHERE でロック中の行を除外し、ここでもロックを延長しない(設計判断1)
+      const nowIso = now.toISOString();
+      await withTeam(deps.teamId, (tx) =>
+        tx.execute(sql`
+          update coaches set
+            failed_login_count = case
+              when failed_login_count + 1 >= ${MAX_FAILED_LOGINS} then 0
+              else failed_login_count + 1
+            end,
+            locked_until = case
+              when failed_login_count + 1 >= ${MAX_FAILED_LOGINS}
+                then ${nowIso}::timestamptz + make_interval(secs => ${LOCKOUT_MS / 1000})
+              else locked_until
+            end,
+            updated_at = ${nowIso}::timestamptz
+          where id = ${coach.id}
+            and (locked_until is null or locked_until <= ${nowIso}::timestamptz)
+        `),
+      );
+    }
+
+    // ロックの有無で status も文言も変えない(admin-login/plan.md 設計判断9・本 plan 設計判断2)
     if (!coach?.passwordHash || !ok) {
       return c.json({ error: LOGIN_FAILED }, 401);
     }

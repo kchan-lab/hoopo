@@ -70,6 +70,15 @@ await withTeam(skcId, async (tx) => {
     passwordHash:
       "pbkdf2:v1:600000:hecUH6ZCjaWcaIZPQzkU0A:CV5j3ALpyV3PuwCBSlFShmLL8JjIrqpf81Hye8MWY6E",
   });
+  // ログイン試行回数制限の E2E 専用(同じパスワード)。他の E2E が使う coach@example.com を
+  // ロックさせないために分ける(login-lockout/plan.md)
+  await tx.insert(schema.coaches).values({
+    teamId: skcId,
+    email: "lockout@example.com",
+    authType: "email",
+    passwordHash:
+      "pbkdf2:v1:600000:hecUH6ZCjaWcaIZPQzkU0A:CV5j3ALpyV3PuwCBSlFShmLL8JjIrqpf81Hye8MWY6E",
+  });
 
   const skcChildren = await tx
     .insert(schema.children)

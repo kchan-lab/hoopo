@@ -64,6 +64,9 @@ export const coaches = pgTable(
     // LINE ログイン(#61)。guardians と同じく暗号文+検索用 HMAC。連携前は NULL
     lineUserId: text("line_user_id"),
     lineUserIdLookup: text("line_user_id_lookup"),
+    // メール+パスワードの試行回数制限(#65)。5 回失敗で 15 分ロック。成功でリセット
+    failedLoginCount: integer("failed_login_count").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
