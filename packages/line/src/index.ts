@@ -22,8 +22,18 @@ export {
   type PushResult,
 } from "./messaging";
 export {
+  createLineMessagingClient,
+  type LineMessagingClientOptions,
+} from "./messaging-http";
+export {
   type AuthorizationCodeExchanger,
   type ExchangeCodeParams,
   type ExchangeCodeResult,
   exchangeAuthorizationCode,
 } from "./oauth";
+export {
+  parseWebhookEvents,
+  verifyLineSignature,
+  type WebhookEvent,
+  type WebhookEventType,
+} from "./webhook";

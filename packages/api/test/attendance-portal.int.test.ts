@@ -30,6 +30,7 @@ function api(team = teamId) {
     encryptionKey: "1".repeat(64),
     hmacKey: "2".repeat(64),
     secureCookie: false,
+    lineChannelSecret: null,
   });
 }
 

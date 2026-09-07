@@ -138,6 +138,7 @@ describe("GET /me(管理)と role 分離", () => {
       encryptionKey: "5".repeat(64),
       hmacKey: "6".repeat(64),
       secureCookie: false,
+      lineChannelSecret: null,
     });
     const guardianLogin = await portal.request("/auth/line", {
       method: "POST",
