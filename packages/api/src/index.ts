@@ -10,6 +10,7 @@ export { type ApiDeps, createApi } from "./app";
 export * from "./attendances-coach";
 export * from "./attendances-guardian";
 export * from "./attendances-shared";
+export * from "./audit-shared";
 export { type CoachAccount, getCoachAccount } from "./coach-account";
 export * from "./dashboard";
 export * from "./fees-coach";
@@ -47,6 +48,12 @@ export * from "./lineups-guardian";
 export * from "./lineups-shared";
 export * from "./login-lockout-shared";
 export {
+  type ArchivedMemberRow,
+  type AuditLogRow,
+  type DeleteArchivedMemberResult,
+  deleteArchivedMember,
+  listArchivedMembers,
+  listAuditLogs,
   listMembers,
   listRegistrations,
   type MemberRow,

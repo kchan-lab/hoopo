@@ -64,6 +64,13 @@
       "when": 1788790634069,
       "tag": "0008_coaches_login_lockout",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788792021401,
+      "tag": "0009_audit_logs",
+      "breakpoints": true
     }
   ]
 }

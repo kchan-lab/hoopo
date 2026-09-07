@@ -53,7 +53,7 @@ export type ExecuteYearRolloverResult =
   | { ok: false; reason: "no_members" | "pending_undoable" };
 
 export type UndoYearRolloverResult =
-  | { ok: true; restored: number }
+  | { ok: true; restored: number; missing: number }
   | { ok: false; reason: "nothing_to_undo" };
 
 /** 対象は「有効な部員(active・非アーカイブ)」。卒団済み・無効化済みは触らない */
@@ -256,6 +256,9 @@ export async function undoYearRollover(
       .set({ undoneAt: now })
       .where(eq(yearRollovers.id, latest.id));
 
-    return { ok: true, restored };
+    // 猶予中に「卒団した部員のデータを削除」(member-deletion/plan.md)された部員は行が無いので
+    // 復元されない(物理削除は元に戻せない)。件数差として返し、画面で伝える
+    const missing = Object.keys(latest.snapshot).length - restored;
+    return { ok: true, restored, missing };
   });
 }

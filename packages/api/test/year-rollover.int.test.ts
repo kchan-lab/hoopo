@@ -267,7 +267,10 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
 
     const res = await coach.post("/members/year-rollover/undo");
     expect(res.status).toBe(200);
-    expect((await res.json()) as { restored: number }).toEqual({ restored: 3 });
+    expect((await res.json()) as { restored: number }).toEqual({
+      restored: 3,
+      missing: 0,
+    });
 
     expect((await childRow(ichinen)).grade).toBe(1);
     expect((await childRow(gonen)).grade).toBe(5);
