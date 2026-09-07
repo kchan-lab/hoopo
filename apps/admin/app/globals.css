@@ -1254,3 +1254,27 @@ textarea.afld {
   font-weight: 600;
   text-align: left;
 }
+
+/* ---- チーム編成(lineups/plan.md 7b-1) ---- */
+/* ベンチのチェックは人数が増えても縦に伸びすぎないよう、幅に応じて段組みする
+ * (タップ領域 44px は .achk が持つ。DESIGN §3) */
+.lineup-bench {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0 0.8em;
+}
+
+/* ベンチは選択肢そのものなので、補助テキスト色ではなく本文色で読ませる */
+.lineup-bench .achk {
+  color: var(--aink);
+  font-weight: 500;
+}
+
+.lineup-acts {
+  margin-top: 0.7em;
+}
+
+.lineup-saved {
+  font-size: 0.82em;
+  color: var(--asub);
+}
