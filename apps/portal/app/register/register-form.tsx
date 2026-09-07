@@ -196,6 +196,10 @@ export function RegisterForm() {
               ＋ 兄弟・姉妹を追加
             </button>
           )}
+          <p className="legal-link">
+            入力した情報の扱いは
+            <Link href="/privacy">プライバシーポリシー</Link>をご覧ください
+          </p>
           <button type="submit" className="cta">
             次へ
           </button>
