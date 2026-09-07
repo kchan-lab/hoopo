@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 管理の出欠管理・欠席者管理 API(attendance/plan.md 4b)を RLS 配下で検証する。
 // 保護者側の提出 API は 4a なので、ここでは owner 接続で attendances に直接行を作る
@@ -26,11 +27,7 @@ let p2: string; // 2026-09-13
 let pOther: string; // 他チームの練習
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 async function coachClient(
   app: ReturnType<typeof adminApi>,

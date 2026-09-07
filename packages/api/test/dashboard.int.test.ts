@@ -5,6 +5,7 @@ import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { daysInMonth, monthOf, todayInTokyo } from "../src/tokyo-date";
+import { adminDeps } from "./admin-deps";
 
 // 管理ダッシュボード API(admin-dashboard/plan.md 7c)を RLS 配下で検証する。
 // 集計は「Tokyo の今日」基準なので、練習日は固定値ではなく今日から組み立てる。
@@ -36,11 +37,7 @@ let pToday: string; // 今日の練習(= 次回の練習)
 let pOtherDay: string; // 同じ月のもう1本
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 async function coachClient(
   app: ReturnType<typeof adminApi>,

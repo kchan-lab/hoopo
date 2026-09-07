@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 年度更新 API(year-rollover/plan.md)を RLS 配下で検証する。
 // 対象は「有効な部員(active・非アーカイブ)」だけ。卒団済み・無効化済み・他チームは触らない。
@@ -25,11 +26,7 @@ let archived: string; // 卒団済み(対象外)
 let revoked: string; // 無効化済み(対象外)
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 interface CoachClient {
   get: (path: string) => Promise<Response>;

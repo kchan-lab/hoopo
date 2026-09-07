@@ -77,3 +77,29 @@ describe("createFakeIdTokenVerifier", () => {
     }
   });
 });
+
+describe("nonce の受け渡し(LINE ログイン Web フロー)", () => {
+  it("nonce を渡すと verify API のフォームに載る", async () => {
+    const fetchFn = fetchStub(200, { sub: USER_ID });
+    await createLineIdTokenVerifier("123", fetchFn)("the-token", {
+      nonce: "n-1",
+    });
+    const [, init] = (fetchFn as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(Object.fromEntries(new URLSearchParams(String(init.body)))).toEqual({
+      id_token: "the-token",
+      client_id: "123",
+      nonce: "n-1",
+    });
+  });
+
+  it("フェイクは nonce を無視して userId を返す", async () => {
+    const verify = createFakeIdTokenVerifier();
+    expect(await verify(`fake:${USER_ID}`, { nonce: "n-1" })).toEqual({
+      ok: true,
+      lineUserId: USER_ID,
+    });
+  });
+});

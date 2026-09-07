@@ -5,6 +5,7 @@ import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { todayInTokyo } from "../src/tokyo-date";
+import { adminDeps } from "./admin-deps";
 
 // 管理の月謝管理 API(fees/plan.md 5b)を RLS 配下で検証する。
 // 「未来」は Tokyo の今月から導出されるため、テストの年月は実行日から組み立てる:
@@ -33,11 +34,7 @@ let revoked: string; // 無効化(同上)
 let otherChild: string; // 他チームの部員
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 interface CoachClient {
   get: (path: string) => Promise<Response>;

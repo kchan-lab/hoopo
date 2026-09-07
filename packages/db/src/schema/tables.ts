@@ -58,11 +58,19 @@ export const coaches = pgTable(
     // PBKDF2 形式のハッシュのみ保存(生成・照合は packages/api/password.ts の責務)。
     // auth_type='line' のコーチは NULL。リセットトークンは §10 未決のため未実装
     passwordHash: text("password_hash"),
+    // LINE ログイン(#61)。guardians と同じく暗号文+検索用 HMAC。連携前は NULL
+    lineUserId: text("line_user_id"),
+    lineUserIdLookup: text("line_user_id_lookup"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     check("coaches_auth_type_check", sql`${t.authType} IN ('line', 'email')`),
+    check(
+      "coaches_line_user_id_not_plaintext",
+      sql`${t.lineUserId} IS NULL OR ${t.lineUserId} !~ '^U[0-9a-f]{32}$'`,
+    ),
+    unique("coaches_team_lookup_unique").on(t.teamId, t.lineUserIdLookup),
     // email 認証なのにハッシュ未設定というログイン不能データを DB で拒否する
     check(
       "coaches_email_auth_requires_password",

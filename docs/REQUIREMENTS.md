@@ -36,7 +36,7 @@
 - 第二保護者: 子どもごとの**招待コード**で連携(父母どちらのLINEアカウントからも同じ子どもを閲覧・提出可)
 - 登録は招待コードまたは登録用URL経由のみ。部外者対策は**自動認定+事後確認**方式: 登録・家族連携は即時有効とし、コーチへ通知。心当たりのない登録はコーチが後から無効化できる
 - 「コーチへ通知」は LINE 送信ではなく、**管理アプリの認定管理画面に新着順で表示**して事後確認する(§6 通数原則。個別 push は行わない)。招待コードの入力は大文字小文字・ハイフン・空白を区別しない
-- 管理者: LINEログイン **または** メールアドレス+パスワードを選択可
+- 管理者: LINEログイン **または** メールアドレス+パスワードを選択可。LINE ログインは LIFF ではなく通常の LINE ログイン(Web OAuth、scope は openid のみ)で、LINE ユーザー ID を暗号化して coaches に保持する(表示名・画像は保存しない)。メール+パスワードでログイン済みのコーチが「LINE を連携」してから使える(主経路は LINE、メールは予備)
 
 ## 4. 保護者向けアプリ
 
@@ -109,8 +109,8 @@
 テーブル定義:
 
 - teams(id, name, short_name, logo_path, team_color, line_group_id[一意])
-- coaches(id, team_id, email[一意], auth_type[line/email], password_hash[email認証時は必須・PBKDF2形式])
-  ※ パスワードリセット関連は §10 未決のため未実装。管理者のLINEログインは別Issueで追加
+- coaches(id, team_id, email[一意], auth_type[line/email], password_hash[email認証時は必須・PBKDF2形式], line_user_id[暗号文・任意], line_user_id_lookup[検索用HMAC・team内一意・任意])
+  ※ パスワードリセット関連は §10 未決のため未実装。line_user_id は §3 の管理者 LINE ログイン(#61)で使用(guardians と同じ暗号文+HMAC)
 - guardians(id, team_id, line_user_id[暗号文], line_user_id_lookup[検索用HMAC・team内一意])
   ※ 平文の LINE userId 形式は CHECK 制約で拒否。暗号化・HMAC の実装は packages/line の責務
 - guardian_children(team_id, guardian_id, child_id, relation[father/mother/grandparent/other], status[active/revoked・自動認定]) — 複合主キー (guardian_id, child_id)

@@ -6,6 +6,7 @@ import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 家族連携の仕上げ(family-links/plan.md)を RLS 配下で検証する。
 // 見たいのは2点:
@@ -40,11 +41,7 @@ const api = (team = teamId) =>
   });
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 function cookieOf(res: Response, name: string): string {
   const value = (res.headers.get("set-cookie") ?? "").match(

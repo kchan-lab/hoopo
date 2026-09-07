@@ -1,5 +1,6 @@
 import { coaches, guardians, withTeam } from "@hoopo/db";
 import { eq } from "drizzle-orm";
+import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import {
@@ -50,19 +51,34 @@ export async function principalExists(
   });
 }
 
+// Cookie からセッションを読み、role・teamId・行の存在まで確認する。
+// ミドルウェア(requireRole)と、ミドルウェアを挟めないルート(LINE ログインの
+// /auth/line/start?mode=link のように認証要否が動的なもの)で同じ規則を共有する
+export async function readSession(
+  c: Context,
+  role: SessionRole,
+  deps: GuardDeps,
+): Promise<SessionPayload | null> {
+  const token = getCookie(c, COOKIE_BY_ROLE[role]);
+  const session = token
+    ? await verifySessionToken(token, deps.sessionSecret, {
+        expectedRole: role,
+      })
+    : null;
+  if (
+    !session ||
+    session.teamId !== deps.teamId ||
+    !(await principalExists(session))
+  ) {
+    return null;
+  }
+  return session;
+}
+
 function requireRole(role: SessionRole, deps: GuardDeps) {
   return createMiddleware<AuthEnv>(async (c, next) => {
-    const token = getCookie(c, COOKIE_BY_ROLE[role]);
-    const session = token
-      ? await verifySessionToken(token, deps.sessionSecret, {
-          expectedRole: role,
-        })
-      : null;
-    if (
-      !session ||
-      session.teamId !== deps.teamId ||
-      !(await principalExists(session))
-    ) {
+    const session = await readSession(c, role, deps);
+    if (!session) {
       return c.json({ error: "未ログインです" }, 401);
     }
     c.set("session", session);
