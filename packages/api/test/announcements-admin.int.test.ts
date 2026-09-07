@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 管理のお知らせ API(announcements/plan.md 6a-1)を RLS 配下で検証する。
 // 公開の意味は published_at の有無(設計判断1): 編集しても公開日時は維持し、
@@ -19,11 +20,7 @@ let otherTeamId: string;
 let coachHash: string;
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 async function coachClient(
   app: ReturnType<typeof adminApi>,

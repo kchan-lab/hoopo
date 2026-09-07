@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 予定表の発行 API(schedule-publish/plan.md 6b-1)を RLS 配下で検証する
 
@@ -19,11 +20,7 @@ let coachHash: string;
 const MONTH = "2026-09";
 
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 async function coachClient(
   app: ReturnType<typeof adminApi>,

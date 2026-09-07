@@ -6,6 +6,7 @@ import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
+import { adminDeps } from "./admin-deps";
 
 // 認定管理・部員管理 API(child-registration/plan.md 12b)。
 // 保護者 API で登録・連携したデータを、コーチ側で一覧・無効化できることを RLS 配下で検証する
@@ -29,11 +30,7 @@ const guardianApi = (team = teamId) =>
     secureCookie: false,
   });
 const adminApi = (team = teamId) =>
-  createAdminApi({
-    teamId: team,
-    sessionSecret: SESSION_SECRET,
-    secureCookie: false,
-  });
+  createAdminApi(adminDeps(team, SESSION_SECRET));
 
 function cookieOf(res: Response, name: string): string {
   const value = (res.headers.get("set-cookie") ?? "").match(
