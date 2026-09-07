@@ -45,6 +45,7 @@ export * from "./line-shared";
 export * from "./lineups-coach";
 export * from "./lineups-guardian";
 export * from "./lineups-shared";
+export * from "./login-lockout-shared";
 export {
   listMembers,
   listRegistrations,

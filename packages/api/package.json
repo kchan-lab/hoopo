@@ -13,6 +13,7 @@
     "./schedule-shared": "./src/schedule-shared.ts",
     "./lineups-shared": "./src/lineups-shared.ts",
     "./year-rollover-shared": "./src/year-rollover-shared.ts",
+    "./login-lockout-shared": "./src/login-lockout-shared.ts",
     "./line-shared": "./src/line-shared.ts"
   },
   "scripts": {
