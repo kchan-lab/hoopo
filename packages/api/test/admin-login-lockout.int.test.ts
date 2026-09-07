@@ -211,3 +211,22 @@ describe("POST /auth/login の試行回数制限", () => {
     expect(await lockoutRow()).toEqual(locked);
   });
 });
+
+describe("同時リクエスト", () => {
+  it("並列に 20 回失敗しても lost update せず、ロックがかかる", async () => {
+    const app = createAdminApi(adminDeps(teamId, SESSION_SECRET));
+    await Promise.all(
+      Array.from({ length: 20 }, (_, i) =>
+        app.request("/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: COACH_EMAIL, password: `wrong-${i}` }),
+        }),
+      ),
+    );
+    const [row] = await owner`
+      SELECT failed_login_count, locked_until FROM coaches WHERE id = ${coachId}`;
+    expect(row?.locked_until).not.toBeNull();
+    expect(row?.failed_login_count).toBeLessThan(MAX_FAILED_LOGINS);
+  });
+});
