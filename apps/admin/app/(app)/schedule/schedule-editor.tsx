@@ -413,6 +413,10 @@ export function ScheduleEditor({
                       </fieldset>
                     ) : (
                       <>
+                        {/* チーム編成(lineups/plan.md 7b-1)。別ページで5枠+ベンチを選ぶ */}
+                        <Link className="abtn" href={`/lineups/${p.id}`}>
+                          編成
+                        </Link>
                         <button
                           type="button"
                           className="abtn"
