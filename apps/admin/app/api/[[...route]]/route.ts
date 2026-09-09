@@ -45,6 +45,9 @@ function buildLineLoginDeps(): AdminLineLoginDeps {
   return {
     channelId,
     channelSecret,
+    // channelId が空のとき admin-app.ts の /auth/line/start が「準備中」へ早期リターンするため、
+    // この verifier は通常到達しない。start 側のガードと同じ前提に依存しているので、
+    // 万一 callback まで来ても空の channelId で LINE へ verify しに行かない保険として置く
     verifyIdToken: channelId
       ? createLineIdTokenVerifier(channelId)
       : async () => ({
