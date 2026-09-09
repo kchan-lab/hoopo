@@ -38,12 +38,19 @@ function buildLineLoginDeps(): AdminLineLoginDeps {
       fake: true,
     };
   }
-  // ID トークンの verify も認可コードの交換も LINE ログインチャネル宛て(LIFF とは別チャネル)
-  const channelId = requireEnv("LINE_LOGIN_CHANNEL_ID");
+  // ID トークンの verify も認可コードの交換も LINE ログインチャネル宛て(LIFF とは別チャネル)。
+  // 未設定(#9 取得前)でも管理画面は起動させ、LINE ログイン開始時に「準備中」で案内する
+  const channelId = process.env.LINE_LOGIN_CHANNEL_ID ?? "";
+  const channelSecret = process.env.LINE_LOGIN_CHANNEL_SECRET ?? "";
   return {
     channelId,
-    channelSecret: requireEnv("LINE_LOGIN_CHANNEL_SECRET"),
-    verifyIdToken: createLineIdTokenVerifier(channelId),
+    channelSecret,
+    verifyIdToken: channelId
+      ? createLineIdTokenVerifier(channelId)
+      : async () => ({
+          ok: false,
+          reason: "LINE ログインチャネルが未設定です",
+        }),
     exchangeCode: exchangeAuthorizationCode,
     fake: false,
   };

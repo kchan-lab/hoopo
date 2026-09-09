@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
   line_taken: "このLINEアカウントは別のコーチが連携済みです",
+  line_unconfigured:
+    "LINE ログインは準備中です(LINE ログインチャネルの設定後に連携できます)",
   line_denied: "LINE連携がキャンセルされました",
   line_state: "LINE連携に失敗しました。もう一度お試しください",
   line_failed: "LINE連携に失敗しました。もう一度お試しください",
