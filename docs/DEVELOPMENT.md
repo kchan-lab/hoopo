@@ -146,6 +146,63 @@ hotfix/xxx ───────────────────────
 - **DB のロールバックはしない(forward-fix)**。障害時はアプリを Vercel の過去デプロイ再昇格で
   戻し、DB は前方修正のマイグレーションで対処する(Free プランは PITR なし・down migration 非管理)
 
+## ステージング環境(stg)の準備
+
+stg は `development` ブランチが自動デプロイされる(Vercel の Production Branch = development)。
+新しい縦切りを stg で確かめる前に、次の 3 つが揃っているかを確認する。**環境変数が 1 つでも
+欠けると管理画面の API が全滅する**ので、まず必須 5 つを入れてから任意を足す(2026-09-10 の事故から)。
+
+### 1. DB マイグレーション
+
+`.env` に `STG_DATABASE_URL`(所有者ロール `postgres.<project ref>`・Supavisor 6543)を置いて
+`pnpm db:migrate:stg`。適用済みの正は `drizzle.__drizzle_migrations`。stg の SKC チーム行の id は
+`TEAM_ID` と同じ値(`60ab8c74-7e06-4cf7-a615-c1c818f4c4fe`)。
+
+### 2. Vercel の環境変数(Production)
+
+| 変数 | portal-stg | admin-stg | 備考 |
+|---|---|---|---|
+| `TEAM_ID` | 必須 | 必須 | stg の teams.id |
+| `SESSION_SECRET` | 必須 | 必須 | 64 桁 hex。portal と admin で別の値でよい(Cookie が別) |
+| `APP_DATABASE_URL` | 必須 | 必須 | `hoopo_app_stg` ロールの接続文字列(6543)。両アプリで同じ |
+| `LINE_ID_ENCRYPTION_KEY` / `LINE_ID_HMAC_KEY` | 必須 | 必須 | 64 桁 hex。portal(guardians)と admin(coaches)は別テーブルなので別の値でも動く |
+| `LINE_CHANNEL_ID` / `NEXT_PUBLIC_LIFF_ID` | 必須 | − | LIFF・ID トークン検証(#9) |
+| `LINE_CHANNEL_SECRET` | 任意 | − | Messaging API の Webhook 署名検証。無いと Webhook は 503 |
+| `NEXT_PUBLIC_PORTAL_URL` / `LIFF_ID` | − | 必須 / 任意 | 予定表画像の URL・LINE メッセージのリンク |
+| `LINE_LOGIN_CHANNEL_ID` / `LINE_LOGIN_CHANNEL_SECRET` | − | 任意 | 管理者の LINE ログイン。無いと「準備中」表示 |
+| `LINE_CHANNEL_ACCESS_TOKEN` | − | 任意 | Messaging API の push。無いと送信ボタンが押せない |
+| `CRON_SECRET` | − | 任意 | 出欠リマインドの定期ジョブ(GitHub Secrets と同じ値) |
+
+`AUTH_FAKE` / `LINE_FAKE` は **Vercel には置かない**(フェイクは Vercel 環境で起動時に拒否される)。
+値の設定は Vercel CLI でもできる: `vercel link --project hoopo-admin-stg` のあと
+`printf '%s' "<値>" | vercel env add <名前> production`。
+
+### 3. 管理者アカウント
+
+coaches は seed しないので stg では手で作る。メールアドレスはログイン ID としてしか使わない
+(メール送信機能は無い)ので、実在しなくてもよい。小文字で保存する。
+
+```bash
+# ハッシュ生成(packages/api の password.ts。pbkdf2:v1 形式)
+cd packages/api && pnpm exec tsx -e 'import("./src/password.ts").then(m=>m.hashPassword(process.argv[1]).then(console.log))' -- '<パスワード>'
+```
+
+```sql
+insert into coaches (team_id, email, auth_type, password_hash)
+values ('<TEAM_ID>', '<メール(小文字)>', 'email', '<生成したハッシュ>');
+```
+
+ログインできたら「アカウント」から LINE を連携する(LINE ログインチャネルの設定後)。
+
+### 動作確認の順番
+
+1. `GET https://<admin>/api/me` が **401**(500 なら環境変数か DB の問題。Vercel の Runtime Logs に
+   `環境変数 X が設定されていません` と出る)
+2. メール+パスワードでログイン → ダッシュボード
+3. portal は LIFF から開く(外部ブラウザは LINE ログインへフォールバック)→ 子ども登録
+4. 日程入力 → 発行 → 予定表画像(`/api/schedule/YYYY-MM.png`)
+5. LINE 送信(Messaging API・Bot のグループ招待後)→ 通数メーター
+
 ## 運用ジョブ(GitHub Actions schedule)
 
 定期ジョブはすべて GitHub Actions の schedule で回す(常時課金のインフラを増やさない。CLAUDE.md 絶対原則1)。
