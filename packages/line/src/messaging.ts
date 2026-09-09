@@ -68,3 +68,18 @@ export function createFakeLineMessagingClient(
     },
   };
 }
+
+// LINE_CHANNEL_ACCESS_TOKEN が未設定の環境(実チャネル #9 取得前の stg など)向け。
+// 送信・人数取得は常に失敗として返し、管理画面自体は動かす(設定漏れで全画面が落ちないように)
+export function createUnconfiguredLineMessagingClient(): LineMessagingClient {
+  const reason =
+    "LINE_CHANNEL_ACCESS_TOKEN が未設定です(Messaging API チャネルの設定後に有効になります)";
+  return {
+    async pushToGroup() {
+      return { ok: false, reason };
+    },
+    async getGroupMemberCount() {
+      return { ok: false, reason };
+    },
+  };
+}
