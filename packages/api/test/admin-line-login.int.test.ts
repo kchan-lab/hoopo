@@ -371,5 +371,15 @@ describe("LINE ログインチャネルが未設定のとき", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/login?error=line_unconfigured");
     expect(res.headers.get("set-cookie")).toBeNull();
+
+    // 連携(mode=link)はログイン済みのコーチが押すので、アカウント画面へ戻す
+    const link = await app.request("/auth/line/start?mode=link", {
+      headers: { cookie: await coachSessionCookie() },
+    });
+    expect(link.status).toBe(302);
+    expect(link.headers.get("location")).toBe(
+      "/account?error=line_unconfigured",
+    );
+    expect(link.headers.get("set-cookie")).toBeNull();
   });
 });
