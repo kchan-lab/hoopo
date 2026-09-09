@@ -262,6 +262,15 @@ export function createAdminApi(deps: AdminApiDeps) {
       coachId = session.sub;
     }
 
+    // チャネル未設定(フェイクでもない)なら LINE へ飛ばさず「準備中」で戻す(設定漏れで白画面にしない)
+    if (!deps.lineLogin.fake && !deps.lineLogin.channelId) {
+      return c.redirect(
+        mode === "link"
+          ? "/account?error=line_unconfigured"
+          : "/login?error=line_unconfigured",
+      );
+    }
+
     const oauth = createLineOAuthState(mode, coachId);
     setCookie(
       c,

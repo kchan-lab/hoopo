@@ -2,6 +2,7 @@ import { trimTrailingSlash } from "@hoopo/api/line-shared";
 import {
   createFakeLineMessagingClient,
   createLineMessagingClient,
+  createUnconfiguredLineMessagingClient,
   type LineMessagingClient,
 } from "@hoopo/line";
 
@@ -9,23 +10,16 @@ import {
 // API ルート(app/api/[[...route]]/route.ts)と、通数メーターを描くサーバーコンポーネント
 // (ダッシュボード・日程管理)の両方が同じ組み立てを使うのでここに集約する
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`環境変数 ${name} が設定されていません(.env を確認)`);
-  }
-  return value;
-}
-
 /**
  * 送信クライアント。LINE_FAKE=1 はローカル/E2E 専用で、実チャネル(#9)無しでも
  * 送信導線と通数カウンターを貫通させる(フェイク側が Vercel 環境では起動時に拒否する)
  */
 export function lineClient(): LineMessagingClient {
   if (process.env.LINE_FAKE === "1") return createFakeLineMessagingClient();
-  return createLineMessagingClient({
-    channelAccessToken: requireEnv("LINE_CHANNEL_ACCESS_TOKEN"),
-  });
+  // Messaging API チャネル(#9)が未設定でも管理画面は動かす。送信ボタンは「参加人数を取得できない」で止まる
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) return createUnconfiguredLineMessagingClient();
+  return createLineMessagingClient({ channelAccessToken: token });
 }
 
 /** 予定表画像を載せる保護者アプリの URL(末尾スラッシュは落とす) */
