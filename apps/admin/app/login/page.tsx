@@ -15,6 +15,8 @@ const LINE_ERRORS: Record<string, string> = {
   line_unlinked:
     "このLINEアカウントは管理者として登録されていません。メールでログインして「LINE を連携」してください",
   line_denied: "LINEログインがキャンセルされました",
+  line_unconfigured:
+    "LINEログインは準備中です。メールアドレスとパスワードでログインしてください",
   line_state: "LINEログインに失敗しました。もう一度お試しください",
   line_failed: "LINEログインに失敗しました。もう一度お試しください",
 };

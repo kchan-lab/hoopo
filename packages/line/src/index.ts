@@ -12,6 +12,7 @@ export {
 } from "./id-token";
 export {
   createFakeLineMessagingClient,
+  createUnconfiguredLineMessagingClient,
   FAKE_GROUP_MEMBER_COUNT,
   type FakeLineMessagingClient,
   type FakePush,
