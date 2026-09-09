@@ -156,7 +156,7 @@ stg は `development` ブランチが自動デプロイされる(Vercel の Prod
 
 `.env` に `STG_DATABASE_URL`(所有者ロール `postgres.<project ref>`・Supavisor 6543)を置いて
 `pnpm db:migrate:stg`。適用済みの正は `drizzle.__drizzle_migrations`。stg の SKC チーム行の id は
-`TEAM_ID` と同じ値(`60ab8c74-7e06-4cf7-a615-c1c818f4c4fe`)。
+Vercel の `TEAM_ID` と同じ値(実値はドキュメントに書かず Vercel 側を正とする)。
 
 ### 2. Vercel の環境変数(Production)
 
