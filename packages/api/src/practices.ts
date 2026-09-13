@@ -1,7 +1,14 @@
 import { practiceMenus, practices, withTeam } from "@hoopo/db";
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
-import type { PracticeInput } from "./practices-shared";
-import { monthRange, toHHMM, weekdayOf } from "./tokyo-date";
+import { and, asc, count, desc, eq, gte, inArray, lte, max } from "drizzle-orm";
+import type { BulkPracticeInput, PracticeInput } from "./practices-shared";
+import {
+  addMonths,
+  monthOf,
+  monthRange,
+  todayInTokyo,
+  toHHMM,
+  weekdayOf,
+} from "./tokyo-date";
 
 // 練習(practice)のドメインロジック(practice-schedule/plan.md)。
 // 管理(CRUD)と保護者(参照)の両方から使う。定数・検証は practices-shared.ts
@@ -228,5 +235,78 @@ export async function deletePractice(
       .where(eq(practices.id, practiceId))
       .returning({ id: practices.id });
     return rows.length > 0;
+  });
+}
+
+/**
+ * カレンダーからのまとめ登録(plan.md 設計判断3)。withTeam は 1 トランザクションなので、
+ * 1 件でも失敗すれば全件ロールバックされ、中途半端な月が残らない。
+ * メニューは作らない(設計判断5)
+ */
+export async function createPracticesBulk(
+  teamId: string,
+  input: BulkPracticeInput,
+): Promise<Practice[]> {
+  return withTeam(teamId, async (tx) => {
+    const rows = await tx
+      .insert(practices)
+      .values(
+        input.dates.map((heldOn) => ({
+          teamId,
+          heldOn,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          location: input.location,
+          note: input.note,
+        })),
+      )
+      .returning(rowColumns);
+    // returning の順序は保証されないので、呼び出し側が期待する日付昇順に整える
+    return rows
+      .sort((a, b) => a.heldOn.localeCompare(b.heldOn))
+      .map((r) => toPractice(r, []));
+  });
+}
+
+/** 直近何か月の実績からプリセットを作るか(plan.md 設計判断2) */
+const PRESET_MONTHS = 6;
+const PRESET_LIMIT = 5;
+
+export interface PracticePreset {
+  startTime: string;
+  endTime: string;
+  location: string | null;
+  count: number;
+}
+
+/**
+ * まとめ登録の時間帯・場所プリセット(plan.md 設計判断2)。専用テーブルは作らず、
+ * 直近 6 か月の practices を (開始, 終了, 場所) で集計して件数の多い順に返す。
+ * 同数なら直近に使ったものを優先する
+ */
+export async function listPracticePresets(
+  teamId: string,
+  today: string = todayInTokyo(),
+): Promise<PracticePreset[]> {
+  const from = `${addMonths(monthOf(today), -PRESET_MONTHS)}-01`;
+  return withTeam(teamId, async (tx) => {
+    const rows = await tx
+      .select({
+        startTime: practices.startTime,
+        endTime: practices.endTime,
+        location: practices.location,
+        count: count(),
+      })
+      .from(practices)
+      .where(gte(practices.heldOn, from))
+      .groupBy(practices.startTime, practices.endTime, practices.location)
+      .orderBy(desc(count()), desc(max(practices.heldOn)))
+      .limit(PRESET_LIMIT);
+    return rows.map((r) => ({
+      startTime: toHHMM(r.startTime),
+      endTime: toHHMM(r.endTime),
+      location: r.location,
+      count: r.count,
+    }));
   });
 }
