@@ -17,7 +17,7 @@
       "groupName": "github-actions"
     },
     {
-      "description": "Playwright は npm パッケージと Docker イメージ(compose.yaml)のバージョンが一致していないとブラウザが見つからず E2E が全滅するため、同じ PR にまとめて完全固定で更新する(2026-09-13 の nightly 失敗から)",
+      "description": "Playwright は npm パッケージと Docker イメージ(compose.yaml)のバージョンが一致していないとブラウザが見つからず E2E が全滅するため、同じ PR にまとめて更新する(2026-09-13 の nightly 失敗から)。pin は npm 側の @playwright/test にだけ効く(Docker イメージのタグは元々固定)",
       "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
       "groupName": "playwright",
       "rangeStrategy": "pin"
