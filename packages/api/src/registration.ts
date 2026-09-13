@@ -4,11 +4,15 @@ import {
   formatInviteCode,
   guardianChildren,
   resolveInviteCode,
+  type TeamTx,
   withInviteCodeRetry,
   withTeam,
 } from "@hoopo/db";
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { gradeFromBirthDate, todayTokyo } from "./grade-shared";
 import type {
+  ChildDetail,
+  ChildPatch,
   Gender,
   LinkInput,
   RegistrationInput,
@@ -28,6 +32,19 @@ export interface ChildSummary {
   nicknameKana: string | null;
   grade: number;
   gender: Gender;
+  /** "YYYY-MM-DD"。0010 より前に登録された部員は null(plan.md 設計判断3) */
+  birthDate: string | null;
+  heightCm: number | null;
+}
+
+/**
+ * 生年月日から保存する学年を求める。パース(parseBirthDate)を通っていれば必ず 1..6 に
+ * なるので、null は日付をまたいだ等の異常系。黙って古い学年を残さず落とす
+ */
+function gradeForBirthDate(birthDate: string): number {
+  const grade = gradeFromBirthDate(birthDate, todayTokyo());
+  if (grade === null) throw new Error("小学生の生年月日を入力してください");
+  return grade;
 }
 
 // 「active な guardian_children 経由で見える子」だけを返す(plan.md 設計判断8)。
@@ -44,6 +61,8 @@ export async function listChildrenForGuardian(
         nicknameKana: children.nicknameKana,
         grade: children.grade,
         gender: children.gender,
+        birthDate: children.birthDate,
+        heightCm: children.heightCm,
       })
       .from(guardianChildren)
       .innerJoin(children, eq(children.id, guardianChildren.childId))
@@ -91,7 +110,10 @@ export async function registerChildren(
               teamId,
               name: child.name,
               nicknameKana: child.nicknameKana,
-              grade: child.grade,
+              // 学年は入力ではなく生年月日からの算出値(plan.md 設計判断2)
+              grade: gradeForBirthDate(child.birthDate),
+              birthDate: child.birthDate,
+              heightCm: child.heightCm,
               gender: child.gender,
               coachNote: input.coachNote,
               inviteCode,
@@ -241,9 +263,7 @@ export async function unlinkChild(
   });
 }
 
-export interface FamilyChild {
-  id: string;
-  name: string;
+export interface FamilyChild extends ChildDetail {
   /** 表示用(5-5 ハイフン区切り) */
   inviteCode: string;
   guardians: {
@@ -284,8 +304,7 @@ export async function getFamily(
       )
       .orderBy(asc(guardianChildren.createdAt));
     return mine.map((c) => ({
-      id: c.id,
-      name: c.name,
+      ...c,
       inviteCode: formatInviteCode(
         codes.find((x) => x.id === c.id)?.inviteCode ?? "",
       ),
@@ -298,5 +317,74 @@ export async function getFamily(
           linkedAt: l.createdAt.toISOString(),
         })),
     }));
+  });
+}
+
+/**
+ * 子ども情報の更新本体。保護者(家族の設定)とコーチ(部員管理)で同じ規則にするため
+ * ここに集約する。「見えるか」の判定は呼び出し側の責務。
+ * 見つからなければ null(RLS 配下なので他チームの行はそもそも更新できない)
+ */
+export async function applyChildPatch(
+  tx: TeamTx,
+  childId: string,
+  patch: ChildPatch,
+): Promise<ChildDetail | null> {
+  const [row] = await tx
+    .update(children)
+    .set({
+      ...patch,
+      // 生年月日を直したら学年も追従させる(設計判断2)
+      ...(patch.birthDate ? { grade: gradeForBirthDate(patch.birthDate) } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(children.id, childId))
+    .returning({
+      id: children.id,
+      name: children.name,
+      nicknameKana: children.nicknameKana,
+      grade: children.grade,
+      gender: children.gender,
+      birthDate: children.birthDate,
+      heightCm: children.heightCm,
+    });
+  return row ? { ...row, gender: row.gender as Gender } : null;
+}
+
+export type UpdateChildResult =
+  | { ok: true; value: ChildDetail }
+  | { ok: false; reason: "not_found" };
+
+/**
+ * 家族の設定からの子ども情報の編集(plan.md 設計判断5)。
+ * active な連携経由で見える子だけが対象(他チーム・未連携・無効化済みは not_found)。
+ * 生年月日を直したときは学年を再計算して保存する(設計判断2)
+ */
+export async function updateChildByGuardian(
+  teamId: string,
+  guardianId: string,
+  childId: string,
+  patch: ChildPatch,
+): Promise<UpdateChildResult> {
+  return withTeam(teamId, async (tx) => {
+    const mine = await tx
+      .select({ childId: guardianChildren.childId })
+      .from(guardianChildren)
+      .innerJoin(children, eq(children.id, guardianChildren.childId))
+      .where(
+        and(
+          eq(guardianChildren.guardianId, guardianId),
+          eq(guardianChildren.childId, childId),
+          eq(guardianChildren.status, "active"),
+          eq(children.status, "active"),
+          eq(children.archived, false),
+        ),
+      )
+      .limit(1);
+    if (mine.length === 0) return { ok: false, reason: "not_found" };
+    const updated = await applyChildPatch(tx, childId, patch);
+    return updated
+      ? { ok: true, value: updated }
+      : { ok: false, reason: "not_found" };
   });
 }

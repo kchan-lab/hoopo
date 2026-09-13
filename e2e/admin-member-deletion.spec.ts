@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 卒団後のデータ削除(Issue #21 受入条件。member-deletion/plan.md):
@@ -25,7 +26,15 @@ async function registerChildViaPortal(
   expect(login.ok()).toBe(true);
   const created = await ctx.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name, nicknameKana: "てすと", grade, gender: "male" }],
+      children: [
+        {
+          name,
+          nicknameKana: "てすと",
+          birthDate: birthDateForGrade(grade),
+          heightCm: heightForGrade(grade),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [6],
       startTime: "09:00",

@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./shared": "./src/registration-shared.ts",
+    "./grade-shared": "./src/grade-shared.ts",
     "./practices-shared": "./src/practices-shared.ts",
     "./tokyo-date": "./src/tokyo-date.ts",
     "./attendances-shared": "./src/attendances-shared.ts",

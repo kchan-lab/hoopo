@@ -3,6 +3,11 @@ import { createFakeIdTokenVerifier } from "@hoopo/line";
 import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApi } from "../src/app";
+import {
+  birthDateForGrade,
+  schoolYearOf,
+  todayTokyo,
+} from "../src/grade-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 子ども登録・家族連携 API を RLS 配下で検証する(child-registration/plan.md)。
@@ -47,7 +52,7 @@ async function loginAs(app: ReturnType<typeof api>, userId: string) {
 }
 
 function json(app: ReturnType<typeof api>, cookie: string) {
-  return (path: string, method: "GET" | "POST", body?: unknown) =>
+  return (path: string, method: "GET" | "POST" | "PATCH", body?: unknown) =>
     app.request(path, {
       method,
       headers: { "Content-Type": "application/json", Cookie: cookie },
@@ -57,8 +62,20 @@ function json(app: ReturnType<typeof api>, cookie: string) {
 
 const registration = {
   children: [
-    { name: "粉浜 太郎", nicknameKana: "たろう", grade: 4, gender: "male" },
-    { name: "粉浜 花子", nicknameKana: null, grade: 2, gender: "female" },
+    {
+      name: "粉浜 太郎",
+      nicknameKana: "たろう",
+      birthDate: birthDateForGrade(4),
+      heightCm: 135,
+      gender: "male",
+    },
+    {
+      name: "粉浜 花子",
+      nicknameKana: null,
+      birthDate: birthDateForGrade(2),
+      heightCm: 120,
+      gender: "female",
+    },
   ],
   relation: "father",
   weekdays: [0, 6],
@@ -152,6 +169,61 @@ describe("子ども登録(POST /children)", () => {
     }
   });
 
+  it("生年月日・身長を保存し、学年は生年月日から算出する(4/1 と 4/2 で分かれる)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    // 4年生になる学齢の年度。同じ年の 4/2 生まれは4年、4/1 生まれは5年になる
+    const birthYear = (schoolYearOf(todayTokyo()) as number) - 4 - 6;
+    const res = await call("/children", "POST", {
+      ...registration,
+      children: [
+        {
+          name: "4月2日生まれ",
+          nicknameKana: null,
+          birthDate: `${birthYear}-04-02`,
+          heightCm: 138,
+          gender: "male",
+        },
+        {
+          name: "4月1日生まれ",
+          nicknameKana: null,
+          birthDate: `${birthYear}-04-01`,
+          heightCm: 142,
+          gender: "female",
+        },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const rows = await owner`
+      SELECT name, grade, birth_date::text AS birth_date, height_cm
+      FROM children ORDER BY name`;
+    expect(
+      rows.map((r) => [r.name, r.grade, r.birth_date, r.height_cm]),
+    ).toEqual([
+      ["4月1日生まれ", 5, `${birthYear}-04-01`, 142],
+      ["4月2日生まれ", 4, `${birthYear}-04-02`, 138],
+    ]);
+  });
+
+  it("小学生にならない生年月日は 400", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const res = await call("/children", "POST", {
+      ...registration,
+      children: [
+        {
+          name: "まだ入学前",
+          nicknameKana: null,
+          birthDate: birthDateForGrade(0),
+          heightCm: 110,
+          gender: "male",
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain("小学生");
+  });
+
   it("入力不正は 400 で理由を返す", async () => {
     const app = api();
     const call = json(app, await loginAs(app, USER_A));
@@ -161,6 +233,80 @@ describe("子ども登録(POST /children)", () => {
     });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toContain("曜日");
+  });
+});
+
+describe("子ども情報の編集(PATCH /children/:id)", () => {
+  it("身長を直せて、生年月日を直すと学年が再計算される", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const created = (await (
+      await call("/children", "POST", registration)
+    ).json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    const height = await call(`/children/${childId}`, "PATCH", {
+      heightCm: 141,
+    });
+    expect(height.status).toBe(200);
+    expect(
+      ((await height.json()) as { child: { heightCm: number } }).child,
+    ).toMatchObject({ grade: 4, heightCm: 141 });
+
+    const moved = await call(`/children/${childId}`, "PATCH", {
+      birthDate: birthDateForGrade(6),
+    });
+    expect(moved.status).toBe(200);
+    expect(
+      ((await moved.json()) as { child: { grade: number } }).child.grade,
+    ).toBe(6);
+    const rows = await owner`
+      SELECT grade, birth_date::text AS birth_date, height_cm
+      FROM children WHERE id = ${childId}`;
+    expect(rows[0]?.grade).toBe(6);
+    expect(rows[0]?.birth_date).toBe(birthDateForGrade(6));
+    expect(rows[0]?.height_cm).toBe(141);
+
+    // 家族の設定にも生年月日・身長が出る
+    const family = (await (await call("/family", "GET")).json()) as {
+      children: {
+        id: string;
+        grade: number;
+        birthDate: string | null;
+        heightCm: number | null;
+      }[];
+    };
+    expect(family.children.find((c) => c.id === childId)).toMatchObject({
+      grade: 6,
+      birthDate: birthDateForGrade(6),
+      heightCm: 141,
+    });
+  });
+
+  it("入力不正は 400、連携していない子は 404", async () => {
+    const app = api();
+    const a = json(app, await loginAs(app, USER_A));
+    const b = json(app, await loginAs(app, USER_B));
+    const created = (await (
+      await a("/children", "POST", registration)
+    ).json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    const bad = await a(`/children/${childId}`, "PATCH", { heightCm: 300 });
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: string }).error).toContain("身長");
+
+    // 連携していない保護者からは見えない(存在も漏らさない)
+    expect(
+      (await b(`/children/${childId}`, "PATCH", { heightCm: 141 })).status,
+    ).toBe(404);
+    expect(
+      (
+        await a("/children/00000000-0000-4000-8000-000000000099", "PATCH", {
+          heightCm: 141,
+        })
+      ).status,
+    ).toBe(404);
   });
 });
 

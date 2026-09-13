@@ -3,6 +3,7 @@
 // (@hoopo/api/shared)。DB を触る関数は registration.ts 側
 
 import { isInviteCodeFormat, normalizeInviteCode } from "@hoopo/db/invite-code";
+import { parseBirthDate, parseHeightCm } from "./grade-shared";
 
 export const RELATIONS = ["father", "mother", "grandparent", "other"] as const;
 export type Relation = (typeof RELATIONS)[number];
@@ -33,7 +34,9 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 export interface ChildInput {
   name: string;
   nicknameKana: string | null;
-  grade: number;
+  /** "YYYY-MM-DD"。学年はここからサーバーで算出する(plan.md 設計判断2) */
+  birthDate: string;
+  heightCm: number;
   gender: Gender;
 }
 
@@ -65,28 +68,41 @@ function optionalText(value: unknown, max: number): string | null | undefined {
   return text === "" ? null : text;
 }
 
+function parseName(value: unknown): string | null {
+  const name = typeof value === "string" ? value.trim() : "";
+  return name && name.length <= NAME_MAX ? name : null;
+}
+
 function parseChild(value: unknown, index: number): ParseResult<ChildInput> {
   const label = `${index + 1}人目`;
   const r = asRecord(value);
   if (!r) return { ok: false, error: `${label}の情報が不正です` };
-  const name = typeof r.name === "string" ? r.name.trim() : "";
-  if (!name || name.length > NAME_MAX) {
+  const name = parseName(r.name);
+  if (!name) {
     return { ok: false, error: `${label}のお名前を入力してください` };
   }
   const nicknameKana = optionalText(r.nicknameKana, NAME_MAX);
   if (nicknameKana === undefined) {
     return { ok: false, error: `${label}の呼び名が長すぎます` };
   }
-  const grade = typeof r.grade === "number" ? r.grade : Number.NaN;
-  if (!Number.isInteger(grade) || grade < 1 || grade > 6) {
-    return { ok: false, error: `${label}の学年を選んでください` };
-  }
+  // 学年は生年月日から算出する(§3)。入力は生年月日と身長で、どちらも必須
+  const birthDate = parseBirthDate(r.birthDate);
+  if (!birthDate.ok)
+    return { ok: false, error: `${label}の${birthDate.error}` };
+  const heightCm = parseHeightCm(r.heightCm);
+  if (!heightCm.ok) return { ok: false, error: `${label}の${heightCm.error}` };
   if (!GENDERS.includes(r.gender as Gender)) {
     return { ok: false, error: `${label}の性別を選んでください` };
   }
   return {
     ok: true,
-    value: { name, nicknameKana, grade, gender: r.gender as Gender },
+    value: {
+      name,
+      nicknameKana,
+      birthDate: birthDate.value,
+      heightCm: heightCm.value,
+      gender: r.gender as Gender,
+    },
   };
 }
 
@@ -164,4 +180,68 @@ export function parseLink(body: unknown): ParseResult<LinkInput> {
     return { ok: false, error: "続柄を選んでください" };
   }
   return { ok: true, value: { code, relation: r.relation as Relation } };
+}
+
+/** 子ども情報(編集フォームの初期値・PATCH の応答。保護者とコーチで同形) */
+export interface ChildDetail {
+  id: string;
+  name: string;
+  nicknameKana: string | null;
+  /** birthDate からの算出値(保存済み) */
+  grade: number;
+  gender: Gender;
+  /** 0010 より前に登録された部員は null(plan.md 設計判断3) */
+  birthDate: string | null;
+  heightCm: number | null;
+}
+
+/** 子ども情報の部分更新(保護者の家族の設定・コーチの部員管理。plan.md 設計判断5) */
+export interface ChildPatch {
+  name?: string;
+  nicknameKana?: string | null;
+  birthDate?: string;
+  heightCm?: number;
+  gender?: Gender;
+}
+
+/**
+ * PATCH の入力。渡された項目だけを更新するので全項目が任意だが、
+ * 「何も無い」更新は受け付けない。学年は birthDate から保存時に再計算する
+ */
+export function parseChildPatch(body: unknown): ParseResult<ChildPatch> {
+  const r = asRecord(body);
+  if (!r) return { ok: false, error: "入力内容が不正です" };
+  const patch: ChildPatch = {};
+  if (r.name !== undefined) {
+    const name = parseName(r.name);
+    if (!name) return { ok: false, error: "お名前を入力してください" };
+    patch.name = name;
+  }
+  if ("nicknameKana" in r) {
+    const nicknameKana = optionalText(r.nicknameKana, NAME_MAX);
+    if (nicknameKana === undefined) {
+      return { ok: false, error: "呼び名が長すぎます" };
+    }
+    patch.nicknameKana = nicknameKana;
+  }
+  if (r.birthDate !== undefined) {
+    const birthDate = parseBirthDate(r.birthDate);
+    if (!birthDate.ok) return birthDate;
+    patch.birthDate = birthDate.value;
+  }
+  if (r.heightCm !== undefined) {
+    const heightCm = parseHeightCm(r.heightCm);
+    if (!heightCm.ok) return heightCm;
+    patch.heightCm = heightCm.value;
+  }
+  if (r.gender !== undefined) {
+    if (!GENDERS.includes(r.gender as Gender)) {
+      return { ok: false, error: "性別を選んでください" };
+    }
+    patch.gender = r.gender as Gender;
+  }
+  if (Object.keys(patch).length === 0) {
+    return { ok: false, error: "変更する項目がありません" };
+  }
+  return { ok: true, value: patch };
 }
