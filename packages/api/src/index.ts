@@ -68,15 +68,21 @@ export {
 } from "./members";
 export { hashPassword, verifyPassword } from "./password";
 export {
+  BULK_MAX,
+  type BulkPracticeInput,
   createPractice,
+  createPracticesBulk,
   deletePractice,
   getNextPractice,
   getPractice,
+  listPracticePresets,
   listPracticesByMonth,
   type Practice,
   type PracticeInput,
   type PracticeMenu,
   type PracticeMenuInput,
+  type PracticePreset,
+  parseBulkPracticeInput,
   parseMonth,
   parsePracticeInput,
   updatePractice,
