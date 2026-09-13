@@ -25,8 +25,8 @@ Issue: [#128](https://github.com/kchan-lab/hoopo/issues/128) / Plan: [plan.md](p
 
 ## 128c: admin(feat/child-birthdate-height-admin)
 
-- [ ] 部員管理: 一覧に生年月日・身長(モバイルは詳細側)、行詳細に編集フォーム
-- [ ] E2E: admin-members.spec の更新
+- [x] 部員管理: 一覧に生年月日・身長(モバイルは詳細側)、行詳細に編集フォーム
+- [x] E2E: admin-members.spec の更新
 - [ ] PR 作成 → CI グリーン → development へマージ(`Closes #133`)
 
 ## 仕上げ
