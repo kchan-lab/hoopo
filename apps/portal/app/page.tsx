@@ -131,10 +131,7 @@ export default async function Home() {
           </Link>
         )}
         <div className="label">お子さん</div>
-        <ul
-          className="news"
-          style={{ listStyle: "none", margin: 0, padding: 0 }}
-        >
+        <ul className="news">
           {children.map((c) => (
             <li key={c.id} className="row">
               <span>
