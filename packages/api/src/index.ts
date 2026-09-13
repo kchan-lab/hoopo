@@ -16,6 +16,7 @@ export * from "./dashboard";
 export * from "./fees-coach";
 export * from "./fees-guardian";
 export * from "./fees-shared";
+export * from "./grade-shared";
 export {
   type AuthEnv,
   principalExists,
@@ -63,6 +64,7 @@ export {
   type RegistrationKind,
   type RevokeInput,
   revokeRegistration,
+  updateMemberByCoach,
 } from "./members";
 export { hashPassword, verifyPassword } from "./password";
 export {
@@ -80,6 +82,8 @@ export {
   updatePractice,
 } from "./practices";
 export {
+  type ChildDetail,
+  type ChildPatch,
   type ChildSummary,
   type FamilyChild,
   GENDERS,
@@ -89,6 +93,7 @@ export {
   type LinkResult,
   linkChildByInviteCode,
   listChildrenForGuardian,
+  parseChildPatch,
   parseLink,
   parseRegistration,
   RELATION_LABELS,
@@ -98,7 +103,9 @@ export {
   type Relation,
   registerChildren,
   type UnlinkResult,
+  type UpdateChildResult,
   unlinkChild,
+  updateChildByGuardian,
   WEEKDAY_LABELS,
 } from "./registration";
 export * from "./schedule-image";

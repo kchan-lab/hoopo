@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 月謝管理の導線(Issue #82 受入条件)。
@@ -30,7 +31,15 @@ async function registerChildViaPortal(page: Page, name: string) {
   expect(login.ok()).toBe(true);
   const created = await ctx.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name, nicknameKana: "てすと", grade: 5, gender: "female" }],
+      children: [
+        {
+          name,
+          nicknameKana: "てすと",
+          birthDate: birthDateForGrade(5),
+          heightCm: heightForGrade(5),
+          gender: "female",
+        },
+      ],
       relation: "mother",
       weekdays: [6],
       startTime: "09:00",

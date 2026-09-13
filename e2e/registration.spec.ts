@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 子ども登録・家族連携の導線(Issue #66 受入条件)。
@@ -73,7 +74,14 @@ test("第二保護者が招待コードで連携すると同じ子どもが見�
   await loginAsNewGuardian(contextA);
   const created = await contextA.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name: "北粉浜 次郎", grade: 3, gender: "male" }],
+      children: [
+        {
+          name: "北粉浜 次郎",
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
+          gender: "male",
+        },
+      ],
       relation: "mother",
       weekdays: [6],
       startTime: "09:00",

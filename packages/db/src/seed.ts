@@ -83,18 +83,32 @@ await withTeam(skcId, async (tx) => {
   const skcChildren = await tx
     .insert(schema.children)
     .values(
+      // 生年月日は grade と辻褄が合う値にする(child-birthdate-height/plan.md)。
+      // 学齢は 4/2〜翌 4/1 生まれが同学年なので、2026 年度(2026-04-01〜2027-03-31)を
+      // 基準日にすると下の生年月日から grade が算出される。年度が進んだら合わせて更新する
       [
-        { name: "粉浜 太郎", nicknameKana: "たろう", grade: 6, gender: "male" },
+        {
+          name: "粉浜 太郎",
+          nicknameKana: "たろう",
+          grade: 6,
+          birthDate: "2014-06-15",
+          heightCm: 152,
+          gender: "male",
+        },
         {
           name: "粉浜 花子",
           nicknameKana: "はなちゃん",
           grade: 4,
+          birthDate: "2016-08-20",
+          heightCm: 136,
           gender: "female",
         },
         {
           name: "北粉浜 次郎",
           nicknameKana: "じろう",
           grade: 2,
+          birthDate: "2018-11-03",
+          heightCm: 118,
           gender: "male",
         },
       ].map((c) => ({ ...c, teamId: skcId, inviteCode: generateInviteCode() })),
@@ -233,6 +247,8 @@ await withTeam(otherId, async (tx) => {
       teamId: otherId,
       name: "東 三郎",
       grade: 5,
+      birthDate: "2015-05-05",
+      heightCm: 145,
       gender: "male",
       inviteCode: generateInviteCode(),
     })

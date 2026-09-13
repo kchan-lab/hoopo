@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の月謝確認(Issue #81 受入条件)。
@@ -20,7 +21,14 @@ async function registerChildAsNewGuardian(
   expect(login.ok()).toBe(true);
   const res = await context.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name, grade: 3, gender: "male" }],
+      children: [
+        {
+          name,
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [0, 6],
       startTime: "09:00",
