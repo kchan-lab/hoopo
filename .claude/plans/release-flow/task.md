@@ -23,9 +23,12 @@ Issue: [#4](https://github.com/kchan-lab/hoopo/issues/4) / Plan: [plan.md](plan.
 
 - [x] development へ直 push が拒否されることを確認(ダミーコミットで実際に試し、
       「Changes must be made through a pull request」で拒否された)
-- [ ] 次に development→main のリリース PR を出した際、release-please が動くことを確認
-      (release PR 起票 → CI 実行 → マージでタグ + Release + CHANGELOG)
-- [ ] リリース後に main→development の back-merge PR を出す
+- [x] 次に development→main のリリース PR を出した際、release-please が動くことを確認
+      (2026-09-13: #122 マージ → 初回は target-branch 未指定で development 向け #124 v1.0.0 が
+      起票されたため #125 で `target-branch: main` と `initial-version: 0.1.0` を追加 → #126 経由で
+      main 向け #127 `release: v0.1.0` 起票 → CI → マージでタグ v0.1.0 + Release + CHANGELOG を確認。
+      CHANGELOG に merge commit(PR タイトル)由来の重複行が載る問題は #129)
+- [x] リリース後に main→development の back-merge PR を出す(v0.1.0 の back-merge が初回)
 
 ## 仕上げ
 
