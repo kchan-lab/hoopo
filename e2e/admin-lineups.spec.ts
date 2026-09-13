@@ -5,6 +5,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // チーム編成の導線(Issue #101 受入条件)。
@@ -80,7 +81,8 @@ async function registerChildren(page: Page, names: string[]) {
       children: names.map((name) => ({
         name,
         nicknameKana: null,
-        grade: 4,
+        birthDate: birthDateForGrade(4),
+        heightCm: heightForGrade(4),
         gender: "male",
       })),
       relation: "father",

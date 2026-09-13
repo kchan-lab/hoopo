@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 家族連携の解除(family-links/plan.md。Issue #31 受入条件)。
@@ -23,7 +24,14 @@ test("第二保護者は自分の連携を解除でき、最後の保護者は�
   const childName = `粉浜 解除${randomBytes(3).toString("hex")}`;
   const created = await contextA.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name: childName, grade: 3, gender: "male" }],
+      children: [
+        {
+          name: childName,
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [6],
       startTime: "09:00",

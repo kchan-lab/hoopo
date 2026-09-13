@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 保護者のお知らせ(Issue #87 受入条件): 管理で公開したものがホーム → 詳細 → 一覧で読める。
@@ -64,7 +65,14 @@ test("公開したお知らせがホーム → 詳細 → 一覧で読め、下�
   expect(guardian.ok()).toBe(true);
   const reg = await page.context().request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name: `お知らせ 花子 ${tag}`, grade: 4, gender: "female" }],
+      children: [
+        {
+          name: `お知らせ 花子 ${tag}`,
+          birthDate: birthDateForGrade(4),
+          heightCm: heightForGrade(4),
+          gender: "female",
+        },
+      ],
       relation: "mother",
       weekdays: [0],
       startTime: "09:00",
