@@ -1,0 +1,1290 @@
+/*
+ * 保護者アプリのデザイントークンと基本クラス。
+ * 値は docs/DESIGN_GUIDELINES.md §1 と docs/wireframes/wireframes-v6.html(parent セクション)に
+ * 一致させる。薄いオレンジ・iOS ネイティブ調(CLAUDE.md 絶対原則6)
+ */
+
+:root {
+  --bg: #f5f3ef;
+  --paper: #fff;
+  --ink: #1a1511;
+  --sub: #7d7368;
+  --faint: #b3a99e;
+  --hair: rgba(58, 42, 22, 0.12);
+  --card-hair: rgba(58, 42, 22, 0.06);
+  --field: #fbf8f3;
+  --accent: #ef8432;
+  --tint: #fcebda;
+  --deep: #9c4e0e;
+  --line-green: #06c755;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+  font-family:
+    -apple-system, "SF Pro Text", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- 画面骨格 ----
+ * LIFF(スマホ)が主。PC ではスマホ幅に収めて中央寄せする */
+.screen {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.sc-head {
+  padding: 14px 16px 8px;
+  flex: none;
+}
+.sc-title {
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.sc-title .step {
+  font-size: 12px;
+  color: var(--faint);
+  font-weight: 600;
+}
+.sc-title .back {
+  color: var(--accent);
+  font-size: 17px;
+  display: flex;
+  font-weight: 600;
+}
+.sc-body {
+  flex: 1;
+  padding: 2px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sc-body.tight {
+  gap: 8px;
+}
+
+/* ---- チームヘッダー(§1.3) ---- */
+.team-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.team-head .logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  flex: none;
+}
+.team-head .name {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--deep);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+
+/* ---- カード・リスト ---- */
+.card {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--card-hair);
+}
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.news {
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.news .row {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.news .row + .row {
+  border-top: 1px solid var(--hair);
+}
+.news time,
+.news .meta {
+  font-size: 11px;
+  color: var(--faint);
+  flex: none;
+}
+/* お知らせの行(6a): タップで詳細へ。長いタイトルは1行で省略する */
+.news .t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 一覧ページへの導線(「すべて見る →」) */
+.more {
+  align-self: flex-end;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--deep);
+}
+.pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--deep);
+  background: var(--tint);
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+.linked {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+.help {
+  font-size: 11px;
+  color: var(--sub);
+  margin: 0;
+}
+.sync {
+  font-size: 10.5px;
+  color: var(--faint);
+  text-align: center;
+  margin: 0;
+}
+.err {
+  font-size: 12px;
+  color: #b3261e;
+  background: #fdecea;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 0;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--faint);
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hair);
+}
+.powered {
+  text-align: center;
+  font-size: 9.5px;
+  color: var(--faint);
+  font-weight: 600;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.powered b {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* ---- フォーム(ワイヤー fld2 / inbox / seg2 / days7) ---- */
+.fld2 {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+}
+.fld2 > label,
+.fld2 > legend.lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sub);
+}
+/* legend は flex アイテムにならず gap が効かないため余白を直接持たせる */
+.fld2 > legend.lbl {
+  margin-bottom: 5px;
+}
+.inbox {
+  background: var(--field);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  width: 100%;
+  appearance: none;
+}
+.inbox::placeholder {
+  color: var(--faint);
+}
+textarea.inbox {
+  min-height: 70px;
+  resize: vertical;
+}
+.inbox.code {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.time-range .inbox {
+  flex: 1;
+}
+.seg2 {
+  display: flex;
+  background: #eae4da;
+  border-radius: 12px;
+  padding: 3px;
+}
+.seg2 button {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+}
+.seg2 button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.days7 {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.days7 button {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  background: var(--field);
+  border: 1px solid var(--hair);
+  color: var(--sub);
+}
+.days7 button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.child-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.child-block + .child-block {
+  border-top: 1px solid var(--hair);
+  padding-top: 10px;
+}
+.child-block .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.addlink {
+  font-size: 12px;
+  color: var(--deep);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.addlink.boxed {
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  padding: 6px 12px;
+  margin-top: 8px;
+}
+/* 連携の解除(7d): 行内の二段階確認。質問とボタンは行の下に折り返して出す */
+.news .row.unlink {
+  flex-wrap: wrap;
+}
+.row .addlink.boxed {
+  margin-top: 0;
+}
+.invite-code {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  font-family: ui-monospace, monospace;
+}
+
+/* ---- CTA ---- */
+.cta {
+  margin-top: auto;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 15px;
+  padding: 13px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  border: 0;
+  width: 100%;
+  display: block;
+  cursor: pointer;
+}
+.cta.inline {
+  margin-top: 8px;
+  padding: 11px 0;
+}
+.cta.sec2 {
+  margin-top: 0;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--hair);
+}
+.cta:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* 連携の解除の二段階確認(7d): 質問と キャンセル/解除する を縦に積む */
+.unlink-confirm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.unlink-confirm .q {
+  font-size: 12px;
+  color: var(--sub);
+}
+.unlink-confirm .btns {
+  display: flex;
+  gap: 8px;
+}
+.unlink-confirm .btns .cta {
+  margin-top: 0;
+  flex: 1;
+}
+
+.choice {
+  text-align: center;
+  font-size: 12.5px;
+  display: block;
+}
+.choice small {
+  display: block;
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+.card-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-title .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ---- アイコン ---- */
+.ic {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.12em;
+  flex: none;
+}
+
+/* ---- ホーム hero・行アイコン(ワイヤー .hero/.kv) ---- */
+.hero {
+  display: block;
+}
+.hero .kicker,
+.card .kicker {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--deep);
+}
+.hero .big,
+.card .big {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- お知らせの詳細(6a) ---- */
+.article .ttl {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 2px 0 0;
+}
+/* 本文はプレーンテキスト。改行だけ反映する(plan.md 設計判断4) */
+.article .body {
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.kv {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--sub);
+}
+.kv .ic {
+  color: var(--accent);
+}
+.kv + .kv {
+  margin-top: 7px;
+}
+.kv .go {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--deep);
+  white-space: nowrap;
+}
+
+/* ---- 日程: 月ナビ・ビュートグル(.seg)・リスト(.sched/.sr) ---- */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.month-nav a {
+  color: var(--faint);
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.seg {
+  display: flex;
+  background: #e9e4dc;
+  border-radius: 9px;
+  padding: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sub);
+  margin-left: auto;
+}
+.seg button {
+  padding: 4px 9px;
+  min-height: 32px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+.seg button[aria-selected="true"] {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.sched {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.sr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+}
+.sched li + li .sr {
+  border-top: 1px solid var(--hair);
+}
+.sr .d {
+  width: 38px;
+  flex: none;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+.sr .d b {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.sr .d span {
+  font-size: 10px;
+  color: var(--faint);
+}
+.sr .body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sr .t {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sr .p {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 1px;
+}
+.sr .badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--deep);
+  background: var(--tint);
+  border-radius: 99px;
+  padding: 3px 8px;
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- カレンダー(DESIGN §1.3 日程ビュー) ---- */
+.cal {
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  padding: 12px 10px 10px;
+}
+.cal .wk,
+.cal .days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal .wk div {
+  font-size: 10px;
+  color: var(--faint);
+  text-align: center;
+  padding-bottom: 6px;
+  font-weight: 600;
+}
+.cell {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cell a {
+  display: flex;
+  min-width: 44px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+.cell i {
+  font-style: normal;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.cell.mute i {
+  color: #d5ccc1;
+}
+.cell.off i {
+  color: var(--faint);
+}
+.cell.pr i {
+  font-weight: 600;
+}
+.cell.prac i {
+  background: var(--tint);
+  color: var(--deep);
+}
+.cell.prac.sel i {
+  background: var(--accent);
+  color: #fff;
+}
+/* 今日は色に頼らず下線で示す(DESIGN §3) */
+.cell.today i {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  color: var(--sub);
+  margin-top: 8px;
+  padding-left: 4px;
+}
+.legend em {
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend .sw {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.legend .sw.prac {
+  background: var(--tint);
+  border: 1px solid var(--deep);
+}
+.legend .sw.sel {
+  background: var(--accent);
+}
+.day-detail {
+  display: block;
+  padding: 10px 14px;
+}
+.day-detail .ttl {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.day-detail .kv {
+  margin-top: 4px;
+}
+
+/* ---- 練習詳細: メニュー行 ---- */
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.menu-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--hair);
+  font-size: 13px;
+}
+.menu-row b {
+  font-size: 12px;
+  color: var(--deep);
+  width: 44px;
+  flex: none;
+}
+
+/* ---- タブバー(DESIGN §1.3。5ボタン、中央「日程」は50pxの黒丸) ---- */
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  flex: none;
+  background: rgba(253, 252, 250, 0.96);
+  border-top: 1px solid var(--hair);
+  padding: 8px 6px calc(6px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  margin-top: auto;
+}
+.tb {
+  flex: 1;
+  text-align: center;
+  color: #a79b8d;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 44px;
+  justify-content: flex-end;
+}
+.tb .ic {
+  width: 22px;
+  height: 22px;
+  display: block;
+  margin: 0 auto 2px;
+}
+.tb.on {
+  color: var(--accent);
+}
+.tb.center {
+  margin-top: -22px;
+}
+.tb.center .orb {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #f5f3ef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 3px;
+  border: 4px solid #f5f3ef;
+  box-shadow: 0 6px 14px -6px rgba(20, 12, 4, 0.5);
+}
+.tb.center .orb .ic {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+.tb.center.on .orb {
+  background: var(--accent);
+}
+
+/* ---- 参加予定の提出: 一括チップ・提出行(ワイヤー10) ---- */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--deep);
+  background: var(--tint);
+  border: 0;
+  border-radius: 99px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.chip.ghost {
+  background: transparent;
+  border: 1px solid var(--hair);
+  color: var(--sub);
+}
+.sub-list {
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.sbr {
+  padding: 10px 13px;
+}
+.sbr + .sbr {
+  border-top: 1px solid var(--hair);
+}
+.sbr .top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sbr .d {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sbr .p {
+  font-size: 10.5px;
+  color: var(--sub);
+}
+.sbr select {
+  margin-left: auto;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: #f1ede6;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  padding: 5px 6px;
+  max-width: 132px;
+}
+.sbr input {
+  margin-top: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 11.5px;
+  background: #fbf8f3;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  padding: 7px 9px;
+  color: var(--ink);
+}
+.sbr input::placeholder {
+  color: var(--faint);
+}
+.cta small {
+  font-weight: 500;
+  opacity: 0.7;
+  font-size: 11px;
+  margin-left: 6px;
+}
+/* お子さん切替(2人以上のときだけ)。seg2 をリンクで組む */
+.seg2.links a {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+  border-radius: 9px;
+}
+.seg2.links a[aria-current="true"] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- 提出カレンダー(4状態。DESIGN §1.3 提出ビュー。ワイヤー11) ---- */
+.cell button {
+  display: flex;
+  min-width: 44px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.cell.s-none i {
+  border: 1.5px solid var(--accent);
+  color: var(--deep);
+}
+.cell.s-full i {
+  background: var(--accent);
+  color: #fff;
+}
+.cell.s-part i {
+  background: var(--tint);
+  border: 1.5px solid var(--accent);
+  color: var(--deep);
+}
+/* 色だけに頼らないよう、不参加は打消線も併せる(DESIGN §3) */
+.cell.s-abs i {
+  background: #e7e1d8;
+  color: #9a8f82;
+  text-decoration: line-through;
+}
+.legend .sw.full {
+  background: var(--accent);
+}
+.legend .sw.part {
+  background: var(--tint);
+  border: 1.5px solid var(--accent);
+}
+.legend .sw.abs {
+  background: #e7e1d8;
+}
+.legend .sw.none {
+  border: 1.5px solid var(--accent);
+}
+
+/* ---- ホームの未提出アラート(ワイヤー4) ---- */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--tint);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--deep);
+  font-weight: 500;
+}
+.notice .go {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- 月謝確認: 年ナビ・封筒グリッド(DESIGN §1.3 月謝スタンプ。ワイヤー13) ---- */
+.year-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.year-nav a,
+.year-nav .off {
+  color: var(--faint);
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.year-nav .off {
+  opacity: 0.35;
+}
+.year-nav b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fee-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.fee {
+  background: var(--paper);
+  border: 1px solid var(--card-hair);
+  border-radius: 14px;
+  padding: 8px 0 9px;
+  text-align: center;
+}
+.fee .m {
+  display: block;
+  font-size: 10.5px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.fee .st {
+  width: 29px;
+  height: 29px;
+  margin: 5px auto 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+/* 済=deep の2px円枠、未=accent 枠カード+破線円、未来=淡色の「–」 */
+.fee.paid .st {
+  border: 2px solid var(--deep);
+  color: var(--deep);
+}
+.fee.due {
+  border-color: var(--accent);
+}
+.fee.due .st {
+  border: 2px dashed var(--faint);
+  color: var(--faint);
+  font-size: 10px;
+}
+.fee.later .st {
+  color: #d8d0c5;
+}
+/* 凡例のスタンプ(色だけに頼らず文字も併記する。DESIGN §3) */
+.legend .fee-sw {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+.legend .fee-sw.paid {
+  border: 1.5px solid var(--deep);
+  color: var(--deep);
+}
+.legend .fee-sw.due {
+  border: 1.5px dashed var(--faint);
+  color: var(--faint);
+}
+.legend .fee-sw.later {
+  color: #d8d0c5;
+}
+.fee-note {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--sub);
+  margin: 0;
+}
+
+/* ---- チーム名簿(DESIGN §1.3 名簿行。ワイヤー12) ---- */
+.sc-title .count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.rrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+}
+.rrow + .rrow {
+  border-top: 1px solid var(--hair);
+}
+/* 頭文字アバター(顔写真は未対応。§9 の合意待ち) */
+.rrow .ini {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--deep);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin-right: 3px;
+}
+.rrow .nm {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rrow .kana {
+  font-size: 11px;
+  color: var(--sub);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rrow .pill {
+  margin-left: auto;
+  flex: none;
+}
+
+/* ---- 出場メンバー 2D(DESIGN §1.3 コート。ワイヤー8) ---- */
+.court-cap {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sub);
+}
+/* コートは基準 SVG を180度回転してリングを下にする(回転は SVG 側のみ) */
+.court-wrap {
+  position: relative;
+  background: #f8ecdd;
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  overflow: hidden;
+}
+.court-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* 選手チップ。COURT_SPOTS の left/top % で絶対配置する(回転させない) */
+.pl {
+  position: absolute;
+  width: 58px;
+  margin-left: -29px;
+  text-align: center;
+}
+.pl .ini {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--deep);
+  background: #fff;
+  border: 2px solid var(--accent);
+  position: relative;
+}
+.pl .pos {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 1.5px 5px;
+}
+.pl .nm {
+  font-size: 9.5px;
+  font-weight: 600;
+  margin-top: 3px;
+  text-shadow: 0 1px 0 #f8ecdd;
+}
+.bench {
+  background: var(--paper);
+  border-radius: 16px;
+  border: 1px solid var(--card-hair);
+  padding: 11px 14px;
+}
+.bench .bh {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+  margin-bottom: 8px;
+}
+.bench .bl {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.bp {
+  text-align: center;
+}
+.bp .ini {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #efe9e0;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+.bp .nm {
+  font-size: 9.5px;
+  color: var(--sub);
+  margin-top: 3px;
+  font-weight: 600;
+}
+/* 3D は後追い(§4.2-7)。タブは無効表示のみ */
+.seg button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---- プライバシーポリシー(privacy-policy/plan.md)。長文を読ませるログイン不要の公開ページ ---- */
+/* 見出し・本文のサイズは DESIGN_GUIDELINES §1.2(カード見出し 14–15/700、本文 13)に合わせる */
+.legal .ttl {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+.legal p,
+.legal ul {
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 6px 0 0;
+}
+.legal ul {
+  padding-left: 1.2em;
+}
+.legal li + li {
+  margin-top: 2px;
+}
+/* プライバシーポリシーへの導線(チーム画面の末尾)と、そこからホームへ戻る導線。
+ * 最下部に控えめに置く(オレンジは使わない) */
+.legal-link {
+  margin-top: auto;
+  padding-top: 16px;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--sub);
+}
+.legal-link a,
+.powered a {
+  text-decoration: underline;
+}

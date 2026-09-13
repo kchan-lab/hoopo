@@ -1,0 +1,91 @@
+import { coaches, guardians, withTeam } from "@hoopo/db";
+import { eq } from "drizzle-orm";
+import type { Context } from "hono";
+import { getCookie } from "hono/cookie";
+import { createMiddleware } from "hono/factory";
+import {
+  ADMIN_SESSION_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  type SessionPayload,
+  type SessionRole,
+  verifySessionToken,
+} from "./session";
+
+// 認証ガード(child-registration/plan.md 設計判断9)。
+// Cookie のセッショントークンを検証し、role と teamId が期待どおりで、かつ DB 上に
+// guardian / coach 行がまだ存在するときだけ通す(セッションはステートレスなので、
+// 削除・無効化の検出はこの存在確認が担う。全ルートで同じ規則にする)。
+// 通過後は c.get("session") で SessionPayload を取り出せる
+
+export type AuthEnv = { Variables: { session: SessionPayload } };
+
+interface GuardDeps {
+  sessionSecret: string;
+  /** 当面は env の単一チーム。セッションの teamId と一致しないものは拒否する */
+  teamId: string;
+}
+
+const COOKIE_BY_ROLE: Record<SessionRole, string> = {
+  guardian: SESSION_COOKIE_NAME,
+  coach: ADMIN_SESSION_COOKIE_NAME,
+};
+
+// セッションの主体(guardian / coach 行)がまだ DB に存在するか。
+// Hono のガードと、アプリのサーバーコンポーネント(SSR で直接ドメイン関数を呼ぶ経路)の
+// 両方がこれを通り、読み取りと書き込みで認可の強さが変わらないようにする
+export async function principalExists(
+  session: SessionPayload,
+): Promise<boolean> {
+  return withTeam(session.teamId, async (tx) => {
+    const row =
+      session.role === "guardian"
+        ? await tx.query.guardians.findFirst({
+            where: eq(guardians.id, session.sub),
+            columns: { id: true },
+          })
+        : await tx.query.coaches.findFirst({
+            where: eq(coaches.id, session.sub),
+            columns: { id: true },
+          });
+    return row !== undefined;
+  });
+}
+
+// Cookie からセッションを読み、role・teamId・行の存在まで確認する。
+// ミドルウェア(requireRole)と、ミドルウェアを挟めないルート(LINE ログインの
+// /auth/line/start?mode=link のように認証要否が動的なもの)で同じ規則を共有する
+export async function readSession(
+  c: Context,
+  role: SessionRole,
+  deps: GuardDeps,
+): Promise<SessionPayload | null> {
+  const token = getCookie(c, COOKIE_BY_ROLE[role]);
+  const session = token
+    ? await verifySessionToken(token, deps.sessionSecret, {
+        expectedRole: role,
+      })
+    : null;
+  if (
+    !session ||
+    session.teamId !== deps.teamId ||
+    !(await principalExists(session))
+  ) {
+    return null;
+  }
+  return session;
+}
+
+function requireRole(role: SessionRole, deps: GuardDeps) {
+  return createMiddleware<AuthEnv>(async (c, next) => {
+    const session = await readSession(c, role, deps);
+    if (!session) {
+      return c.json({ error: "未ログインです" }, 401);
+    }
+    c.set("session", session);
+    await next();
+  });
+}
+
+export const requireGuardian = (deps: GuardDeps) =>
+  requireRole("guardian", deps);
+export const requireCoach = (deps: GuardDeps) => requireRole("coach", deps);
