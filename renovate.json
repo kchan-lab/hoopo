@@ -17,6 +17,12 @@
       "groupName": "github-actions"
     },
     {
+      "description": "Playwright は npm パッケージと Docker イメージ(compose.yaml)のバージョンが一致していないとブラウザが見つからず E2E が全滅するため、同じ PR にまとめて完全固定で更新する(2026-09-13 の nightly 失敗から)",
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "groupName": "playwright",
+      "rangeStrategy": "pin"
+    },
+    {
       "description": "Supabase CLI はローカルスタック・CI を壊し得るため単独 PR に分離し、完全固定で更新する",
       "matchPackageNames": ["supabase"],
       "groupName": "supabase-cli",

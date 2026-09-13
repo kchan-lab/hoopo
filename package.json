@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "1.63.0",
     "@types/node": "^24.13.3",
     "supabase": "2.111.0",
     "typescript": "^7.0.2",
