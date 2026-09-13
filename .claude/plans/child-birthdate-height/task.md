@@ -17,10 +17,10 @@ Issue: [#128](https://github.com/kchan-lab/hoopo/issues/128) / Plan: [plan.md](p
 
 ## 128b: portal(feat/child-birthdate-height-portal)
 
-- [ ] 登録①: 学年セレクトを生年月日(date 入力)+身長(number)に置き換え、算出した学年を表示
-- [ ] 家族の設定: 子どもごとに生年月日・身長を編集(学年は再計算表示)
-- [ ] プライバシーポリシー: 取得する情報に生年月日・身長を追加、「生年月日はお聞きしません」を保護者本人に限定
-- [ ] E2E: registration.spec / family-links.spec / privacy.spec の更新
+- [x] 登録①: 学年セレクトを生年月日(date 入力)+身長(number)に置き換え、算出した学年を表示
+- [x] 家族の設定: 子どもごとに生年月日・身長を編集(学年は再計算表示)
+- [x] プライバシーポリシー: 取得する情報に生年月日・身長を追加、「生年月日はお聞きしません」を保護者本人に限定
+- [x] E2E: registration.spec / family-links.spec / privacy.spec の更新
 - [ ] PR 作成 → CI グリーン → development へマージ(`Closes #132`)
 
 ## 128c: admin(feat/child-birthdate-height-admin)
