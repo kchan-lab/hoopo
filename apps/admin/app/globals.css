@@ -653,12 +653,21 @@ a.abtn {
 }
 
 .atable .c-name {
-  width: 27%;
+  width: 22%;
 }
 
 .atable .c-kana,
 .atable .c-note {
-  width: 17%;
+  width: 13%;
+}
+
+/* 生年月日・身長(child-birthdate-height)。PC のみの列で、モバイルは行詳細の編集フォーム側 */
+.atable .c-birth {
+  width: 15%;
+}
+
+.atable .c-height {
+  width: 9%;
 }
 
 .atable .sp {
@@ -1345,4 +1354,28 @@ textarea.afld {
 .lgin .privacy a {
   color: var(--asub);
   text-decoration: underline;
+}
+
+/* 行詳細の編集フォーム(child-birthdate-height)。日程管理の .pform/.pgrid/.afld を流用し、
+   定義リストとの間にだけ区切りを足す */
+.atable .medit {
+  margin-top: 0.7em;
+  padding-top: 0.7em;
+  border-top: 1px solid var(--ahair);
+}
+
+.atable .medit .anote {
+  margin: 0;
+}
+
+/* 行詳細の地色(--afield)と同じ背景だと沈むので、通知・エラーはカード色で浮かせる */
+.atable .medit .anotice,
+.atable .medit .lgerr {
+  margin: 0;
+  background: var(--acard);
+}
+
+.atable .medit .pfoot {
+  margin: 0;
+  justify-content: flex-end;
 }
