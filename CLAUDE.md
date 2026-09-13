@@ -45,7 +45,7 @@ apps/admin         … 管理者向け (Next.js)
 packages/api       … Hono ルート定義(将来SDK/横展開の中核)
 packages/db        … Drizzle スキーマ・マイグレーション・RLSポリシー
 packages/ui        … 共有UIプリミティブ(テーマはアプリ側で注入)
-packages/line      … LINE/LIFF クライアント(署名検証・通数計算含む)
+packages/line      … LINE/LIFF クライアント(ID トークン検証・Webhook 署名検証・暗号化・グループ宛て送信。通数計算は packages/api の line-shared)
 docs/              … REQUIREMENTS.md / DESIGN_GUIDELINES.md ほか
 .github/workflows  … CI/CD・定期ジョブ
 ```
@@ -53,7 +53,7 @@ docs/              … REQUIREMENTS.md / DESIGN_GUIDELINES.md ほか
 ## 開発ルール
 
 - コミットは Conventional Commits。PRは小さく、CIグリーンが必須
-- ブランチは feat/xxx → dev(=stg) → main(=prod)。リリースは release-please によるタグ+ノート自動生成(詳細は `docs/DEVELOPMENT.md`)
+- ブランチは feat/xxx → development(=stg) → main(=prod)。リリースは release-please によるタグ+ノート自動生成(詳細は `docs/DEVELOPMENT.md`)
 - テストは**3層で全網羅**(Unit / Integration / E2E)。実装PRには対象層のテストを必ず含める。戦略の詳細は `docs/DEVELOPMENT.md` のテスト戦略に従う
 - LINEのチャネルシークレット等は必ずサーバー側のみ。Webhookは署名検証を必ず通す
 - 日付・曜日は `Asia/Tokyo` 固定で扱う(練習日は「日付+曜日」で保持)

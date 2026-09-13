@@ -1,0 +1,34 @@
+{
+  "name": "@hoopo/api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shared": "./src/registration-shared.ts",
+    "./practices-shared": "./src/practices-shared.ts",
+    "./tokyo-date": "./src/tokyo-date.ts",
+    "./attendances-shared": "./src/attendances-shared.ts",
+    "./fees-shared": "./src/fees-shared.ts",
+    "./announcements-shared": "./src/announcements-shared.ts",
+    "./schedule-shared": "./src/schedule-shared.ts",
+    "./lineups-shared": "./src/lineups-shared.ts",
+    "./year-rollover-shared": "./src/year-rollover-shared.ts",
+    "./login-lockout-shared": "./src/login-lockout-shared.ts",
+    "./line-shared": "./src/line-shared.ts",
+    "./audit-shared": "./src/audit-shared.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "postgres": "^3.4.9",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@hoopo/db": "workspace:*",
+    "@hoopo/line": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.4"
+  }
+}

@@ -1,0 +1,96 @@
+# PR ごとの自動チェック(lint / typecheck / test)。
+# 失敗箇所が PR のチェック一覧で一目で分かるよう、また Issue #4 のブランチ保護で
+# 「必須チェック」を個別に指定できるよう、1ジョブにまとめず3ジョブを並列に置く。
+# E2E(Playwright)はここに含めない — フル E2E はリリース PR と nightly で実行する
+# (docs/DEVELOPMENT.md テスト戦略)。
+name: CI
+
+on:
+  pull_request:
+    branches: [development, main]
+
+# 同一 PR へ再 push したら古い実行を止める(public リポジトリで Actions 分数は無料だが、
+# 結果が出るまでの待ち時間を短くする)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # pnpm のセットアップは setup-node より前に置く。
+      # 逆にすると setup-node の cache: pnpm が pnpm を見つけられず失敗する。
+      # バージョンは指定しない — root package.json の packageManager から解決される
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # next build は挟まない。next-env.d.ts / .next/types が無い状態でも
+      # tsc --noEmit が通ることを確認済み(.claude/plans/ci-foundation/plan.md 設計判断9)
+      - run: pnpm typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  # Integration(実 Postgres + RLS 越境テスト)。DB は supabase start ではなく素の
+  # postgres コンテナを使う — RLS が Supabase 固有機能に依存しない設計のため Postgres だけで
+  # 検証でき、毎 PR 数分のイメージ pull と CLI 更新起因の破壊を避けられる
+  # (.claude/plans/db-schema-rls-seed/plan.md 設計判断10。バージョンは supabase/config.toml の
+  # major_version = 17 に合わせる)
+  test-int:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      APP_DATABASE_URL: postgresql://hoopo_app_local:postgres@localhost:54322/postgres
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # マイグレーション生成漏れの検知: スキーマ定義を変えたのに drizzle-kit generate を
+      # 忘れた PR をここで落とす(+ マイグレーション同士の衝突検出)
+      - run: pnpm db:generate && git diff --exit-code packages/db/drizzle
+      - run: pnpm db:check
+      - run: pnpm db:migrate
+      - run: pnpm test:int

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["* 0-7 * * 1"],
+  "prConcurrentLimit": 3,
+  "packageRules": [
+    {
+      "description": "devDependencies の minor/patch はまとめて1本の PR にする(レビュー回数を減らす)",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "devDependencies (minor/patch)"
+    },
+    {
+      "description": "GitHub Actions もまとめる",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Playwright は npm パッケージと Docker イメージ(compose.yaml)のバージョンが一致していないとブラウザが見つからず E2E が全滅するため、同じ PR にまとめて更新する(2026-09-13 の nightly 失敗から)。pin は npm 側の @playwright/test にだけ効く(Docker イメージのタグは元々固定)",
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "groupName": "playwright",
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Supabase CLI はローカルスタック・CI を壊し得るため単独 PR に分離し、完全固定で更新する",
+      "matchPackageNames": ["supabase"],
+      "groupName": "supabase-cli",
+      "rangeStrategy": "pin"
+    }
+  ],
+  "lockFileMaintenance": {
+    "description": "lockfile の推移的依存を週次で更新する",
+    "enabled": true,
+    "schedule": ["* 0-7 * * 1"]
+  },
+  "vulnerabilityAlerts": {
+    "description": "脆弱性由来の更新はスケジュールを無視して即座に PR を出す",
+    "schedule": ["at any time"]
+  }
+}

@@ -30,11 +30,13 @@
 - 保護者: LINEログイン(LIFF)。IDトークンをサーバーで検証し、httpOnly Cookieセッションへ
 - 初回登録(2ステップ):
   - ①子ども情報: 名前 / 呼び名(ひらがな・練習で呼ばれる下の名前) / 学年 / 性別(男・女) ※兄弟・姉妹の複数登録可
-  - ②参加情報: 参加可能曜日(日〜土のボタン複数選択) / 参加可能時間帯 / コーチへの伝達事項(自由入力・任意)
+  - ②参加情報: 参加可能曜日(日〜土のボタン複数選択) / 参加可能時間帯 / コーチへの伝達事項(自由入力・任意) / 続柄(父・母・祖父母・その他の1タップ選択)
+  - 兄弟・姉妹を同時登録する場合、②の参加情報は全員に同一適用する(個別調整は部員情報の編集で対応)
 - 2回目以降は重複入力を求めない
 - 第二保護者: 子どもごとの**招待コード**で連携(父母どちらのLINEアカウントからも同じ子どもを閲覧・提出可)
 - 登録は招待コードまたは登録用URL経由のみ。部外者対策は**自動認定+事後確認**方式: 登録・家族連携は即時有効とし、コーチへ通知。心当たりのない登録はコーチが後から無効化できる
-- 管理者: LINEログイン **または** メールアドレス+パスワードを選択可
+- 「コーチへ通知」は LINE 送信ではなく、**管理アプリの認定管理画面に新着順で表示**して事後確認する(§6 通数原則。個別 push は行わない)。招待コードの入力は大文字小文字・ハイフン・空白を区別しない
+- 管理者: LINEログイン **または** メールアドレス+パスワードを選択可。LINE ログインは LIFF ではなく通常の LINE ログイン(Web OAuth、scope は openid のみ)で、LINE ユーザー ID を暗号化して coaches に保持する(表示名・画像は保存しない)。メール+パスワードでログイン済みのコーチが「LINE を連携」してから使える(主経路は LINE、メールは予備)。メール+パスワードは 5 回連続で失敗すると 15 分間ロックする(ロック中も応答は通常の失敗と区別しない)
 
 ## 4. 保護者向けアプリ
 
@@ -48,7 +50,7 @@
 |---|---|---|
 | 1 | ログイン | LINEログインのみ。LIFF起動時はスキップ |
 | 2 | 初回登録①② | §3の項目。ステップ形式 |
-| 3 | ホーム | **チームヘッダー(SKCロゴ+チーム名を常時表示)**、次回練習(日時・場所を大きく)、未提出アラート、**「コーチにLINEで連絡する」ボタン**(コーチ個別LINEのトークURLへ遷移。LINEチャットの送受信は通数カウント対象外)、お知らせ一覧、最下部に「powered by hoopo」 |
+| 3 | ホーム | **チームヘッダー(SKCロゴ+チーム名を常時表示)**、次回練習(日時・場所を大きく)、未提出アラート、**「コーチにLINEで連絡する」ボタン**(コーチ個別LINEのトークURLへ遷移。LINEチャットの送受信は通数カウント対象外)、お知らせ一覧(タイトル+日付。タップで本文の詳細ページ)、最下部に「powered by hoopo」 |
 | 4 | 練習日程 | **リスト/カレンダーの2形式**。右上トグルで相互切替。カレンダーは日曜始まり・土曜終わり。練習日のみアクティブ(タップ可)。日付タップで詳細(時間/場所/備考/練習メニュー)を表示 |
 | 5 | 練習詳細 | **フルスクリーンの詳細ページ**(日程で日付選択→遷移)。時間/場所/備考/**練習メニュー**を表示し、「出場メンバーはこちら」ボタンで当日のコート配置画面へ。別案(チーム画面に公式戦/練習試合タグ+日付選択を挟む構成)は将来検討 |
 | 6 | 参加予定の提出 | **リスト/カレンダーの2形式**・完全同期・一括操作あり。回答は日付ごとの**プルダウン選択**: 「9:00〜12:00(全参加)」/「途中参加・早退」/「不参加」+未回答。「途中参加・早退」選択時のみ**任意コメント欄**を活性化(例: 11:00ごろ早退します)。不参加も明示的に選択できる。提出後も変更可。CTAに回答数を表示 |
@@ -64,7 +66,7 @@
 - 配色: **モノトーン**(オレンジ不使用)。保護者UIと明確に区別する
 - **ダークモード対応**(全画面共通、ボタンでワンタップ切替)
 - **文字サイズ3段階**(小/中/大、ボタン切替)— 高齢の管理者を想定
-- 画面構成は2レイアウト: **PC=左サイドバー**(ダッシュボード/出欠/欠席者/認定/日程/月謝/部員から選択)、**モバイル=ハンバーガーメニュー**(ドロワー表示)。両方のワイヤーフレームを整備(wireframes-v6)
+- 画面構成は2レイアウト: **PC=左サイドバー**(ダッシュボード/出欠/欠席者/認定/日程/月謝/部員/お知らせから選択)、**モバイル=ハンバーガーメニュー**(ドロワー表示)。両方のワイヤーフレームを整備(wireframes-v6)
 
 ### 5.2 画面一覧
 | 画面 | 仕様の要点 |
@@ -73,42 +75,67 @@
 | ダッシュボード | 提出率 / 次回参加人数 / 月謝未提出数 |
 | 出欠管理 | 部員×練習日マトリクス(**○全参加/△途中参加・早退/×不参加/−未回答**)。△タップで保護者コメント表示。列=当日参加者一覧、行=個人詳細 |
 | 欠席者管理 | 練習日ごとに不参加者・途中参加/早退者を保護者コメント付きで一覧表示。未回答者はリマインド対象に指定可 |
-| 認定管理 | **自動認定+事後確認**。新規登録・家族連携は即時有効となりコーチへ通知。この画面では登録履歴を確認し、心当たりのない登録を**無効化**できる |
+| 認定管理 | **自動認定+事後確認**。新規登録・家族連携は即時有効となり、この画面に新着順で表示される(LINE 通知は行わない)。心当たりのない登録・連携を**無効化**でき、無効化した保護者からは当該の子どもが見えなくなる |
 | 月謝管理 | 部員×1〜12月の「済」グリッド。セルクリックで済⇄未(封筒ハンコと同運用)。保護者側に即反映 |
 | 日程管理 | 月単位で 日付/開始/終了/場所/備考 を行入力。**練習メニュー**を練習ごとに登録(保護者アプリに表示)。「予定表を発行してLINEへ送信」ボタンで画像生成+グループ送信。LINE通数カウンター(n/200)常設 |
-| 部員管理 | 名前/学年/性別/連携保護者数/伝達事項。行クリックで詳細(伝達事項全文・参加可能曜日/時間・招待コード)。**年度更新**ボタン |
-| チーム編成 | 公式戦/練習試合ごとにスタメン(ポジション割当)とベンチを設定 → 保護者のチーム画面に反映 |
+| 部員管理 | 名前/学年/性別/連携保護者数/伝達事項。行クリックで詳細(伝達事項全文・参加可能曜日/時間・招待コード)。**年度更新**ボタン。**卒団した部員**(アーカイブ済み)は一覧の下に表示し、「データを削除」(二段階確認)で本人の記録を物理削除する(紐づく保護者がいなくなればその保護者も削除)。削除は実行ログ(audit_logs)に残す |
+| お知らせ管理 | タイトル/本文/「LINEへ通知する」フラグ。下書き保存と公開、編集・削除。公開したものだけ保護者のホームに新しい順で表示。通知ありのお知らせは「LINE へ送信」(確認+送信ログ)でグループへ 1 通 |
+| チーム編成 | 練習・試合ごとにスタメン(ポジション割当)とベンチを設定 → 保護者の練習詳細「出場メンバー」に反映。当面は練習の種別を持たないため全ての練習が対象(種別タグの導入時に試合のみへ絞る) |
 
-- 年度更新: 全部員の学年+1、6年生は卒団アーカイブ。確認ダイアログ+取り消し猶予つき一括処理
+- 年度更新: 全部員の学年+1、6年生は卒団アーカイブ(archived=true、学年は据え置き)。確認ダイアログ+取り消し猶予(24時間)つき一括処理。実行ログ(year_rollovers)を残し、猶予内は1回だけ取り消せる
 
 ## 6. LINE連携仕様
 
 - LINE公式アカウント+Messaging API(コーチ個人名義で開設・管理)。Botを対象グループに招待し、WebhookでgroupIdを取得
+  (Webhook は署名検証を通した `join` イベントの groupId を teams.line_group_id に保存するだけ。メッセージ本文・送信者は保存しない)
 - 通知は**グループ宛て1通のみ**。個別push・全員broadcastは実装しない
-- 通数 = 送信回数 × グループ参加人数。無料枠 月200通(超過月は送信不可になる仕様を踏まえ、カウンターで残数を常時表示)
+- 通数 = 送信回数 × グループ参加人数。無料枠 月200通(超過月は送信不可になる仕様を踏まえ、カウンターで残数を常時表示)。
+  参加人数は送信時に Messaging API から取得して送信ログ(line_messages.recipient_count)に記録し、当月(Asia/Tokyo)の合計を「使用済み」とする。
+  送信前に「使用済み+今回の人数」が 200 を超える場合は送信しない。送信は必ず確認ダイアログ(人数・残数を表示)を経る
 - 必須通知(いずれも詳細は載せず、LIFFリンクへ誘導する短文): 
   1. 予定表発行時(画像+リンク)
   2. 出欠回答を促すリマインド
 - 非必須の日常連絡(練習終了等)はアプリから送らない(コーチ個人アカウントで代用)
-- お知らせは投稿時に「LINEへ通知する/しない」を選択(notify_lineフラグ)
+- お知らせは投稿時に「LINEへ通知する/しない」を選択(notify_lineフラグ)。通知ありで公開したお知らせは、お知らせ管理の「LINE へ送信」(確認つき)で送る。本文は送らずタイトル+LIFF リンクのみ
+- 予定表の送信は「発行」済みの月に対して「LINE へ送信」(確認つき)。画像メッセージ(固定パスの予定表画像)+短文(LIFF リンク)の 1 push
 - 予定表画像: DBのpracticesから**動的生成**(1ヶ月を1日1行で並べ、練習日に時間+学校名。
   現行アプリ「縦型カレンダー」の見慣れた体裁を踏襲)。備考は画像に載せない。
   画像URLは固定パス(例 `/api/schedule/2026-08.png`)でLINEのoriginalContentUrlに渡し、CDNキャッシュ
 
 ## 7. データモデル(全テーブルに team_id / RLS必須)
 
-- teams(id, name, short_name, logo_path, team_color, line_group_id)
-- coaches(id, team_id, email, auth方式)
-- guardians(id, team_id, line_user_id[暗号化])
-- guardian_children(guardian_id, child_id, relation, status[active/revoked・自動認定])
-- children(id, team_id, name, nickname_kana[呼び名], grade, gender, coach_note, invite_code, photo_path[任意], status[active/revoked・自動認定], archived)
-- child_availabilities(id, team_id, child_id, weekday[0=日], start_time, end_time)
-- practices(id, team_id, held_on, start_time, end_time, location, note, published_at)
+共通事項:
+
+- id は uuid。**teams 以外の全テーブルに team_id**(teams は id 自身がテナント境界のため列を持たない)
+- 全テーブルに created_at、更新のある表は updated_at(§5.2 認定管理の登録履歴表示に使用)
+- 練習日は「日付+曜日」で保持: held_on(date)から曜日(0=日)を導出した生成列を持つ
+
+テーブル定義:
+
+- teams(id, name, short_name, logo_path, team_color, line_group_id[一意])
+- coaches(id, team_id, email[一意], auth_type[line/email], password_hash[email認証時は必須・PBKDF2形式], line_user_id[暗号文・任意], line_user_id_lookup[検索用HMAC・team内一意・任意], failed_login_count, locked_until[メール認証の試行回数制限: 5回失敗で15分ロック・成功でリセット])
+  ※ パスワードリセット関連は §10 未決のため未実装。line_user_id は §3 の管理者 LINE ログイン(#61)で使用(guardians と同じ暗号文+HMAC)
+- guardians(id, team_id, line_user_id[暗号文], line_user_id_lookup[検索用HMAC・team内一意])
+  ※ 平文の LINE userId 形式は CHECK 制約で拒否。暗号化・HMAC の実装は packages/line の責務
+- guardian_children(team_id, guardian_id, child_id, relation[father/mother/grandparent/other], status[active/revoked・自動認定]) — 複合主キー (guardian_id, child_id)
+- children(id, team_id, name, nickname_kana[呼び名], grade[1..6], gender[male/female], coach_note, invite_code[全体一意・推測困難], photo_path[任意], status[active/revoked・自動認定], archived, archived_at)
+  ※ 卒団は archived=true(grade は据え置き)。archived_at は年度更新の取り消し猶予に使用
+- child_availabilities(id, team_id, child_id, weekday[0=日], start_time, end_time) — (child_id, weekday, start_time) 一意
+- practices(id, team_id, held_on, weekday[生成列・0=日], start_time, end_time, location, note, published_at)
 - practice_menus(id, team_id, practice_id, duration_min, content, sort)
-- attendances(id, team_id, child_id, practice_id, status[full/partial/absent], comment[任意・途中参加/早退の詳細], submitted_at)
-- fee_records(id, team_id, child_id, year, month, status, received_at)
+- attendances(id, team_id, child_id, practice_id, status[full/partial/absent], comment[任意・途中参加/早退の詳細。partial 時のみ], submitted_at) — (practice_id, child_id) 一意
+- fee_records(id, team_id, child_id, year, month[1..12], status[paid/unpaid], received_at) — (child_id, year, month) 一意。「未来」はアプリが year/month から導出
 - announcements(id, team_id, title, body, notify_line, published_at)
-- lineups(id, team_id, practice_id, child_id, role[starter/bench], position[PG..C]) — チーム編成用
+- lineups(id, team_id, practice_id, child_id, role[starter/bench], position[PG..C・任意]) — チーム編成用。(practice_id, child_id) 一意
+- year_rollovers(id, team_id, executed_at, undone_at, snapshot[jsonb: child_id → { grade, archived }]) — 年度更新の実行ログ。取り消し猶予(24時間)内は snapshot から復元する。1チームにつき未取り消しの最新1件だけが取り消し対象
+
+整合性の方針: 子テーブルは複合外部キー(xxx_id, team_id)で親を参照し、他チームの行を参照する
+不整合(例: A チームの出欠が B チームの練習を指す)を DB レベルで防ぐ。
+- line_messages(id, team_id, kind[schedule/announcement/reminder], ref[schedule=YYYY-MM / announcement=announcements.id], recipient_count, status[sent/failed], error, sent_at) — LINE 送信の実行ログ兼通数カウンター。当月の sent 行の recipient_count 合計が使用済み通数。message 本文は保存しない(再送はアプリが組み立てる)
+
+- audit_logs(id, team_id, action[child_deleted など], target_id[任意・FK なし], detail[jsonb: 学年・削除した保護者数など。名前は入れない], performed_by[coaches.id・任意], created_at) — 破壊的操作の実行ログ
+
+(年度更新の実行ログは year_rollovers として定義済み)。
 
 
 ### ER図(概念)
@@ -156,4 +183,5 @@ erDiagram
 - 顔写真機能のチーム内合意(§9)
 - 予定表画像の細部デザイン(現行スクリーンショットの共有待ち)
 - 管理者メールログインのパスワードリセット手段(コスト0のメール送信手段の選定)
+- 出場メンバー配置の左右指定(C=リング横の左/右)を lineups にどう持つか(§4.2-7)
 - `hoopo` 表記の商標有無の確認(J-PlatPatで9・38・42類を検索)を、チーム外への公開・展開前に実施

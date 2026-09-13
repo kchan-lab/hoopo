@@ -1,0 +1,32 @@
+{
+  "name": "hoopo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "tsc --noEmit && pnpm -r typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:int": "vitest run -c vitest.int.config.ts",
+    "test:e2e": "docker compose --profile e2e run --rm playwright",
+    "db:generate": "pnpm --filter @hoopo/db db:generate",
+    "db:check": "pnpm --filter @hoopo/db db:check",
+    "db:migrate": "pnpm --filter @hoopo/db db:migrate",
+    "db:migrate:stg": "pnpm --filter @hoopo/db db:migrate:stg",
+    "db:migrate:prod": "pnpm --filter @hoopo/db db:migrate:prod",
+    "db:seed": "pnpm --filter @hoopo/db db:seed"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.13.3",
+    "supabase": "2.111.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,60 @@
+# Supabase Free の自動一時停止(約1週間無アクセス)対策の定期 ping(Issue #54)。
+# 各環境の DB へ SELECT 1 を実行して活動を発生させる。停止判定に確実に効かせるため
+# REST のヘルスチェックではなく DB クエリを使う(.claude/plans/supabase-ping/plan.md)。
+# シークレット未設定の環境はスキップするため、stg/prod 作成(#55)前でもグリーンで完走する。
+# - STG_PING_DATABASE_URL: stg の接続文字列(Supavisor 6543。最小権限の hoopo_app_stg を推奨)
+# - PROD_PING_DATABASE_URL: prod の接続文字列(初回リリースまでは postgres、以後 hoopo_app_prod)
+# - DISCORD_WEBHOOK_URL: 失敗通知先(#10 で設定。未設定時は Actions の失敗表示のみ)
+name: Supabase ping
+
+on:
+  schedule:
+    - cron: "23 21 * * *" # 06:23 JST(Asia/Tokyo)。毎正時はキュー混雑で遅延しやすいため分をずらす
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # 一時停止済みプロジェクトへの接続はハングしうるため接続タイムアウトを明示
+      PGCONNECT_TIMEOUT: "15"
+      STG_URL: ${{ secrets.STG_PING_DATABASE_URL }}
+      PROD_URL: ${{ secrets.PROD_PING_DATABASE_URL }}
+    steps:
+      - name: Ping databases
+        id: ping
+        run: |
+          failed_envs=""
+          for env_name in STG PROD; do
+            url_var="${env_name}_URL"
+            url="${!url_var}"
+            if [ -z "$url" ]; then
+              echo "::notice::${env_name}: 接続文字列が未設定のためスキップ(#55 完了後に設定)"
+              continue
+            fi
+            if psql "$url" -tAc "select 1" >/dev/null 2>&1; then
+              echo "${env_name}: ok"
+            else
+              echo "::error::${env_name}: ping に失敗しました(プロジェクトの一時停止・接続情報を確認)"
+              failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
+            fi
+          done
+          # 失敗した環境名を通知ステップへ渡す(exit 1 でも GITHUB_OUTPUT は保持される)
+          echo "failed=${failed_envs}" >> "$GITHUB_OUTPUT"
+          [ -z "$failed_envs" ] || exit 1
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILED: ${{ steps.ping.outputs.failed }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL が未設定のため通知をスキップ(#10 で設定)"
+            exit 0
+          fi
+          curl -fsS -H "Content-Type: application/json" \
+            -d "{\"content\":\"⚠️ Supabase ping が失敗しました(対象: ${FAILED:-不明}): ${RUN_URL}\"}" \
+            "$WEBHOOK" \
+            || echo "::warning::Discord への通知送信に失敗しました(Webhook URL・Discord 側の状態を確認)"
