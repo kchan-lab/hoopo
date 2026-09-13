@@ -3,6 +3,7 @@ import {
   getLineUsage,
   getPublishStatus,
   listLineMessages,
+  listPracticePresets,
   listPracticesByMonth,
   monthOf,
   parseMonth,
@@ -29,15 +30,17 @@ export default async function SchedulePage({
   const session = await getCoachSession();
   if (!session) redirect("/login");
   const { month: raw } = await searchParams;
-  const month = parseMonth(raw) ?? monthOf(todayInTokyo());
-  const [practices, publishStatus, lineUsage, lineMessages] = await Promise.all(
-    [
+  const today = todayInTokyo();
+  const month = parseMonth(raw) ?? monthOf(today);
+  const [practices, publishStatus, lineUsage, lineMessages, presets] =
+    await Promise.all([
       listPracticesByMonth(session.teamId, month),
       getPublishStatus(session.teamId, month),
       getLineUsage(session.teamId, lineClient()),
       listLineMessages(session.teamId, 20),
-    ],
-  );
+      // まとめ登録の時間帯プリセット(過去の実績から集計。schedule-bulk-entry/plan.md 設計判断2)
+      listPracticePresets(session.teamId),
+    ]);
 
   return (
     <Shell title="日程管理">
@@ -45,10 +48,12 @@ export default async function SchedulePage({
         <ScheduleEditor
           month={month}
           monthLabel={formatMonthLabel(month)}
+          today={today}
           initialPractices={practices}
           publishStatus={publishStatus}
           lineUsage={lineUsage}
           lineMessages={lineMessages}
+          presets={presets}
         />
       </main>
     </Shell>
