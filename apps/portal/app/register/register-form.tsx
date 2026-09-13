@@ -1,18 +1,30 @@
 "use client";
 
+import {
+  HEIGHT_MAX,
+  HEIGHT_MIN,
+  parseBirthDate,
+  parseHeightCm,
+  todayTokyo,
+} from "@hoopo/api/grade-shared";
 import { type Gender, type Relation, WEEKDAY_LABELS } from "@hoopo/api/shared";
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
+import { GradeHint } from "../grade-hint";
 import { RelationSelect } from "../relation-select";
 
 // 2ステップの初回登録。①子ども情報(兄弟追加可)→ ②参加情報(全員に同一適用)→ POST /api/children。
-// 入力は REQUIREMENTS §3 の項目のみ(絶対原則4)。バリデーションの正はサーバー(parseRegistration)
+// 入力は REQUIREMENTS §3 の項目のみ(絶対原則4)。バリデーションの正はサーバー(parseRegistration)。
+// 学年は選ばせず、生年月日から判定して表示する(child-birthdate-height/plan.md 設計判断2・4)
 
 interface ChildDraft {
   key: number;
   name: string;
   nicknameKana: string;
-  grade: number;
+  /** "YYYY-MM-DD"(input[type=date] の値)。未入力は "" */
+  birthDate: string;
+  /** input[type=number] の値なので文字列で持つ。検証は parseHeightCm に任せる */
+  heightCm: string;
   gender: Gender | null;
 }
 
@@ -20,11 +32,15 @@ const newChild = (key: number): ChildDraft => ({
   key,
   name: "",
   nicknameKana: "",
-  grade: 1,
+  birthDate: "",
+  heightCm: "",
   gender: null,
 });
 
 export function RegisterForm() {
+  // 学年判定の基準日は Asia/Tokyo の「今日」。入力中の表示は目安で、保存する学年の正は
+  // サーバー(registerChildren)が同じ純関数で算出する(plan.md 設計判断4)
+  const [today] = useState(todayTokyo);
   const [step, setStep] = useState<1 | 2>(1);
   const [kids, setKids] = useState<ChildDraft[]>([newChild(0)]);
   const [weekdays, setWeekdays] = useState<number[]>([]);
@@ -45,6 +61,11 @@ export function RegisterForm() {
     for (const [i, k] of kids.entries()) {
       if (!k.name.trim())
         return setError(`${i + 1}人目のお名前を入力してください`);
+      // サーバーと同じ純関数で先に弾く(文言もそろう)。正はあくまでサーバー
+      const birthDate = parseBirthDate(k.birthDate, today);
+      if (!birthDate.ok) return setError(`${i + 1}人目の${birthDate.error}`);
+      const heightCm = parseHeightCm(k.heightCm);
+      if (!heightCm.ok) return setError(`${i + 1}人目の${heightCm.error}`);
       if (!k.gender) return setError(`${i + 1}人目の性別を選んでください`);
     }
     setError(null);
@@ -66,7 +87,8 @@ export function RegisterForm() {
           children: kids.map((k) => ({
             name: k.name,
             nicknameKana: k.nicknameKana,
-            grade: k.grade,
+            birthDate: k.birthDate,
+            heightCm: Number(k.heightCm),
             gender: k.gender,
           })),
           relation,
@@ -150,21 +172,39 @@ export function RegisterForm() {
                 />
               </div>
               <div className="fld2">
-                <label htmlFor={`grade-${k.key}`}>学年</label>
-                <select
-                  id={`grade-${k.key}`}
+                <label htmlFor={`birth-${k.key}`}>生年月日</label>
+                <input
+                  id={`birth-${k.key}`}
                   className="inbox"
-                  value={k.grade}
-                  onChange={(e) =>
-                    update(k.key, { grade: Number(e.target.value) })
-                  }
-                >
-                  {[1, 2, 3, 4, 5, 6].map((g) => (
-                    <option key={g} value={g}>
-                      {g}年生
-                    </option>
-                  ))}
-                </select>
+                  type="date"
+                  value={k.birthDate}
+                  onChange={(e) => update(k.key, { birthDate: e.target.value })}
+                  required
+                />
+                <p className="help" aria-live="polite">
+                  <GradeHint birthDate={k.birthDate} today={today} />
+                </p>
+              </div>
+              <div className="fld2">
+                <label htmlFor={`height-${k.key}`}>身長</label>
+                <div className="with-unit">
+                  <input
+                    id={`height-${k.key}`}
+                    className="inbox"
+                    type="number"
+                    inputMode="numeric"
+                    min={HEIGHT_MIN}
+                    max={HEIGHT_MAX}
+                    step={1}
+                    value={k.heightCm}
+                    onChange={(e) =>
+                      update(k.key, { heightCm: e.target.value })
+                    }
+                    placeholder="130"
+                    required
+                  />
+                  <span className="unit">cm</span>
+                </div>
               </div>
               <fieldset className="fld2">
                 <legend className="lbl">性別</legend>
