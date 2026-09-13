@@ -70,7 +70,7 @@ services:
   # イメージのタグは @playwright/test のバージョンと必ず一致させる(ズレると起動時にエラーになる)
   playwright:
     profiles: [e2e]
-    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
     working_dir: /app
     volumes:
       - .:/app
