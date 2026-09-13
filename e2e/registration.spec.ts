@@ -28,15 +28,25 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await page.getByRole("link", { name: /お子さんを新しく登録する/ }).click();
   await expect(page.locator("h1")).toContainText("お子さんの登録");
 
-  // ①子ども情報(兄弟を追加)
+  // ①子ども情報(兄弟を追加)。学年は選ばず、生年月日から決まる
   await page.getByLabel("お名前").fill("粉浜 太郎");
   await page.getByLabel("呼び名(ひらがな)").fill("たろう");
-  await page.getByLabel("学年").selectOption("4");
+  await page.getByLabel("生年月日").fill(birthDateForGrade(4));
+  await page
+    .getByRole("spinbutton", { name: "身長", exact: true })
+    .fill(String(heightForGrade(4)));
+  // 入力したその場で「小学4年生」が出る(child-birthdate-height/plan.md 設計判断4)
+  const first = page.locator("fieldset.child-block").first();
+  await expect(first).toContainText("小学4年生");
   await page.getByRole("button", { name: "男子" }).click();
   await page.getByRole("button", { name: "兄弟・姉妹を追加" }).click();
   const second = page.locator("fieldset.child-block").nth(1);
   await second.getByLabel("お名前").fill("粉浜 花子");
-  await second.getByLabel("学年").selectOption("2");
+  await second.getByLabel("生年月日").fill(birthDateForGrade(2));
+  await second
+    .getByRole("spinbutton", { name: "身長", exact: true })
+    .fill(String(heightForGrade(2)));
+  await expect(second).toContainText("小学2年生");
   await second.getByRole("button", { name: "女子" }).click();
   await page.getByRole("button", { name: "次へ" }).click();
 
@@ -57,13 +67,42 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await expect(page.locator("main")).toContainText("粉浜 花子");
   await expect(page.locator("main")).toContainText("4年");
 
-  // 家族の設定に招待コード(5-5 区切り)が出る
+  // 家族の設定に招待コード(5-5 区切り)と、生年月日から決まった学年・身長が出る
   await page.getByRole("link", { name: /家族の設定/ }).click();
   await expect(page.locator("h1")).toContainText("家族の設定");
   await expect(page.locator(".invite-code").first()).toHaveText(
     /^[0-9A-Z]{5}-[0-9A-Z]{5}$/,
   );
   await expect(page.locator("main")).toContainText("あなた(父)");
+  const taro = page.locator("section.child-block").first();
+  await expect(taro).toContainText("小学4年生");
+  await expect(taro).toContainText(birthDateForGrade(4));
+  await expect(taro).toContainText(`${heightForGrade(4)} cm`);
+});
+
+test("小学生にならない生年月日では次へ進めない", async ({ context, page }) => {
+  // 学年が 1〜6 に入らない生年月日は登録できない(REQUIREMENTS §3)。
+  // クライアントの検証はサーバー(parseBirthDate)と同じ純関数なので文言もそろう
+  await loginAsNewGuardian(context);
+  await page.goto(`${urls.portal}/register`);
+  await page.getByLabel("お名前").fill("粉浜 未就学");
+  // 小学1年生より1学年下 = まだ入学していない
+  await page.getByLabel("生年月日").fill(birthDateForGrade(0));
+  await page
+    .getByRole("spinbutton", { name: "身長", exact: true })
+    .fill(String(heightForGrade(1)));
+  await expect(page.locator("fieldset.child-block").first()).toContainText(
+    "小学生の生年月日を入力してください",
+  );
+  await page.getByRole("button", { name: "男子" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+
+  // ①に留まり、エラーが出る
+  // Next.js のルートアナウンサー(空の role="alert")と衝突するので form に絞る
+  await expect(page.locator("form").getByRole("alert")).toContainText(
+    "1人目の小学生の生年月日を入力してください",
+  );
+  await expect(page.locator("h1")).toContainText("お子さんの登録");
 });
 
 test("第二保護者が招待コードで連携すると同じ子どもが見える", async ({

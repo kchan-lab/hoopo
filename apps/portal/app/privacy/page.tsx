@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "プライバシーポリシー − hoopo",
 };
 
-const LAST_UPDATED = "2026-09-07";
+const LAST_UPDATED = "2026-09-13";
 
 export default function PrivacyPage() {
   return (
@@ -40,7 +40,9 @@ export default function PrivacyPage() {
           <p>このアプリが保存するのは、次の情報だけです。</p>
           <ul>
             <li>LINE ユーザー ID(暗号化して保存します)</li>
-            <li>お子さんの名前・呼び名(ひらがな)・学年・性別</li>
+            <li>
+              お子さんの名前・呼び名(ひらがな)・生年月日・身長・性別(学年は生年月日から決まります)
+            </li>
             <li>コーチへの伝達事項</li>
             <li>参加できる曜日・時間帯</li>
             <li>お子さんとの続柄(父・母・祖父母・その他)</li>
@@ -60,7 +62,9 @@ export default function PrivacyPage() {
             <li>電話番号</li>
           </ul>
           <p>
-            メールアドレス・パスワード・住所・生年月日は、保護者のみなさまにはお聞きしません。
+            メールアドレス・パスワード・住所と、
+            <b>保護者ご本人の生年月日</b>
+            は、お聞きしません。お子さんの生年月日は学年を決めるために、身長は成長の記録としてお預かりします。
           </p>
         </section>
 
