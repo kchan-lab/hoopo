@@ -64,8 +64,11 @@ import {
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
   createPractice,
+  createPracticesBulk,
   deletePractice,
+  listPracticePresets,
   listPracticesByMonth,
+  parseBulkPracticeInput,
   parseMonth,
   parsePracticeInput,
   updatePractice,
@@ -579,6 +582,24 @@ export function createAdminApi(deps: AdminApiDeps) {
       { practice: await createPractice(session.teamId, parsed.value) },
       201,
     );
+  });
+
+  // カレンダーからのまとめ登録(plan.md 設計判断3)。1 トランザクションで全件成功か全件失敗。
+  // /practices/:id より前に置いて、:id に "bulk" が吸われないようにする
+  app.post("/practices/bulk", coach, async (c) => {
+    const parsed = parseBulkPracticeInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    return c.json(
+      { practices: await createPracticesBulk(session.teamId, parsed.value) },
+      201,
+    );
+  });
+
+  // まとめ登録の時間帯・場所プリセット(plan.md 設計判断2。専用テーブルは作らず実績から集計)
+  app.get("/practices/presets", coach, async (c) => {
+    const session = c.get("session");
+    return c.json({ presets: await listPracticePresets(session.teamId) });
   });
 
   app.put("/practices/:id", coach, async (c) => {
