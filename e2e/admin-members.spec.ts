@@ -98,3 +98,88 @@ test("モバイルではハンバーガーからドロワーで画面を切り�
   await page.getByRole("link", { name: "認定管理", exact: true }).click();
   await expect(page.locator(".ah b")).toContainText("認定管理");
 });
+
+// 生年月日・身長の表示と編集(child-birthdate-height/plan.md 128c)。
+// 学年は生年月日から決まる(設計判断2)ので、フィクスチャは child-input.ts で
+// 「今日」から逆算し、実行日に依存しないようにする
+
+/** 一覧・行詳細の表示("2019-06-01" → "2019/6/1") */
+function birthLabel(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${y}/${Number(m)}/${Number(d)}`;
+}
+
+test("部員の生年月日・身長が見え、行詳細から直すと学年が再計算される", async ({
+  page,
+  isMobile,
+}) => {
+  const name = `E2E 編集 ${randomBytes(2).toString("hex")}`;
+  await registerChildViaPortal(page, name);
+  await loginAsCoach(page);
+  await page.goto(`${urls.admin}/members`);
+
+  const row = page.getByRole("row", { name: new RegExp(name) });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("5年");
+
+  // PC は列、モバイルは行を詰めるので列を隠して行詳細側で見せる
+  const birthCell = row.locator("td.c-birth");
+  const heightCell = row.locator("td.c-height");
+  if (isMobile) {
+    await expect(birthCell).toBeHidden();
+    await expect(heightCell).toBeHidden();
+  } else {
+    await expect(birthCell).toHaveText(birthLabel(birthDateForGrade(5)));
+    await expect(heightCell).toHaveText(`${heightForGrade(5)}cm`);
+  }
+
+  // 行詳細の編集フォームには現在値が入っている(どちらの幅でも見える)
+  await row.click();
+  const detail = page.locator("tr.detail");
+  await expect(detail.getByLabel("生年月日")).toHaveValue(birthDateForGrade(5));
+  await expect(detail.getByLabel("身長")).toHaveValue(
+    String(heightForGrade(5)),
+  );
+
+  // 身長と生年月日を直す。保存前に「この生年月日なら n年」が出る(設計判断4)
+  await detail.getByLabel("身長").fill("150");
+  await detail.getByLabel("生年月日").fill(birthDateForGrade(3));
+  await expect(detail).toContainText("この生年月日なら 3年 になります");
+  await detail.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(detail).toContainText("保存しました");
+
+  // リロードしても残り、学年は生年月日から再計算されている
+  await page.reload();
+  const saved = page.getByRole("row", { name: new RegExp(name) });
+  await expect(saved).toContainText("3年");
+  if (!isMobile) {
+    await expect(saved.locator("td.c-birth")).toHaveText(
+      birthLabel(birthDateForGrade(3)),
+    );
+    await expect(saved.locator("td.c-height")).toHaveText("150cm");
+  }
+  await saved.click();
+  const reopened = page.locator("tr.detail");
+  await expect(reopened.getByLabel("生年月日")).toHaveValue(
+    birthDateForGrade(3),
+  );
+  await expect(reopened.getByLabel("身長")).toHaveValue("150");
+});
+
+test("生年月日が小学生の範囲外だと保存できず、サーバーの文言が出る", async ({
+  page,
+}) => {
+  const name = `E2E 範囲外 ${randomBytes(2).toString("hex")}`;
+  await registerChildViaPortal(page, name);
+  await loginAsCoach(page);
+  await page.goto(`${urls.admin}/members`);
+
+  await page.getByRole("row", { name: new RegExp(name) }).click();
+  const detail = page.locator("tr.detail");
+  // 入学前(0歳)。クライアントの目安表示と、保存時のサーバーの 400 の両方を確認する
+  await detail.getByLabel("生年月日").fill(birthDateForGrade(0));
+  await expect(detail).toContainText("この生年月日は小学生の学年になりません");
+  await detail.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(detail).toContainText("小学生の生年月日を入力してください");
+  await expect(detail).not.toContainText("保存しました");
+});
