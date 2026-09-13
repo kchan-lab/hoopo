@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // プライバシーポリシーの掲示(Issue #21 前半の受入条件)。
@@ -21,7 +22,8 @@ async function loginAndRegisterChild(context: BrowserContext) {
         {
           name: `規約 ${randomBytes(2).toString("hex")}`,
           nicknameKana: "きやく",
-          grade: 3,
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
           gender: "male",
         },
       ],

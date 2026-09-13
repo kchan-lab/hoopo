@@ -59,6 +59,7 @@ import {
   listRegistrations,
   parseRevoke,
   revokeRegistration,
+  updateMemberByCoach,
 } from "./members";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
@@ -69,6 +70,7 @@ import {
   parsePracticeInput,
   updatePractice,
 } from "./practices";
+import { parseChildPatch } from "./registration-shared";
 import { getPublishStatus, publishSchedule } from "./schedule-publish";
 import {
   ADMIN_SESSION_COOKIE_NAME,
@@ -506,6 +508,23 @@ export function createAdminApi(deps: AdminApiDeps) {
   app.get("/members/archived", coach, async (c) => {
     const session = c.get("session");
     return c.json({ members: await listArchivedMembers(session.teamId) });
+  });
+
+  // 部員情報の編集(child-birthdate-height/plan.md 設計判断5)。学年は生年月日から再計算する。
+  // 固定パス(/members/year-rollover・/members/archived)より後に置くこと
+  app.patch("/members/:childId", coach, async (c) => {
+    const childId = c.req.param("childId");
+    if (!isUuid(childId)) return c.json({ error: "対象が見つかりません" }, 404);
+    const parsed = parseChildPatch(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const result = await updateMemberByCoach(
+      session.teamId,
+      childId,
+      parsed.value,
+    );
+    if (!result.ok) return c.json({ error: "対象が見つかりません" }, 404);
+    return c.json({ member: result.value });
   });
 
   // 破壊的操作: 確認は UI 側の二段階確認。実行ログは audit_logs に残る(CLAUDE.md 開発ルール)。

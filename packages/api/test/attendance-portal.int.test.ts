@@ -3,6 +3,7 @@ import { createFakeIdTokenVerifier } from "@hoopo/line";
 import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApi } from "../src/app";
+import { birthDateForGrade } from "../src/grade-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 保護者の参加予定 API(attendance/plan.md 4a)を RLS 配下で検証する。
@@ -58,8 +59,20 @@ function json(app: ReturnType<typeof api>, cookie: string) {
 
 const registration = {
   children: [
-    { name: "粉浜 太郎", nicknameKana: "たろう", grade: 4, gender: "male" },
-    { name: "粉浜 花子", nicknameKana: null, grade: 2, gender: "female" },
+    {
+      name: "粉浜 太郎",
+      nicknameKana: "たろう",
+      birthDate: birthDateForGrade(4),
+      heightCm: 135,
+      gender: "male",
+    },
+    {
+      name: "粉浜 花子",
+      nicknameKana: null,
+      birthDate: birthDateForGrade(2),
+      heightCm: 120,
+      gender: "female",
+    },
   ],
   relation: "father",
   weekdays: [0, 6],
