@@ -142,12 +142,18 @@ export function parseBulkPracticeInput(
   if (!Array.isArray(raw) || raw.length === 0) {
     return { ok: false, error: "日付を1日以上選んでください" };
   }
+  // 重複除去は Set で行う(配列の includes だと件数の二乗に比例して重くなる)。
+  // 上限は「重複を除いたあとの日数」で見る — 同じ日を 2 回選んでも 1 日として扱う仕様のため
+  const seen = new Set<string>();
   const dates: string[] = [];
   for (const d of raw) {
     if (typeof d !== "string" || !isDateString(d)) {
       return { ok: false, error: "日付を YYYY-MM-DD 形式で入力してください" };
     }
-    if (!dates.includes(d)) dates.push(d);
+    if (!seen.has(d)) {
+      seen.add(d);
+      dates.push(d);
+    }
   }
   if (dates.length > BULK_MAX) {
     return { ok: false, error: `一度に登録できるのは${BULK_MAX}日までです` };
