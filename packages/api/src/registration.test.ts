@@ -107,6 +107,14 @@ describe("parseRegistration", () => {
       "1人目の名のよみをひらがなで入力してください",
     ],
     [
+      "よみが濁点だけ(基底文字がない)",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], givenNameKana: "\u3099" }],
+      },
+      "1人目の名のよみをひらがなで入力してください",
+    ],
+    [
       "名のよみに空白が混ざる",
       {
         ...valid,
@@ -122,7 +130,8 @@ describe("parseRegistration", () => {
           {
             ...valid.children[0],
             familyNameKana: "おおのー",
-            givenNameKana: "ぱぴぷ",
+            // 「ゔ」(U+3094)も通す(レビュー指摘 #158)
+            givenNameKana: "ゔぁいおれっと",
           },
         ],
       },
