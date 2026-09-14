@@ -354,6 +354,43 @@ describe("最終提出日時(Issue #145)", () => {
     expect(emptied.submittedAt[taro]).toBeNull();
   });
 
+  it("月の一部だけを送っても、その月の他の提出は最終提出日時に残る", async () => {
+    // レビュー指摘(#149): 送った練習だけで集計すると、部分送信で他の提出が無視される
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const [taro] = await registerTwoChildren(call);
+
+    await call("/attendance", "PUT", {
+      childId: taro,
+      answers: [
+        { practiceId: practiceA, status: "full", comment: null },
+        { practiceId: practiceB, status: "full", comment: null },
+      ],
+    });
+    const both = (
+      (await (await call("/attendance?month=2099-05", "GET")).json()) as Sheet
+    ).submittedAt[taro];
+    if (both == null) throw new Error("提出日時が入っていません");
+
+    // A だけを未回答に戻す(B の提出は残っている)
+    const partial = await call("/attendance", "PUT", {
+      childId: taro,
+      answers: [{ practiceId: practiceA, status: null, comment: null }],
+    });
+    expect(partial.status).toBe(200);
+    const body = (await partial.json()) as { submittedAt: string | null };
+    expect(body.submittedAt).not.toBeNull();
+
+    const sheet = (await (
+      await call("/attendance?month=2099-05", "GET")
+    ).json()) as Sheet;
+    expect(sheet.submittedAt[taro]).not.toBeNull();
+    // PUT の戻り値とシートの値が一致する(集計の範囲が同じ)
+    expect(new Date(body.submittedAt as string).getTime()).toBe(
+      new Date(sheet.submittedAt[taro] as string).getTime(),
+    );
+  });
+
   it("月をまたいだ提出は、その月のシートにだけ出る", async () => {
     const app = api();
     const call = json(app, await loginAs(app, USER_A));

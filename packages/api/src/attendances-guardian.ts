@@ -6,7 +6,7 @@ import type {
 } from "./attendances-shared";
 import { listPracticesByMonth, type Practice } from "./practices";
 import { type ChildSummary, listChildrenForGuardian } from "./registration";
-import { monthRange } from "./tokyo-date";
+import { monthOf, monthRange } from "./tokyo-date";
 
 // 保護者側の参加予定ロジック(attendance/plan.md 4a)。API 契約は plan.md「4a 保護者 API」。
 // 対象は「active な連携で見えるお子さん」だけ(listChildrenForGuardian が唯一の基準)。
@@ -87,7 +87,7 @@ export async function getAttendanceSheet(
 }
 
 export type SubmitAttendanceResult =
-  /** submittedAt は保存後の最終提出日時(ISO)。全件を未回答に戻したときは null */
+  /** submittedAt は保存後の最終提出日時(ISO)。その子・その月に回答が1件も残らなければ null */
   | { ok: true; saved: number; submittedAt: string | null }
   /** 自分の active な連携ではない childId(存在を漏らさないため 404 にする) */
   | { ok: false; reason: "not_found" }
@@ -111,7 +111,7 @@ export async function submitAttendance(
   const practiceIds = input.answers.map((a) => a.practiceId);
   return withTeam(teamId, async (tx) => {
     const found = await tx
-      .select({ id: practices.id })
+      .select({ id: practices.id, heldOn: practices.heldOn })
       .from(practices)
       .where(inArray(practices.id, practiceIds));
     if (found.length !== practiceIds.length) {
@@ -157,14 +157,20 @@ export async function submitAttendance(
         });
     }
     // 画面が即時に「提出済み(日時)」を出せるよう、保存後の最終提出日時も返す。
-    // 対象はこの提出に含めた練習だけ(= 提出タブが送るその月の全練習)
+    // 集計の範囲は getAttendanceSheet と同じ「その子・その月の全練習」にそろえる
+    // (レビュー指摘 #149。月の一部だけを送る呼び出しでも、他の提出済みが無視されない)
+    const held = found.map((f) => f.heldOn).sort();
+    const from = monthRange(monthOf(held[0] as string)).from;
+    const to = monthRange(monthOf(held[held.length - 1] as string)).to;
     const after = await tx
       .select({ submittedAt: attendances.submittedAt })
       .from(attendances)
+      .innerJoin(practices, eq(practices.id, attendances.practiceId))
       .where(
         and(
           eq(attendances.childId, input.childId),
-          inArray(attendances.practiceId, practiceIds),
+          gte(practices.heldOn, from),
+          lte(practices.heldOn, to),
         ),
       );
     let last: string | null = null;

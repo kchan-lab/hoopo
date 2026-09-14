@@ -933,6 +933,7 @@ textarea.inbox {
   border-color: var(--accent);
   color: var(--deep);
 }
+
 /* ---- 参加予定の提出: 一括チップ・提出行(ワイヤー10) ---- */
 .chip-row {
   display: flex;
