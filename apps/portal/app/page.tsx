@@ -67,7 +67,7 @@ export default async function Home() {
           <div className="divider">または</div>
           <Link href="/register" className="card choice">
             お子さんを新しく登録する
-            <small>登録画面(1/2)へ進みます</small>
+            <small>登録画面(1/3)へ進みます</small>
           </Link>
           {/* 登録前に方針を読めるようにする(privacy-policy/plan.md 設計判断1) */}
           <p className="legal-link">
