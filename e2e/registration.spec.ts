@@ -70,7 +70,28 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await page.getByLabel("終了時刻").fill("12:00");
   await page.getByRole("button", { name: "父", exact: true }).click();
   await page.getByLabel("コーチへの伝達事項(任意)").fill("ぜん息があります");
-  await page.getByRole("button", { name: "登録を完了する" }).click();
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+
+  // ③入力内容の確認(registration-confirm/plan.md)。①②で入れた値がそのまま出る
+  await expect(page.locator("h1")).toContainText("入力内容の確認");
+  const firstConfirm = page.locator("section.child-block").first();
+  await expect(firstConfirm).toContainText("粉浜 太郎");
+  await expect(firstConfirm).toContainText("こはま たろう");
+  await expect(firstConfirm).toContainText(birthDateForGrade(4));
+  await expect(firstConfirm).toContainText("小学4年生");
+  await expect(firstConfirm).toContainText(`${heightForGrade(4)} cm`);
+  await expect(firstConfirm).toContainText("男子");
+  const secondConfirm = page.locator("section.child-block").nth(1);
+  await expect(secondConfirm).toContainText("粉浜 花子");
+  await expect(secondConfirm).toContainText("小学2年生");
+  await expect(secondConfirm).toContainText("女子");
+  // 呼び名を入れていない2人目は「未入力」と分かる
+  await expect(secondConfirm).toContainText("未入力");
+  const confirmForm = page.locator("form");
+  await expect(confirmForm).toContainText("日・土");
+  await expect(confirmForm).toContainText("09:00 〜 12:00");
+  await expect(confirmForm).toContainText("ぜん息があります");
+  await page.getByRole("button", { name: "この内容で登録する" }).click();
 
   // 自動認定で即時ホームへ
   await expect(page.locator("main")).toContainText("粉浜 太郎", {
@@ -90,6 +111,76 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await expect(taro).toContainText("小学4年生");
   await expect(taro).toContainText(birthDateForGrade(4));
   await expect(taro).toContainText(`${heightForGrade(4)} cm`);
+});
+
+test("確認画面から修正して戻ると、直した内容で登録される", async ({
+  context,
+  page,
+}) => {
+  // ③で気づいた間違いを①②に戻って直せること。戻っても入力は消えない
+  // (registration-confirm/plan.md 設計判断2・3)
+  await loginAsNewGuardian(context);
+  await page.goto(`${urls.portal}/register`);
+
+  // ①わざと違う名前で入力する
+  await page.getByLabel("姓", { exact: true }).fill("粉浜");
+  await page.getByLabel("姓のよみ").fill("こはま");
+  await page.getByLabel("名", { exact: true }).fill("次郎");
+  await page.getByLabel("名のよみ").fill("じろう");
+  await page.getByLabel("生年月日").fill(birthDateForGrade(5));
+  await page
+    .getByRole("spinbutton", { name: "身長", exact: true })
+    .fill(String(heightForGrade(5)));
+  await page.getByRole("button", { name: "男子" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+
+  // ②(伝達事項は入れずに進む)
+  await page.getByRole("button", { name: "土", exact: true }).click();
+  await page.getByRole("button", { name: "母", exact: true }).click();
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+  await expect(page.locator("h1")).toContainText("入力内容の確認");
+  await expect(page.locator("form")).toContainText("粉浜 次郎");
+  // 呼び名・伝達事項は任意。空欄は「未入力」と分かる
+  await expect(page.locator("form")).toContainText("未入力");
+
+  // ③ → ①(お子さんの欄の「①を修正」)。入力は残っていて、名前だけ直す
+  await page.getByRole("button", { name: "①を修正" }).click();
+  await expect(page.locator("h1")).toContainText("お子さんの登録");
+  await expect(page.getByLabel("姓", { exact: true })).toHaveValue("粉浜");
+  await expect(page.getByLabel("生年月日")).toHaveValue(birthDateForGrade(5));
+  await page.getByLabel("名", { exact: true }).fill("太郎");
+  await page.getByLabel("名のよみ").fill("たろう");
+  await page.getByRole("button", { name: "次へ" }).click();
+
+  // ②の選択も残っている
+  await expect(page.locator("h1")).toContainText("参加について");
+  await expect(
+    page.getByRole("button", { name: "土", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "母", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+
+  // ③ → ②(「修正する」)。伝達事項を足してから戻る
+  await page.getByRole("button", { name: "修正する" }).click();
+  await expect(page.locator("h1")).toContainText("参加について");
+  await page
+    .getByLabel("コーチへの伝達事項(任意)")
+    .fill("送迎は祖母が行います");
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+
+  const confirm = page.locator("form");
+  await expect(confirm).toContainText("粉浜 太郎");
+  await expect(confirm).toContainText("こはま たろう");
+  await expect(confirm).toContainText("小学5年生");
+  await expect(confirm).toContainText("送迎は祖母が行います");
+  await page.getByRole("button", { name: "この内容で登録する" }).click();
+
+  // 直した名前で登録されている
+  await expect(page.locator("main")).toContainText("粉浜 太郎", {
+    timeout: 15000,
+  });
 });
 
 test("小学生にならない生年月日では次へ進めない", async ({ context, page }) => {
