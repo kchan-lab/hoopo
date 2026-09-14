@@ -4,8 +4,10 @@ import { HEIGHT_MAX, HEIGHT_MIN, todayTokyo } from "@hoopo/api/grade-shared";
 import {
   type ChildDetail,
   fullName,
+  GENDER_LABELS,
   type Gender,
   NAME_PART_MAX,
+  NOT_SET,
 } from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
@@ -18,11 +20,6 @@ import { GradeHint } from "../grade-hint";
 // 打ち間違い・身長の伸びを保護者が自分で直せない。画面遷移を増やさず、行内で
 // 「編集」→ 入力 →「保存」だけで完結させる。学年は生年月日から再計算され、
 // 保存後の値は PATCH の応答(サーバーの算出結果)をそのまま表示する
-
-const GENDER_LABELS: Record<Gender, string> = { male: "男子", female: "女子" };
-
-/** 0010 より前に登録された部員は生年月日・身長が無い(plan.md 設計判断3) */
-const NOT_SET = "未入力";
 
 export function ChildEdit({ child }: { child: ChildDetail }) {
   const router = useRouter();

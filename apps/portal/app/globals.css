@@ -169,6 +169,14 @@ ul.news {
 .news .row + .row {
   border-top: 1px solid var(--hair);
 }
+/* 項目名 + 値の行(家族の設定・初回登録③)の値側。伝達事項のような長い自由入力は
+ * 改行を保ったまま右側で折り返す(registration-confirm/plan.md 設計判断5) */
+.news .row .val {
+  min-width: 0;
+  text-align: right;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .news time,
 .news .meta {
   font-size: 11px;
