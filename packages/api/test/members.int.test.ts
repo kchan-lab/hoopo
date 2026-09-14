@@ -6,8 +6,10 @@ import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
 import { birthDateForGrade } from "../src/grade-shared";
 import { hashPassword } from "../src/password";
+import { fullName } from "../src/registration-shared";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
+import { childNameParts } from "./child-name";
 
 // 認定管理・部員管理 API(child-registration/plan.md 12b)。
 // 保護者 API で登録・連携したデータを、コーチ側で一覧・無効化できることを RLS 配下で検証する
@@ -82,7 +84,7 @@ const registration = (name: string, grade: number) => ({
   // 学年は生年月日からの算出値なので、欲しい学年になる生年月日を逆算して渡す
   children: [
     {
-      name,
+      ...childNameParts(name),
       birthDate: birthDateForGrade(grade),
       heightCm: 120 + grade * 5,
       gender: "male",
@@ -291,7 +293,8 @@ describe("部員管理(GET /members)", () => {
     const coach = await coachClient(adminApi());
     const body = (await (await coach("/members", "GET")).json()) as {
       members: {
-        name: string;
+        familyName: string;
+        givenName: string;
         grade: number;
         guardianCount: number;
         coachNote: string;
@@ -303,12 +306,12 @@ describe("部員管理(GET /members)", () => {
         }[];
       }[];
     };
-    expect(body.members.map((m) => [m.name, m.grade, m.guardianCount])).toEqual(
-      [
-        ["粉浜 太郎", 6, 2],
-        ["北粉浜 次郎", 2, 1],
-      ],
-    );
+    expect(
+      body.members.map((m) => [fullName(m), m.grade, m.guardianCount]),
+    ).toEqual([
+      ["粉浜 太郎", 6, 2],
+      ["北粉浜 次郎", 2, 1],
+    ]);
     expect(body.members[0]?.coachNote).toBe("備考あり");
     expect(body.members[0]?.inviteCode).toBe(
       `${code.slice(0, 5)}-${code.slice(5)}`,

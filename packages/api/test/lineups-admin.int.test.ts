@@ -3,6 +3,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
+import { fullName } from "../src/registration-shared";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
 
@@ -49,11 +50,17 @@ async function coachClient(
     });
 }
 
+interface LineupChildBody {
+  id: string;
+  familyName: string;
+  givenName: string;
+}
+
 interface LineupBody {
   practice: { id: string; heldOn: string };
-  starters: { child: { id: string; name: string }; position: string }[];
-  bench: { child: { id: string; name: string } }[];
-  members: { id: string; name: string; grade: number }[];
+  starters: { child: LineupChildBody; position: string }[];
+  bench: { child: LineupChildBody }[];
+  members: (LineupChildBody & { grade: number })[];
 }
 
 beforeAll(async () => {
@@ -83,28 +90,73 @@ beforeEach(async () => {
   if (!p) throw new Error("練習の作成に失敗しました");
   practiceId = p.id;
 
-  // 部員7人(学年降順→名前の並びを検証できるよう学年をばらす)
+  // 部員7人(学年降順→よみの並びを検証できるよう学年をばらす)
   const seeds = [
-    { name: "青木 一郎", grade: 6, code: "AAAAAAAAAA" },
-    { name: "石田 二郎", grade: 6, code: "BBBBBBBBBB" },
-    { name: "上田 三郎", grade: 5, code: "CCCCCCCCCC" },
-    { name: "江川 四郎", grade: 4, code: "DDDDDDDDDD" },
-    { name: "岡田 五郎", grade: 3, code: "EEEEEEEEEE" },
-    { name: "加藤 六郎", grade: 2, code: "FFFFFFFFFF" },
-    { name: "木村 七郎", grade: 1, code: "GGGGGGGGGG" },
+    {
+      family: "青木",
+      given: "一郎",
+      kana: ["あおき", "いちろう"],
+      grade: 6,
+      code: "AAAAAAAAAA",
+    },
+    {
+      family: "石田",
+      given: "二郎",
+      kana: ["いしだ", "じろう"],
+      grade: 6,
+      code: "BBBBBBBBBB",
+    },
+    {
+      family: "上田",
+      given: "三郎",
+      kana: ["うえだ", "さぶろう"],
+      grade: 5,
+      code: "CCCCCCCCCC",
+    },
+    {
+      family: "江川",
+      given: "四郎",
+      kana: ["えがわ", "しろう"],
+      grade: 4,
+      code: "DDDDDDDDDD",
+    },
+    {
+      family: "岡田",
+      given: "五郎",
+      kana: ["おかだ", "ごろう"],
+      grade: 3,
+      code: "EEEEEEEEEE",
+    },
+    {
+      family: "加藤",
+      given: "六郎",
+      kana: ["かとう", "ろくろう"],
+      grade: 2,
+      code: "FFFFFFFFFF",
+    },
+    {
+      family: "木村",
+      given: "七郎",
+      kana: ["きむら", "しちろう"],
+      grade: 1,
+      code: "GGGGGGGGGG",
+    },
   ];
   kids = [];
   for (const s of seeds) {
     const [row] = await owner`
-      INSERT INTO children (team_id, name, grade, gender, invite_code)
-      VALUES (${teamId}, ${s.name}, ${s.grade}, 'male', ${s.code})
+      INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                            given_name_kana, grade, gender, invite_code)
+      VALUES (${teamId}, ${s.family}, ${s.given}, ${s.kana[0] as string},
+              ${s.kana[1] as string}, ${s.grade}, 'male', ${s.code})
       RETURNING id`;
     if (!row) throw new Error("部員の作成に失敗しました");
-    kids.push({ id: row.id, name: s.name });
+    kids.push({ id: row.id, name: `${s.family} ${s.given}` });
   }
   const [oc] = await owner`
-    INSERT INTO children (team_id, name, grade, gender, invite_code)
-    VALUES (${otherTeamId}, '東 三郎', 5, 'male', 'ZZZZZZZZZZ')
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                          given_name_kana, grade, gender, invite_code)
+    VALUES (${otherTeamId}, '東', '三郎', 'ひがし', 'さぶろう', 5, 'male', 'ZZZZZZZZZZ')
     RETURNING id`;
   if (!oc) throw new Error("他チームの部員の作成に失敗しました");
   otherChildId = oc.id;
@@ -145,7 +197,7 @@ describe("チーム編成 API", () => {
     ).toBe(401);
   });
 
-  it("編成が無い練習は空で返り、部員は学年降順→名前で並ぶ", async () => {
+  it("編成が無い練習は空で返り、部員は学年降順→よみで並ぶ", async () => {
     const c = await coachClient(adminApi());
     const res = await c(`/lineups/${practiceId}`, "GET");
     expect(res.status).toBe(200);
@@ -153,11 +205,11 @@ describe("チーム編成 API", () => {
     expect(body.practice.id).toBe(practiceId);
     expect(body.starters).toEqual([]);
     expect(body.bench).toEqual([]);
-    // 同学年内の name 順は DB の照合順(コードポイント順)なので、読みの五十音順ではなく
-    // 「石田(U+77F3)」が「青木(U+9752)」より先に来る
-    expect(body.members.map((m) => m.name)).toEqual([
-      "石田 二郎",
+    // 同学年内はよみ(ひらがな)順なので「あおき < いしだ」で五十音どおりに並ぶ
+    // (漢字で並べるとコードポイント順になり、読みと食い違う)
+    expect(body.members.map((m) => fullName(m))).toEqual([
       "青木 一郎",
+      "石田 二郎",
       "上田 三郎",
       "江川 四郎",
       "岡田 五郎",
@@ -197,15 +249,15 @@ describe("チーム編成 API", () => {
     const body = (await (
       await c(`/lineups/${practiceId}`, "GET")
     ).json()) as LineupBody;
-    expect(body.starters.map((s) => [s.position, s.child.name])).toEqual([
+    expect(body.starters.map((s) => [s.position, fullName(s.child)])).toEqual([
       ["PG", "石田 二郎"],
       ["SG", "江川 四郎"],
       ["SF", "岡田 五郎"],
       ["PF", "上田 三郎"],
       ["C", "青木 一郎"],
     ]);
-    // 入力順(木村→加藤)ではなく名簿順(学年降順→名前)で返る
-    expect(body.bench.map((b) => b.child.name)).toEqual([
+    // 入力順(木村→加藤)ではなく名簿順(学年降順→よみ)で返る
+    expect(body.bench.map((b) => fullName(b.child))).toEqual([
       "加藤 六郎",
       "木村 七郎",
     ]);
@@ -236,14 +288,14 @@ describe("チーム編成 API", () => {
     const body = (await (
       await c(`/lineups/${practiceId}`, "GET")
     ).json()) as LineupBody;
-    expect(body.starters.map((s) => [s.position, s.child.name])).toEqual([
+    expect(body.starters.map((s) => [s.position, fullName(s.child)])).toEqual([
       ["PG", "石田 二郎"],
       ["SG", "青木 一郎"],
       ["SF", "上田 三郎"],
       ["PF", "江川 四郎"],
       ["C", "加藤 六郎"],
     ]);
-    expect(body.bench.map((b) => b.child.name)).toEqual(["岡田 五郎"]);
+    expect(body.bench.map((b) => fullName(b.child))).toEqual(["岡田 五郎"]);
 
     // 空で保存すると編成が消える(全置換)
     expect(

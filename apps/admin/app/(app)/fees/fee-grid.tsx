@@ -6,6 +6,7 @@ import {
   type FeeMonth,
   MONTHS,
 } from "@hoopo/api/fees-shared";
+import { fullName } from "@hoopo/api/shared";
 import { useState } from "react";
 
 // 月謝管理(REQUIREMENTS §5.2。ワイヤー PC-7 / SP-8)。
@@ -113,13 +114,13 @@ export function FeeGrid({
             <tbody>
               {rows.map((r) => (
                 <tr key={r.child.id}>
-                  <td className="c-member">{r.child.name}</td>
+                  <td className="c-member">{fullName(r.child)}</td>
                   {r.months.map((cell) => (
                     <td key={cell.month}>
                       <button
                         type="button"
                         className={cell.state === "paid" ? "on" : ""}
-                        aria-label={cellLabel(r.child.name, cell)}
+                        aria-label={cellLabel(fullName(r.child), cell)}
                         disabled={busy !== null}
                         onClick={() => toggle(r.child.id, cell)}
                       >
@@ -151,7 +152,7 @@ export function FeeGrid({
           >
             {rows.map((r) => (
               <option key={r.child.id} value={r.child.id}>
-                {r.child.name}({r.child.grade}年)
+                {fullName(r.child)}({r.child.grade}年)
               </option>
             ))}
           </select>
@@ -162,7 +163,7 @@ export function FeeGrid({
               key={cell.month}
               type="button"
               className={cell.state === "paid" ? "on" : ""}
-              aria-label={cellLabel(selected.child.name, cell)}
+              aria-label={cellLabel(fullName(selected.child), cell)}
               disabled={busy !== null}
               onClick={() => toggle(selected.child.id, cell)}
             >

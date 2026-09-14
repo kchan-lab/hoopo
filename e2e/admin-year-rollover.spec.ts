@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 年度更新(Issue #83 受入条件): 実行 → 一覧の学年が +1・6年生が卒団で消える → 取り消しで戻る。
@@ -28,7 +32,7 @@ async function registerChildViaPortal(
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           nicknameKana: "てすと",
           birthDate: birthDateForGrade(grade),
           heightCm: heightForGrade(grade),

@@ -31,10 +31,11 @@ export interface DashboardFees {
   total: number;
 }
 
-/** 今月に未回答の練習が1件以上ある部員(学年降順→名前) */
+/** 今月に未回答の練習が1件以上ある部員(学年降順→姓のよみ→名のよみ) */
 export interface DashboardUnansweredMember {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   grade: number;
   /** 未回答の練習の件数 */
   unanswered: number;
@@ -80,7 +81,8 @@ export async function getDashboard(
     if (missing > 0) {
       unansweredMembers.push({
         id: row.child.id,
-        name: row.child.name,
+        familyName: row.child.familyName,
+        givenName: row.child.givenName,
         grade: row.child.grade,
         unanswered: missing,
       });

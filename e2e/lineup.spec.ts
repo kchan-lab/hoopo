@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  fullName,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の出場メンバー 2D(Issue #102 受入条件)。
@@ -48,7 +53,7 @@ async function registerChildren(context: BrowserContext, names: string[]) {
   const res = await context.request.post(`${urls.portal}/api/children`, {
     data: {
       children: names.map((name) => ({
-        name,
+        ...childNameInput(name),
         nicknameKana: "らいん",
         birthDate: birthDateForGrade(6),
         heightCm: heightForGrade(6),
@@ -61,8 +66,11 @@ async function registerChildren(context: BrowserContext, names: string[]) {
     },
   });
   expect(res.status()).toBe(201);
-  return ((await res.json()) as { children: { id: string; name: string }[] })
-    .children;
+  return (
+    (await res.json()) as {
+      children: { id: string; familyName: string; givenName: string }[];
+    }
+  ).children;
 }
 
 test("編成のある練習だけ「出場メンバーはこちら →」が出て、コートに5人とベンチが並ぶ", async ({
@@ -82,7 +90,7 @@ test("編成のある練習だけ「出場メンバーはこちら →」が出�
   ]);
   expect(children).toHaveLength(6);
   const idOf = (name: string) => {
-    const child = children.find((c) => c.name === name);
+    const child = children.find((c) => fullName(c) === name);
     if (!child) throw new Error(`部員が見つかりません: ${name}`);
     return child.id;
   };

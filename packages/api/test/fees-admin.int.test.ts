@@ -3,9 +3,11 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
+import { fullName } from "../src/registration-shared";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { todayInTokyo } from "../src/tokyo-date";
 import { adminDeps } from "./admin-deps";
+import { childNameParts } from "./child-name";
 
 // 管理の月謝管理 API(fees/plan.md 5b)を RLS 配下で検証する。
 // 「未来」は Tokyo の今月から導出されるため、テストの年月は実行日から組み立てる:
@@ -25,7 +27,7 @@ const NEXT_YEAR = YEAR + 1;
 let teamId: string;
 let otherTeamId: string;
 let coachHash: string;
-/** 学年降順→名前 の期待順に並ぶ部員 */
+/** 学年降順→よみ の期待順に並ぶ部員 */
 let taro: string; // 粉浜 太郎(6年)
 let ichiro: string; // 粉浜 一郎(4年)
 let jiro: string; // 粉浜 二郎(4年)
@@ -74,9 +76,13 @@ async function insertChild(
   code: string,
   options: { archived?: boolean; status?: "active" | "revoked" } = {},
 ): Promise<string> {
+  const parts = childNameParts(name);
   const [row] = await owner`
-    INSERT INTO children (team_id, name, nickname_kana, grade, gender, invite_code, status, archived)
-    VALUES (${team}, ${name}, ${"たろう"}, ${grade}, 'male', ${code},
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          nickname_kana, grade, gender, invite_code, status, archived)
+    VALUES (${team}, ${parts.familyName}, ${parts.givenName},
+            ${parts.familyNameKana}, ${parts.givenNameKana},
+            ${"たろう"}, ${grade}, 'male', ${code},
             ${options.status ?? "active"}, ${options.archived ?? false})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);
@@ -127,7 +133,7 @@ beforeEach(async () => {
     VALUES (${teamId}, 'coach@example.com', 'email', ${coachHash}),
            (${otherTeamId}, 'other@example.com', 'email', ${coachHash})`;
 
-  // 部員: 学年降順→名前。同学年は「一郎 < 二郎」で名前順を検証する
+  // 部員: 学年降順→よみ。同学年は「いちろう < じろう」で五十音順を検証する
   taro = await insertChild(teamId, "粉浜 太郎", 6, "BBBBB0001");
   ichiro = await insertChild(teamId, "粉浜 一郎", 4, "BBBBB0002");
   jiro = await insertChild(teamId, "粉浜 二郎", 4, "BBBBB0003");
@@ -155,7 +161,8 @@ interface GridBody {
   rows: {
     child: {
       id: string;
-      name: string;
+      familyName: string;
+      givenName: string;
       nicknameKana: string | null;
       grade: number;
     };
@@ -168,14 +175,14 @@ interface ToggleBody {
 }
 
 const monthsOf = (body: GridBody, name: string) =>
-  body.rows.find((r) => r.child.name === name)?.months ?? [];
+  body.rows.find((r) => fullName(r.child) === name)?.months ?? [];
 
 describe("月謝グリッド(GET /fee-grid)", () => {
   it("未ログインは 401", async () => {
     expect((await adminApi().request("/fee-grid")).status).toBe(401);
   });
 
-  it("有効な部員を学年降順→名前で行にし、1〜12月のセルを返す", async () => {
+  it("有効な部員を学年降順→よみで行にし、1〜12月のセルを返す", async () => {
     const c = await coachClient(adminApi());
     const res = await c.get(`/fee-grid?year=${YEAR}`);
     expect(res.status).toBe(200);
@@ -183,14 +190,14 @@ describe("月謝グリッド(GET /fee-grid)", () => {
 
     expect(body.year).toBe(YEAR);
     expect(body.currentMonth).toBe(TODAY.slice(0, 7));
-    expect(body.rows.map((r) => [r.child.name, r.child.grade])).toEqual([
+    expect(body.rows.map((r) => [fullName(r.child), r.child.grade])).toEqual([
       ["粉浜 太郎", 6],
       ["粉浜 一郎", 4],
       ["粉浜 二郎", 4],
     ]);
     expect(body.rows[0]?.child.nicknameKana).toBe("たろう");
     // 卒団アーカイブ・無効化された部員は出ない
-    const names = body.rows.map((r) => r.child.name);
+    const names = body.rows.map((r) => fullName(r.child));
     expect(names).not.toContain("卒団 花子");
     expect(names).not.toContain("無効 花子");
     expect(body.rows.map((r) => r.child.id)).not.toContain(archived);

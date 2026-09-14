@@ -28,7 +28,10 @@ export * from "./registration-shared";
 
 export interface ChildSummary {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
+  familyNameKana: string;
+  givenNameKana: string;
   nicknameKana: string | null;
   grade: number;
   gender: Gender;
@@ -57,7 +60,10 @@ export async function listChildrenForGuardian(
     const rows = await tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
+        familyNameKana: children.familyNameKana,
+        givenNameKana: children.givenNameKana,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
         gender: children.gender,
@@ -75,11 +81,12 @@ export async function listChildrenForGuardian(
         ),
       )
       // 同時登録した兄弟は created_at が同一(now() はトランザクション開始時刻)なので
-      // 学年の高い順 → 名前で安定させる(上の子が先に並ぶ)
+      // 学年の高い順 → 姓のよみ → 名のよみで安定させる(上の子が先に並ぶ)
       .orderBy(
         asc(children.createdAt),
         desc(children.grade),
-        asc(children.name),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
       );
     return rows.map((r) => ({ ...r, gender: r.gender as Gender }));
   });
@@ -87,7 +94,8 @@ export async function listChildrenForGuardian(
 
 export interface RegisteredChild {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   inviteCode: string;
 }
 
@@ -108,7 +116,10 @@ export async function registerChildren(
             .insert(children)
             .values({
               teamId,
-              name: child.name,
+              familyName: child.familyName,
+              givenName: child.givenName,
+              familyNameKana: child.familyNameKana,
+              givenNameKana: child.givenNameKana,
               nicknameKana: child.nicknameKana,
               // 学年は入力ではなく生年月日からの算出値(plan.md 設計判断2)
               grade: gradeForBirthDate(child.birthDate),
@@ -140,7 +151,8 @@ export async function registerChildren(
       );
       created.push({
         id: row.id,
-        name: child.name,
+        familyName: child.familyName,
+        givenName: child.givenName,
         inviteCode: row.inviteCode,
       });
     }
@@ -149,7 +161,11 @@ export async function registerChildren(
 }
 
 export type LinkResult =
-  | { ok: true; child: { id: string; name: string }; alreadyLinked: boolean }
+  | {
+      ok: true;
+      child: { id: string; familyName: string; givenName: string };
+      alreadyLinked: boolean;
+    }
   | { ok: false; reason: "not_found" | "revoked" };
 
 // 招待コードで既存の子どもと連携する(第二保護者)。
@@ -168,7 +184,7 @@ export async function linkChildByInviteCode(
         eq(children.id, resolved.childId),
         eq(children.archived, false),
       ),
-      columns: { id: true, name: true, status: true },
+      columns: { id: true, familyName: true, givenName: true, status: true },
     });
     if (!child) return { ok: false, reason: "not_found" };
     if (child.status !== "active") return { ok: false, reason: "revoked" };
@@ -195,7 +211,11 @@ export async function linkChildByInviteCode(
       }
       return {
         ok: true,
-        child: { id: child.id, name: child.name },
+        child: {
+          id: child.id,
+          familyName: child.familyName,
+          givenName: child.givenName,
+        },
         alreadyLinked: true,
       };
     }
@@ -207,7 +227,11 @@ export async function linkChildByInviteCode(
     });
     return {
       ok: true,
-      child: { id: child.id, name: child.name },
+      child: {
+        id: child.id,
+        familyName: child.familyName,
+        givenName: child.givenName,
+      },
       alreadyLinked: false,
     };
   });
@@ -341,7 +365,10 @@ export async function applyChildPatch(
     .where(eq(children.id, childId))
     .returning({
       id: children.id,
-      name: children.name,
+      familyName: children.familyName,
+      givenName: children.givenName,
+      familyNameKana: children.familyNameKana,
+      givenNameKana: children.givenNameKana,
       nicknameKana: children.nicknameKana,
       grade: children.grade,
       gender: children.gender,

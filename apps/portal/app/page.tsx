@@ -2,12 +2,14 @@ import {
   formatDateLabel,
   formatShortDate,
   formatTimeShort,
+  fullName,
   getNextPractice,
   getUnansweredSummary,
   HOME_ANNOUNCEMENT_LIMIT,
   listChildrenForGuardian,
   listPublishedAnnouncements,
   monthOf,
+  nameInitial,
   todayInTokyo,
 } from "@hoopo/api";
 import Link from "next/link";
@@ -100,7 +102,7 @@ export default async function Home() {
             {TEAM_NAME[1]}
           </h1>
           <span className="avatar" aria-hidden="true">
-            {first?.name.charAt(0)}
+            {first ? nameInitial(first) : ""}
           </span>
         </div>
       </header>
@@ -135,7 +137,7 @@ export default async function Home() {
           {children.map((c) => (
             <li key={c.id} className="row">
               <span>
-                {c.name}
+                {fullName(c)}
                 {c.nicknameKana && (
                   <span className="meta" style={{ marginLeft: 6 }}>
                     {c.nicknameKana}

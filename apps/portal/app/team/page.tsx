@@ -1,4 +1,5 @@
 import { listTeamMembers } from "@hoopo/api";
+import { fullName, nameInitial } from "@hoopo/api/shared";
 import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
 import { AutoLogin } from "../auto-login";
@@ -7,13 +8,8 @@ import { TabBar } from "../tab-bar";
 export const dynamic = "force-dynamic";
 
 // チーム(REQUIREMENTS §4.2-7。ワイヤー12)。初期表示は全メンバー一覧で、
-// 表示は氏名・呼び名(ひらがな)・学年のみ(team-roster/plan.md 設計判断1・2)。
+// 表示はフルネーム・呼び名(ひらがな)・学年のみ(team-roster/plan.md 設計判断1・2)。
 // 出場メンバーのコート配置は日程の詳細から遷移する(7b)
-
-/** 頭文字アバター。顔写真は未対応なので氏名の先頭1文字で代替する(設計判断2) */
-function initial(name: string): string {
-  return Array.from(name)[0] ?? "?";
-}
 
 export default async function TeamPage() {
   const session = await getGuardianSession();
@@ -42,9 +38,9 @@ export default async function TeamPage() {
             {members.map((m) => (
               <li key={m.id} className="rrow">
                 <span className="ini" aria-hidden="true">
-                  {initial(m.name)}
+                  {nameInitial(m)}
                 </span>
-                <span className="nm">{m.name}</span>
+                <span className="nm">{fullName(m)}</span>
                 {m.nicknameKana && (
                   <span className="kana">{m.nicknameKana}</span>
                 )}

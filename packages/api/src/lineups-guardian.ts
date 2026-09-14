@@ -4,12 +4,13 @@ import { POSITIONS, type Position } from "./lineups-shared";
 import { getPractice, type Practice } from "./practices";
 
 // 保護者側の出場メンバー参照ロジック(lineups/plan.md 7b-2)。契約は plan.md「7b-2 保護者 API」。
-// 閲覧のみ・写真なし(設計判断4)。返すのは名簿と同じ氏名・呼び名・学年だけ
+// 閲覧のみ・写真なし(設計判断4)。返すのは名簿と同じ姓名・呼び名・学年だけ
 
 /** チップに出す部員(チーム名簿と同じ最小項目) */
 export interface GuardianLineupChild {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   nicknameKana: string | null;
   grade: number;
 }
@@ -27,7 +28,7 @@ export interface GuardianLineup {
   practice: Practice;
   /** POSITIONS(PG→SG→SF→PF→C)の順。空きポジションは要素を持たない */
   starters: GuardianLineupStarter[];
-  /** 学年降順→名前(名簿と同じ並び) */
+  /** 学年降順→姓のよみ→名のよみ(名簿と同じ並び) */
   bench: GuardianLineupBenchMember[];
 }
 
@@ -41,12 +42,13 @@ export async function getLineup(
 ): Promise<GuardianLineup | null> {
   const practice = await getPractice(teamId, practiceId);
   if (!practice) return null;
-  // 学年降順→名前で取り、ベンチはこの順のまま使う(スターターはポジション順に並べ替える)
+  // 学年降順→姓のよみ→名のよみで取り、ベンチはこの順のまま使う(スターターはポジション順に並べ替える)
   const rows = await withTeam(teamId, (tx) =>
     tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
         role: lineups.role,
@@ -55,11 +57,16 @@ export async function getLineup(
       .from(lineups)
       .innerJoin(children, eq(children.id, lineups.childId))
       .where(eq(lineups.practiceId, practiceId))
-      .orderBy(desc(children.grade), asc(children.name)),
+      .orderBy(
+        desc(children.grade),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
+      ),
   );
   const toChild = (r: (typeof rows)[number]): GuardianLineupChild => ({
     id: r.id,
-    name: r.name,
+    familyName: r.familyName,
+    givenName: r.givenName,
     nicknameKana: r.nicknameKana,
     grade: r.grade,
   });

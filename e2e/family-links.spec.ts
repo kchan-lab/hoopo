@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  fullName,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 家族連携の解除(family-links/plan.md。Issue #31 受入条件)。
@@ -27,7 +32,7 @@ test("家族の設定からお子さんの生年月日・身長を直せる", as
     data: {
       children: [
         {
-          name: childName,
+          ...childNameInput(childName),
           nicknameKana: "へんしゅう",
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
@@ -88,7 +93,7 @@ test("第二保護者は自分の連携を解除でき、最後の保護者は�
     data: {
       children: [
         {
-          name: childName,
+          ...childNameInput(childName),
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
           gender: "male",
@@ -104,9 +109,10 @@ test("第二保護者は自分の連携を解除でき、最後の保護者は�
   const family = await contextA.request.get(`${urls.portal}/api/family`);
   expect(family.ok()).toBe(true);
   const { children } = (await family.json()) as {
-    children: { name: string; inviteCode: string }[];
+    children: { familyName: string; givenName: string; inviteCode: string }[];
   };
-  const code = children.find((c) => c.name === childName)?.inviteCode ?? "";
+  const code =
+    children.find((c) => fullName(c) === childName)?.inviteCode ?? "";
   expect(code).toMatch(/^[0-9A-Z]{5}-[0-9A-Z]{5}$/);
 
   // 保護者B(母): 分岐画面で連携する(重複登録の注記が出ている)

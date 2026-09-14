@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { birthDateForGrade } from "./grade-shared";
 import {
+  fullName,
+  nameInitial,
   parseChildPatch,
   parseLink,
   parseRegistration,
@@ -12,14 +14,20 @@ import {
 const valid = {
   children: [
     {
-      name: " 山田 太郎 ",
+      familyName: " 山田 ",
+      givenName: " 太郎 ",
+      familyNameKana: "やまだ",
+      givenNameKana: "たろう",
       nicknameKana: "たろう",
       birthDate: birthDateForGrade(4),
       heightCm: 135,
       gender: "male",
     },
     {
-      name: "山田 花子",
+      familyName: "山田",
+      givenName: "花子",
+      familyNameKana: "やまだ",
+      givenNameKana: "はなこ",
       nicknameKana: "",
       birthDate: birthDateForGrade(2),
       heightCm: 120,
@@ -38,7 +46,10 @@ describe("parseRegistration", () => {
     const r = parseRegistration(valid);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.value.children[0]?.name).toBe("山田 太郎");
+    expect(r.value.children[0]?.familyName).toBe("山田");
+    expect(r.value.children[0]?.givenName).toBe("太郎");
+    expect(r.value.children[0]?.familyNameKana).toBe("やまだ");
+    expect(r.value.children[0]?.givenNameKana).toBe("たろう");
     expect(r.value.children[0]?.birthDate).toBe(birthDateForGrade(4));
     expect(r.value.children[0]?.heightCm).toBe(135);
     expect(r.value.children[1]?.nicknameKana).toBeNull();
@@ -49,9 +60,82 @@ describe("parseRegistration", () => {
   it.each([
     ["子ども0人", { ...valid, children: [] }, "1人以上"],
     [
-      "名前なし",
-      { ...valid, children: [{ ...valid.children[0], name: "" }] },
-      "お名前",
+      "姓なし",
+      { ...valid, children: [{ ...valid.children[0], familyName: "" }] },
+      "1人目の姓を入力してください",
+    ],
+    [
+      "名なし",
+      { ...valid, children: [{ ...valid.children[0], givenName: " " }] },
+      "1人目の名を入力してください",
+    ],
+    [
+      "姓が長い",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], familyName: "あ".repeat(26) }],
+      },
+      "1人目の姓は25文字以内で入力してください",
+    ],
+    [
+      "名が長い",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], givenName: "あ".repeat(26) }],
+      },
+      "1人目の名は25文字以内で入力してください",
+    ],
+    [
+      "姓のよみなし",
+      { ...valid, children: [{ ...valid.children[0], familyNameKana: "" }] },
+      "1人目の姓のよみを入力してください",
+    ],
+    [
+      "姓のよみが漢字",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], familyNameKana: "山田" }],
+      },
+      "1人目の姓のよみをひらがなで入力してください",
+    ],
+    [
+      "名のよみがカタカナ",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], givenNameKana: "タロウ" }],
+      },
+      "1人目の名のよみをひらがなで入力してください",
+    ],
+    [
+      "よみが濁点だけ(基底文字がない)",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], givenNameKana: "\u3099" }],
+      },
+      "1人目の名のよみをひらがなで入力してください",
+    ],
+    [
+      "名のよみに空白が混ざる",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], givenNameKana: "た ろう" }],
+      },
+      "1人目の名のよみをひらがなで入力してください",
+    ],
+    [
+      "よみの長音・濁点は通る",
+      {
+        ...valid,
+        children: [
+          {
+            ...valid.children[0],
+            familyNameKana: "おおのー",
+            // 「ゔ」(U+3094)も通す(レビュー指摘 #158)
+            givenNameKana: "ゔぁいおれっと",
+          },
+        ],
+      },
+      null,
     ],
     [
       "小学生にならない生年月日",
@@ -132,7 +216,19 @@ describe("parseChildPatch", () => {
   });
 
   it.each([
-    ["名前が空", { name: " " }, "お名前"],
+    ["姓が空", { familyName: " " }, "姓を入力してください"],
+    ["名が空", { givenName: "" }, "名を入力してください"],
+    [
+      "名が長い",
+      { givenName: "あ".repeat(26) },
+      "名は25文字以内で入力してください",
+    ],
+    ["姓のよみが空", { familyNameKana: "" }, "姓のよみを入力してください"],
+    [
+      "名のよみがひらがなでない",
+      { givenNameKana: "Taro" },
+      "名のよみをひらがなで入力してください",
+    ],
     ["生年月日が不正", { birthDate: "2019/06/01" }, "生年月日"],
     ["小学生にならない", { birthDate: birthDateForGrade(0) }, "小学生"],
     ["身長が範囲外", { heightCm: 221 }, "身長"],
@@ -141,5 +237,18 @@ describe("parseChildPatch", () => {
     const r = parseChildPatch(body);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain(expected);
+  });
+});
+
+describe("fullName / nameInitial", () => {
+  it("フルネームは半角スペース1つでつなぐ(設計判断3)", () => {
+    expect(fullName({ familyName: "粉浜", givenName: "太郎" })).toBe(
+      "粉浜 太郎",
+    );
+  });
+
+  it("頭文字アバターは姓の先頭1文字(サロゲートペアも1文字として扱う)", () => {
+    expect(nameInitial({ familyName: "北粉浜" })).toBe("北");
+    expect(nameInitial({ familyName: "𠮷田" })).toBe("𠮷");
   });
 });

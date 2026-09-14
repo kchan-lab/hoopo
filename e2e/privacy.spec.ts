@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // プライバシーポリシーの掲示(Issue #21 前半の受入条件)。
@@ -20,7 +24,7 @@ async function loginAndRegisterChild(context: BrowserContext) {
     data: {
       children: [
         {
-          name: `規約 ${randomBytes(2).toString("hex")}`,
+          ...childNameInput(`規約 ${randomBytes(2).toString("hex")}`),
           nicknameKana: "きやく",
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
@@ -60,7 +64,7 @@ test("取得する情報にお子さんの生年月日・身長があり、保�
     .locator("section.legal")
     .filter({ has: page.getByRole("heading", { name: "取得する情報" }) });
   await expect(section).toContainText(
-    "お子さんの名前・呼び名(ひらがな)・生年月日・身長・性別",
+    "お子さんの名前(姓・名)とそのよみ(ひらがな)・呼び名(ひらがな)・生年月日・身長・性別",
   );
   await expect(section).toContainText("学年は生年月日から決まります");
   await expect(section).toContainText("保護者ご本人の生年月日");

@@ -6,6 +6,7 @@ import {
   POSITIONS,
   type Position,
 } from "@hoopo/api/lineups-shared";
+import { fullName } from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -14,9 +15,9 @@ import { useState } from "react";
 // - ベンチはスターターに選ばれていない部員のチェック
 // - 保存は全置換(PUT 1回)。スターターが5人未満でも保存できる(編成途中)
 
-/** セレクト・チェックの表示名(名簿と同じ「名前(n年)」) */
+/** セレクト・チェックの表示名(名簿と同じ「姓 名(n年)」) */
 function memberLabel(m: LineupChild): string {
-  return `${m.name}(${m.grade}年)`;
+  return `${fullName(m)}(${m.grade}年)`;
 }
 
 type StarterMap = Record<Position, string>;

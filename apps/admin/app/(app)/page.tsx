@@ -2,6 +2,7 @@ import {
   ATTENDANCE_MARKS,
   formatDateLabel,
   formatMonthLabel,
+  fullName,
   getDashboard,
   getLineUsage,
   monthOf,
@@ -113,7 +114,7 @@ export default async function DashboardPage() {
             unansweredMembers.map((m) => (
               <div key={m.id} className="arow">
                 <b>
-                  {m.name}({m.grade}年)
+                  {fullName(m)}({m.grade}年)
                 </b>
                 <span>未回答 {m.unanswered}件</span>
               </div>
