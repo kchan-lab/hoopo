@@ -7,10 +7,11 @@ import { getPractice, listPracticesByMonth, type Practice } from "./practices";
 // 未回答は attendances に行を持たない(設計判断1)。マトリクスの「−」も欠席者管理の「未回答」も
 // 「有効な部員」と「回答のある部員」の差集合として導出する
 
-/** 一覧に出す部員の最小情報(個人情報は最小保持。氏名・呼び名・学年のみ) */
+/** 一覧に出す部員の最小情報(個人情報は最小保持。姓名・呼び名・学年のみ) */
 export interface AttendanceChild {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   nicknameKana: string | null;
   grade: number;
 }
@@ -49,13 +50,14 @@ export interface Absentees {
 
 const childColumns = {
   id: children.id,
-  name: children.name,
+  familyName: children.familyName,
+  givenName: children.givenName,
   nicknameKana: children.nicknameKana,
   grade: children.grade,
 };
 
 /**
- * 有効な部員(active・非アーカイブ)を学年降順→名前で返す。
+ * 有効な部員(active・非アーカイブ)を学年降順→姓のよみ→名のよみで返す。
  * 並び順は部員管理(listMembers)と同一にして、画面をまたいでも行の順序が変わらないようにする
  */
 function selectActiveChildren(
@@ -65,7 +67,11 @@ function selectActiveChildren(
     .select(childColumns)
     .from(children)
     .where(and(eq(children.archived, false), eq(children.status, "active")))
-    .orderBy(desc(children.grade), asc(children.name));
+    .orderBy(
+      desc(children.grade),
+      asc(children.familyNameKana),
+      asc(children.givenNameKana),
+    );
 }
 
 /** 部員(行)×練習日(列)のマトリクス(§5.2 出欠管理) */
@@ -141,7 +147,7 @@ export async function getAbsentees(
     const absent: AbsenteeEntry[] = [];
     const partial: AbsenteeEntry[] = [];
     const unanswered: AbsenteeEntry[] = [];
-    // members の順(学年降順→名前)で振り分けるので、3グループとも同じ規則で並ぶ
+    // members の順(学年降順→姓のよみ→名のよみ)で振り分けるので、3グループとも同じ規則で並ぶ
     for (const child of members) {
       const answer = byChild.get(child.id);
       if (!answer) {

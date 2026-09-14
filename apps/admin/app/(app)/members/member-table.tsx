@@ -8,11 +8,11 @@ import {
   todayTokyo,
 } from "@hoopo/api/grade-shared";
 import type { ChildDetail, Gender } from "@hoopo/api/shared";
-import { WEEKDAY_LABELS } from "@hoopo/api/shared";
+import { fullName, NAME_PART_MAX, WEEKDAY_LABELS } from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-// 部員一覧。PC はテーブル(8列)、モバイルは名前+呼び名+学年・性別の行(CSS で切替)。
+// 部員一覧。PC はテーブル(8列)、モバイルはフルネーム+呼び名+学年・性別の行(CSS で切替)。
 // 行タップで詳細(伝達事項全文・参加可能曜日/時間・招待コード)と編集フォームを直下に展開する。
 // 生年月日・身長は PC では列、モバイルでは行が詰まるので詳細の編集フォーム側で見せる
 // (child-birthdate-height/plan.md 設計判断3: 0010 より前の部員は値が無いので「−」)
@@ -94,7 +94,7 @@ function MemberRows({
         aria-expanded={open}
         aria-controls={detailId}
       >
-        <td className="c-name">{m.name}</td>
+        <td className="c-name">{fullName(m)}</td>
         <td className="c-kana sub">{m.nicknameKana ?? DASH}</td>
         <td>
           {m.grade}年<span className="sp">・{GENDER[m.gender]}</span>
@@ -145,7 +145,12 @@ function MemberRows({
 // 行を開いたらフォームが最初から見えている状態にしてタップ数を増やさない
 
 interface Draft {
-  name: string;
+  // 姓・名とそれぞれの読み(child-name-split/plan.md 設計判断1・2)。
+  // 編集欄は 姓 → 姓のよみ → 名 → 名のよみ → 呼び名 の順(設計判断6)
+  familyName: string;
+  familyNameKana: string;
+  givenName: string;
+  givenNameKana: string;
   nicknameKana: string;
   /** "YYYY-MM-DD"。0010 より前の部員は空文字から始まる */
   birthDate: string;
@@ -157,7 +162,10 @@ interface Draft {
 /** 一覧の行(MemberRow)と PATCH の応答(ChildDetail)のどちらからも初期値を作れる */
 function toDraft(m: Omit<ChildDetail, "id" | "grade">): Draft {
   return {
-    name: m.name,
+    familyName: m.familyName,
+    familyNameKana: m.familyNameKana,
+    givenName: m.givenName,
+    givenNameKana: m.givenNameKana,
     nicknameKana: m.nicknameKana ?? "",
     birthDate: m.birthDate ?? "",
     heightCm: m.heightCm === null ? "" : String(m.heightCm),
@@ -180,9 +188,16 @@ function MemberEditForm({ member }: { member: MemberRow }) {
   };
 
   // 変更があった項目だけを送る。全項目を常に送ると、生年月日が空のままの既存部員で
-  // 名前だけ直したいときに「生年月日を入力してください」で弾かれてしまう
+  // 姓名だけ直したいときに「生年月日を入力してください」で弾かれてしまう
   const changed: Record<string, unknown> = {};
-  if (draft.name !== initial.name) changed.name = draft.name;
+  if (draft.familyName !== initial.familyName)
+    changed.familyName = draft.familyName;
+  if (draft.givenName !== initial.givenName)
+    changed.givenName = draft.givenName;
+  if (draft.familyNameKana !== initial.familyNameKana)
+    changed.familyNameKana = draft.familyNameKana;
+  if (draft.givenNameKana !== initial.givenNameKana)
+    changed.givenNameKana = draft.givenNameKana;
   if (draft.nicknameKana !== initial.nicknameKana) {
     changed.nicknameKana =
       draft.nicknameKana.trim() === "" ? null : draft.nicknameKana;
@@ -237,13 +252,42 @@ function MemberEditForm({ member }: { member: MemberRow }) {
     <div className="pform medit">
       <div className="k">部員情報を編集</div>
       <div className="pgrid">
-        <label className="wide">
-          名前
+        <label>
+          姓
           <input
             className="afld"
-            value={draft.name}
-            onChange={(e) => update({ name: e.target.value })}
-            maxLength={50}
+            value={draft.familyName}
+            onChange={(e) => update({ familyName: e.target.value })}
+            maxLength={NAME_PART_MAX}
+          />
+        </label>
+        <label>
+          姓のよみ
+          <input
+            className="afld"
+            value={draft.familyNameKana}
+            onChange={(e) => update({ familyNameKana: e.target.value })}
+            placeholder="こはま"
+            maxLength={NAME_PART_MAX}
+          />
+        </label>
+        <label>
+          名
+          <input
+            className="afld"
+            value={draft.givenName}
+            onChange={(e) => update({ givenName: e.target.value })}
+            maxLength={NAME_PART_MAX}
+          />
+        </label>
+        <label>
+          名のよみ
+          <input
+            className="afld"
+            value={draft.givenNameKana}
+            onChange={(e) => update({ givenNameKana: e.target.value })}
+            placeholder="たろう"
+            maxLength={NAME_PART_MAX}
           />
         </label>
         <label>

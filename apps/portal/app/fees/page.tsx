@@ -1,6 +1,7 @@
 import {
   FEE_STATE_LABELS,
   type FeeState,
+  fullName,
   getFeeSheet,
   monthOf,
   parseYear,
@@ -132,13 +133,13 @@ export default async function FeesPage({
                 href={hrefFor(year, r.child.id)}
                 aria-current={r.child.id === row.child.id ? "true" : undefined}
               >
-                {r.child.name}
+                {fullName(r.child)}
               </Link>
             ))}
           </nav>
         )}
 
-        <ul className="fee-grid" aria-label={`${row.child.name}の月謝`}>
+        <ul className="fee-grid" aria-label={`${fullName(row.child)}の月謝`}>
           {row.months.map((m) => (
             <li
               key={m.month}

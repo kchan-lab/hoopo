@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 月謝管理の導線(Issue #82 受入条件)。
@@ -33,7 +37,7 @@ async function registerChildViaPortal(page: Page, name: string) {
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           nicknameKana: "てすと",
           birthDate: birthDateForGrade(5),
           heightCm: heightForGrade(5),

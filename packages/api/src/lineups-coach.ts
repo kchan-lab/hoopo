@@ -6,10 +6,11 @@ import { getPractice, type Practice } from "./practices";
 // 管理側の出場メンバー編成ロジック(lineups/plan.md 7b-1)。契約は plan.md の「API 契約」。
 // 保存は全置換(delete → insert。設計判断2)。スターターは5人未満でも保存できる(編成途中)
 
-/** 編成に出す部員の最小情報(個人情報は最小保持。氏名・呼び名・学年のみ) */
+/** 編成に出す部員の最小情報(個人情報は最小保持。姓名・呼び名・学年のみ) */
 export interface LineupChild {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   nicknameKana: string | null;
   grade: number;
 }
@@ -28,7 +29,7 @@ export interface CoachLineup {
   /** POSITIONS(PG→C)の順。埋まっていないポジションは要素ごと落ちる */
   starters: LineupStarter[];
   bench: LineupBenchEntry[];
-  /** 編成に使える有効な部員(学年降順→名前) */
+  /** 編成に使える有効な部員(学年降順→姓のよみ→名のよみ) */
   members: LineupChild[];
 }
 
@@ -38,7 +39,8 @@ export type SaveLineupResult =
 
 const childColumns = {
   id: children.id,
-  name: children.name,
+  familyName: children.familyName,
+  givenName: children.givenName,
   nicknameKana: children.nicknameKana,
   grade: children.grade,
 };
@@ -46,7 +48,7 @@ const childColumns = {
 type Tx = Parameters<Parameters<typeof withTeam>[1]>[0];
 
 /**
- * 有効な部員(active・非アーカイブ)を学年降順→名前で返す。
+ * 有効な部員(active・非アーカイブ)を学年降順→姓のよみ→名のよみで返す。
  * 並びは部員管理(listMembers)・出欠管理と揃え、画面をまたいでも順序が変わらないようにする
  */
 function selectActiveChildren(tx: Tx): Promise<LineupChild[]> {
@@ -54,10 +56,14 @@ function selectActiveChildren(tx: Tx): Promise<LineupChild[]> {
     .select(childColumns)
     .from(children)
     .where(and(eq(children.archived, false), eq(children.status, "active")))
-    .orderBy(desc(children.grade), asc(children.name));
+    .orderBy(
+      desc(children.grade),
+      asc(children.familyNameKana),
+      asc(children.givenNameKana),
+    );
 }
 
-/** ベンチは名簿と同じ並び(学年降順→名前)で返す(DB に順序列は持たない) */
+/** ベンチは名簿と同じ並び(学年降順→姓のよみ→名のよみ)で返す(DB に順序列は持たない) */
 function benchInMemberOrder(
   members: LineupChild[],
   ids: Set<string>,
@@ -153,7 +159,7 @@ export async function saveLineup(
     ];
     if (values.length > 0) await tx.insert(lineups).values(values);
 
-    // 応答は GET と同じ並び(スターターは POSITIONS 順、ベンチは学年降順→名前)
+    // 応答は GET と同じ並び(スターターは POSITIONS 順、ベンチは学年降順→姓のよみ→名のよみ)
     const starters: LineupStarter[] = [];
     for (const position of POSITIONS) {
       const found = input.starters.find((s) => s.position === position);

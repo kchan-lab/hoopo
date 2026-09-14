@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 保護者のお知らせ(Issue #87 受入条件): 管理で公開したものがホーム → 詳細 → 一覧で読める。
@@ -67,7 +71,7 @@ test("公開したお知らせがホーム → 詳細 → 一覧で読め、下�
     data: {
       children: [
         {
-          name: `お知らせ 花子 ${tag}`,
+          ...childNameInput(`お知らせ 花子 ${tag}`),
           birthDate: birthDateForGrade(4),
           heightCm: heightForGrade(4),
           gender: "female",

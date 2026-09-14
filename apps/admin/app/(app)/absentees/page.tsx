@@ -2,6 +2,7 @@ import {
   type AbsenteeEntry,
   addMonths,
   formatMonthLabel,
+  fullName,
   getAbsentees,
   getLineUsage,
   listLineMessages,
@@ -63,7 +64,7 @@ function Group({
       {entries.map((e) => (
         <div key={e.child.id} className="arow">
           <b>
-            {e.child.name}({e.child.grade}年)
+            {fullName(e.child)}({e.child.grade}年)
           </b>
           {/* グループ宛て 1 通なので個人名は送らない。ここは画面上の確認だけ */}
           {action === undefined && <span>{e.comment ?? "(コメントなし)"}</span>}

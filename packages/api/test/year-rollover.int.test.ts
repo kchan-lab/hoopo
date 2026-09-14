@@ -5,6 +5,7 @@ import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
+import { childNameParts } from "./child-name";
 
 // 年度更新 API(year-rollover/plan.md)を RLS 配下で検証する。
 // 対象は「有効な部員(active・非アーカイブ)」だけ。卒団済み・無効化済み・他チームは触らない。
@@ -62,9 +63,13 @@ async function insertChild(
   code: string,
   options: { archived?: boolean; status?: "active" | "revoked" } = {},
 ): Promise<string> {
+  const parts = childNameParts(name);
   const [row] = await owner`
-    INSERT INTO children (team_id, name, grade, gender, invite_code, status, archived)
-    VALUES (${team}, ${name}, ${grade}, 'male', ${code},
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          grade, gender, invite_code, status, archived)
+    VALUES (${team}, ${parts.familyName}, ${parts.givenName},
+            ${parts.familyNameKana}, ${parts.givenNameKana},
+            ${grade}, 'male', ${code},
             ${options.status ?? "active"}, ${options.archived ?? false})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);

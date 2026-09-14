@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の日程(リスト/カレンダー/詳細)とホームの次回練習(Issue #72 受入条件)。
@@ -95,7 +99,7 @@ test("ホームに次回の練習が出て、タブバーから日程へ移動�
     data: {
       children: [
         {
-          name: "日程 太郎",
+          ...childNameInput("日程 太郎"),
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
           gender: "male",

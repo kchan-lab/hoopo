@@ -8,6 +8,7 @@ import {
   schoolYearOf,
   todayTokyo,
 } from "../src/grade-shared";
+import { fullName } from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 子ども登録・家族連携 API を RLS 配下で検証する(child-registration/plan.md)。
@@ -63,14 +64,20 @@ function json(app: ReturnType<typeof api>, cookie: string) {
 const registration = {
   children: [
     {
-      name: "粉浜 太郎",
+      familyName: "粉浜",
+      givenName: "太郎",
+      familyNameKana: "こはま",
+      givenNameKana: "たろう",
       nicknameKana: "たろう",
       birthDate: birthDateForGrade(4),
       heightCm: 135,
       gender: "male",
     },
     {
-      name: "粉浜 花子",
+      familyName: "粉浜",
+      givenName: "花子",
+      familyNameKana: "こはま",
+      givenNameKana: "はなこ",
       nicknameKana: null,
       birthDate: birthDateForGrade(2),
       heightCm: 120,
@@ -123,9 +130,14 @@ describe("子ども登録(POST /children)", () => {
     const res = await call("/children", "POST", registration);
     expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      children: { id: string; name: string; inviteCode: string }[];
+      children: {
+        id: string;
+        familyName: string;
+        givenName: string;
+        inviteCode: string;
+      }[];
     };
-    expect(body.children.map((c) => c.name)).toEqual([
+    expect(body.children.map((c) => fullName(c))).toEqual([
       "粉浜 太郎",
       "粉浜 花子",
     ]);
@@ -133,9 +145,9 @@ describe("子ども登録(POST /children)", () => {
       expect(c.inviteCode).toMatch(/^[0-9A-Z]{10}$/);
 
     const list = (await (await call("/children", "GET")).json()) as {
-      children: { name: string; grade: number }[];
+      children: { familyName: string; givenName: string; grade: number }[];
     };
-    expect(list.children.map((c) => [c.name, c.grade])).toEqual([
+    expect(list.children.map((c) => [fullName(c), c.grade])).toEqual([
       ["粉浜 太郎", 4],
       ["粉浜 花子", 2],
     ]);
@@ -167,6 +179,16 @@ describe("子ども登録(POST /children)", () => {
     ]) {
       expect(names.some((n) => n.includes(forbidden))).toBe(false);
     }
+    // フルネーム1本の name 列は 0011 で無くなり、姓・名とよみに分かれている
+    expect(names).not.toContain("name");
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "family_name",
+        "given_name",
+        "family_name_kana",
+        "given_name_kana",
+      ]),
+    );
   });
 
   it("生年月日・身長を保存し、学年は生年月日から算出する(4/1 と 4/2 で分かれる)", async () => {
@@ -178,14 +200,20 @@ describe("子ども登録(POST /children)", () => {
       ...registration,
       children: [
         {
-          name: "4月2日生まれ",
+          familyName: "四月",
+          givenName: "二日生まれ",
+          familyNameKana: "しがつ",
+          givenNameKana: "ふつかうまれ",
           nicknameKana: null,
           birthDate: `${birthYear}-04-02`,
           heightCm: 138,
           gender: "male",
         },
         {
-          name: "4月1日生まれ",
+          familyName: "四月",
+          givenName: "一日生まれ",
+          familyNameKana: "しがつ",
+          givenNameKana: "ついたちうまれ",
           nicknameKana: null,
           birthDate: `${birthYear}-04-01`,
           heightCm: 142,
@@ -195,13 +223,13 @@ describe("子ども登録(POST /children)", () => {
     });
     expect(res.status).toBe(201);
     const rows = await owner`
-      SELECT name, grade, birth_date::text AS birth_date, height_cm
-      FROM children ORDER BY name`;
+      SELECT given_name, grade, birth_date::text AS birth_date, height_cm
+      FROM children ORDER BY given_name`;
     expect(
-      rows.map((r) => [r.name, r.grade, r.birth_date, r.height_cm]),
+      rows.map((r) => [r.given_name, r.grade, r.birth_date, r.height_cm]),
     ).toEqual([
-      ["4月1日生まれ", 5, `${birthYear}-04-01`, 142],
-      ["4月2日生まれ", 4, `${birthYear}-04-02`, 138],
+      ["一日生まれ", 5, `${birthYear}-04-01`, 142],
+      ["二日生まれ", 4, `${birthYear}-04-02`, 138],
     ]);
   });
 
@@ -212,7 +240,10 @@ describe("子ども登録(POST /children)", () => {
       ...registration,
       children: [
         {
-          name: "まだ入学前",
+          familyName: "未就学",
+          givenName: "太郎",
+          familyNameKana: "みしゅうがく",
+          givenNameKana: "たろう",
           nicknameKana: null,
           birthDate: birthDateForGrade(0),
           heightCm: 110,
@@ -329,7 +360,13 @@ describe("家族連携(POST /family-links)と家族の設定(GET /family)", () =
     });
     expect(linked.status).toBe(201);
     expect(
-      ((await linked.json()) as { child: { name: string } }).child.name,
+      fullName(
+        (
+          (await linked.json()) as {
+            child: { familyName: string; givenName: string };
+          }
+        ).child,
+      ),
     ).toBe("粉浜 太郎");
 
     // 2回目は冪等(200・alreadyLinked)
@@ -343,13 +380,14 @@ describe("家族連携(POST /family-links)と家族の設定(GET /family)", () =
     ).toBe(true);
 
     const bList = (await (await b("/children", "GET")).json()) as {
-      children: { name: string }[];
+      children: { familyName: string; givenName: string }[];
     };
-    expect(bList.children.map((c) => c.name)).toEqual(["粉浜 太郎"]);
+    expect(bList.children.map((c) => fullName(c))).toEqual(["粉浜 太郎"]);
 
     const family = (await (await a("/family", "GET")).json()) as {
       children: {
-        name: string;
+        familyName: string;
+        givenName: string;
         inviteCode: string;
         guardians: { relation: string; isMe: boolean }[];
       }[];
@@ -396,8 +434,9 @@ describe("家族連携(POST /family-links)と家族の設定(GET /family)", () =
       ).status,
     ).toBe(404);
 
-    await owner`INSERT INTO children (team_id, name, grade, gender, invite_code)
-      VALUES (${otherTeamId}, '他チームの子', 3, 'male', 'XTEAM00001')`;
+    await owner`INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                                      given_name_kana, grade, gender, invite_code)
+      VALUES (${otherTeamId}, '他チーム', '子', 'ほかちーむ', 'こ', 3, 'male', 'XTEAM00001')`;
     expect(
       (
         await b("/family-links", "POST", {
@@ -407,8 +446,9 @@ describe("家族連携(POST /family-links)と家族の設定(GET /family)", () =
       ).status,
     ).toBe(404);
 
-    await owner`INSERT INTO children (team_id, name, grade, gender, invite_code, status)
-      VALUES (${teamId}, '無効化された子', 3, 'male', 'REV0K00001', 'revoked')`;
+    await owner`INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                                      given_name_kana, grade, gender, invite_code, status)
+      VALUES (${teamId}, '無効', '太郎', 'むこう', 'たろう', 3, 'male', 'REV0K00001', 'revoked')`;
     expect(
       (
         await b("/family-links", "POST", {

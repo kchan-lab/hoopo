@@ -1,12 +1,19 @@
 "use client";
 
 import { HEIGHT_MAX, HEIGHT_MIN, todayTokyo } from "@hoopo/api/grade-shared";
-import type { ChildDetail, Gender } from "@hoopo/api/shared";
+import {
+  type ChildDetail,
+  fullName,
+  type Gender,
+  NAME_PART_MAX,
+} from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { GradeHint } from "../grade-hint";
 
 // お子さんの情報の修正(REQUIREMENTS §4.2-9。child-birthdate-height/plan.md 設計判断5)。
+// 名前は姓・名とそれぞれの読みの4欄(child-name-split/plan.md 設計判断1・2・6。
+// 並びは 姓 → 姓のよみ → 名 → 名のよみ → 呼び名)。
 // 登録は初回の1回だけという原則(絶対原則2)の裏返しで、あとから直す手段が無いと
 // 打ち間違い・身長の伸びを保護者が自分で直せない。画面遷移を増やさず、行内で
 // 「編集」→ 入力 →「保存」だけで完結させる。学年は生年月日から再計算され、
@@ -28,7 +35,10 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [name, setName] = useState(child.name);
+  const [familyName, setFamilyName] = useState(child.familyName);
+  const [familyNameKana, setFamilyNameKana] = useState(child.familyNameKana);
+  const [givenName, setGivenName] = useState(child.givenName);
+  const [givenNameKana, setGivenNameKana] = useState(child.givenNameKana);
   const [nicknameKana, setNicknameKana] = useState(child.nicknameKana ?? "");
   const [birthDate, setBirthDate] = useState(child.birthDate ?? "");
   const [heightCm, setHeightCm] = useState(
@@ -38,7 +48,10 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
 
   function startEditing() {
     // 途中でやめた入力が残らないよう、開くたびに現在の値へ戻す
-    setName(detail.name);
+    setFamilyName(detail.familyName);
+    setFamilyNameKana(detail.familyNameKana);
+    setGivenName(detail.givenName);
+    setGivenNameKana(detail.givenNameKana);
     setNicknameKana(detail.nicknameKana ?? "");
     setBirthDate(detail.birthDate ?? "");
     setHeightCm(detail.heightCm === null ? "" : String(detail.heightCm));
@@ -56,7 +69,10 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
+          familyName,
+          givenName,
+          familyNameKana,
+          givenNameKana,
           nicknameKana,
           birthDate,
           heightCm: Number(heightCm),
@@ -68,7 +84,7 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
         setDetail(body.child);
         setEditing(false);
         setBusy(false);
-        // ホームやチーム画面にも新しい名前・学年を反映させる
+        // ホームやチーム画面にも新しい姓名・学年を反映させる
         router.refresh();
         return;
       }
@@ -96,7 +112,11 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
         <ul className="news">
           <li className="row">
             <span>お名前</span>
-            <span>{detail.name}</span>
+            <span>{fullName(detail)}</span>
+          </li>
+          <li className="row">
+            <span>よみ</span>
+            <span>{`${detail.familyNameKana} ${detail.givenNameKana}`}</span>
           </li>
           <li className="row">
             <span>呼び名(ひらがな)</span>
@@ -138,13 +158,52 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
           </p>
         )}
         <div className="fld2">
-          <label htmlFor={`edit-name-${detail.id}`}>お名前</label>
+          <label htmlFor={`edit-family-name-${detail.id}`}>姓</label>
           <input
-            id={`edit-name-${detail.id}`}
+            id={`edit-family-name-${detail.id}`}
             className="inbox"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={familyName}
+            onChange={(e) => setFamilyName(e.target.value)}
             autoComplete="off"
+            maxLength={NAME_PART_MAX}
+            required
+          />
+        </div>
+        <div className="fld2">
+          <label htmlFor={`edit-family-name-kana-${detail.id}`}>姓のよみ</label>
+          <input
+            id={`edit-family-name-kana-${detail.id}`}
+            className="inbox"
+            value={familyNameKana}
+            onChange={(e) => setFamilyNameKana(e.target.value)}
+            placeholder="こはま"
+            autoComplete="off"
+            maxLength={NAME_PART_MAX}
+            required
+          />
+        </div>
+        <div className="fld2">
+          <label htmlFor={`edit-given-name-${detail.id}`}>名</label>
+          <input
+            id={`edit-given-name-${detail.id}`}
+            className="inbox"
+            value={givenName}
+            onChange={(e) => setGivenName(e.target.value)}
+            autoComplete="off"
+            maxLength={NAME_PART_MAX}
+            required
+          />
+        </div>
+        <div className="fld2">
+          <label htmlFor={`edit-given-name-kana-${detail.id}`}>名のよみ</label>
+          <input
+            id={`edit-given-name-kana-${detail.id}`}
+            className="inbox"
+            value={givenNameKana}
+            onChange={(e) => setGivenNameKana(e.target.value)}
+            placeholder="たろう"
+            autoComplete="off"
+            maxLength={NAME_PART_MAX}
             required
           />
         </div>

@@ -10,6 +10,7 @@ import {
   submissionState,
   UNANSWERED_LABEL,
 } from "@hoopo/api/attendances-shared";
+import { fullName } from "@hoopo/api/shared";
 import {
   addMonths,
   formatDateLabel,
@@ -43,7 +44,8 @@ interface PracticeItem {
 
 interface ChildItem {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
 }
 
 interface Answer {
@@ -245,7 +247,7 @@ export function AttendanceEditor({
                 href={hrefFor(month, c.id)}
                 aria-current={c.id === childId ? "true" : undefined}
               >
-                {c.name}
+                {fullName(c)}
               </Link>
             ))}
           </nav>
