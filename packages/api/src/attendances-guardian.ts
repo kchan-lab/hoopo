@@ -6,7 +6,7 @@ import type {
 } from "./attendances-shared";
 import { listPracticesByMonth, type Practice } from "./practices";
 import { type ChildSummary, listChildrenForGuardian } from "./registration";
-import { monthRange } from "./tokyo-date";
+import { monthOf, monthRange } from "./tokyo-date";
 
 // 保護者側の参加予定ロジック(attendance/plan.md 4a)。API 契約は plan.md「4a 保護者 API」。
 // 対象は「active な連携で見えるお子さん」だけ(listChildrenForGuardian が唯一の基準)。
@@ -26,6 +26,11 @@ export interface AttendanceSheet {
   children: ChildSummary[];
   practices: Practice[];
   answers: AttendanceAnswers;
+  /**
+   * childId → その月の練習に対する回答の submitted_at の最大値(ISO 文字列)。
+   * 回答が1件も無ければ null。提出タブの「提出済み(日時)」表示に使う(Issue #145)
+   */
+  submittedAt: Record<string, string | null>;
 }
 
 /** 提出画面の初期表示(お子さん・月内の練習・回答済みの内容) */
@@ -37,9 +42,13 @@ export async function getAttendanceSheet(
   const children = await listChildrenForGuardian(teamId, guardianId);
   const list = await listPracticesByMonth(teamId, month);
   const answers: AttendanceAnswers = {};
-  for (const child of children) answers[child.id] = {};
+  const submittedAt: Record<string, string | null> = {};
+  for (const child of children) {
+    answers[child.id] = {};
+    submittedAt[child.id] = null;
+  }
   if (children.length === 0 || list.length === 0) {
-    return { month, children, practices: list, answers };
+    return { month, children, practices: list, answers, submittedAt };
   }
   const childIds = children.map((c) => c.id);
   const practiceIds = list.map((p) => p.id);
@@ -50,6 +59,7 @@ export async function getAttendanceSheet(
         practiceId: attendances.practiceId,
         status: attendances.status,
         comment: attendances.comment,
+        submittedAt: attendances.submittedAt,
       })
       .from(attendances)
       .where(
@@ -66,12 +76,19 @@ export async function getAttendanceSheet(
       status: r.status as AttendanceStatus,
       comment: r.comment,
     };
+    // 追加クエリを増やさず、同じ rows から最終提出日時(最大値)を集計する
+    const iso = r.submittedAt.toISOString();
+    const current = submittedAt[r.childId];
+    if (current === null || current === undefined || current < iso) {
+      submittedAt[r.childId] = iso;
+    }
   }
-  return { month, children, practices: list, answers };
+  return { month, children, practices: list, answers, submittedAt };
 }
 
 export type SubmitAttendanceResult =
-  | { ok: true; saved: number }
+  /** submittedAt は保存後の最終提出日時(ISO)。その子・その月に回答が1件も残らなければ null */
+  | { ok: true; saved: number; submittedAt: string | null }
   /** 自分の active な連携ではない childId(存在を漏らさないため 404 にする) */
   | { ok: false; reason: "not_found" }
   /** チームに無い practiceId(他チームの練習は RLS で見えない) */
@@ -94,7 +111,7 @@ export async function submitAttendance(
   const practiceIds = input.answers.map((a) => a.practiceId);
   return withTeam(teamId, async (tx) => {
     const found = await tx
-      .select({ id: practices.id })
+      .select({ id: practices.id, heldOn: practices.heldOn })
       .from(practices)
       .where(inArray(practices.id, practiceIds));
     if (found.length !== practiceIds.length) {
@@ -139,8 +156,30 @@ export async function submitAttendance(
           },
         });
     }
+    // 画面が即時に「提出済み(日時)」を出せるよう、保存後の最終提出日時も返す。
+    // 集計の範囲は getAttendanceSheet と同じ「その子・その月の全練習」にそろえる
+    // (レビュー指摘 #149。月の一部だけを送る呼び出しでも、他の提出済みが無視されない)
+    const held = found.map((f) => f.heldOn).sort();
+    const from = monthRange(monthOf(held[0] as string)).from;
+    const to = monthRange(monthOf(held[held.length - 1] as string)).to;
+    const after = await tx
+      .select({ submittedAt: attendances.submittedAt })
+      .from(attendances)
+      .innerJoin(practices, eq(practices.id, attendances.practiceId))
+      .where(
+        and(
+          eq(attendances.childId, input.childId),
+          gte(practices.heldOn, from),
+          lte(practices.heldOn, to),
+        ),
+      );
+    let last: string | null = null;
+    for (const r of after) {
+      const iso = r.submittedAt.toISOString();
+      if (last === null || last < iso) last = iso;
+    }
     // 削除も含めて「受け付けた回答の件数」を返す
-    return { ok: true, saved: input.answers.length };
+    return { ok: true, saved: input.answers.length, submittedAt: last };
   });
 }
 
