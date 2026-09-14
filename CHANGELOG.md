@@ -5,16 +5,11 @@
 
 ### Features
 
-* 保護者アプリで生年月日と身長を入力し、学年を自動表示する ([4677c53](https://github.com/kchan-lab/hoopo/commit/4677c532a4b6a6a519532bc7d13dcf5844c2857c))
 * 保護者アプリで生年月日と身長を入力し、学年を自動表示する ([6423254](https://github.com/kchan-lab/hoopo/commit/6423254c4c9f2265e8df35ee4bf1c4af276993cb)), closes [#132](https://github.com/kchan-lab/hoopo/issues/132)
 * 参加予定を提出できたかどうかが画面で分かるようにする ([#149](https://github.com/kchan-lab/hoopo/issues/149)) ([3edeedf](https://github.com/kchan-lab/hoopo/commit/3edeedf5d638fc50bda208939dce9de06ac1fbec))
-* 子どもの生年月日・身長を保持し、学年を生年月日から判定する ([6057f94](https://github.com/kchan-lab/hoopo/commit/6057f94ac4d75529ff40e3c2b6a0e6943664bf2a))
 * 子どもの生年月日・身長を保持し、学年を生年月日から判定する ([b8745e9](https://github.com/kchan-lab/hoopo/commit/b8745e93007f97b1f19aeb41fffb9172a1e0a70d)), closes [#131](https://github.com/kchan-lab/hoopo/issues/131)
-* 日程管理にカレンダーからのまとめ登録を追加する ([e61b5c3](https://github.com/kchan-lab/hoopo/commit/e61b5c3f07022053f1bc2c53639153c3b23a7f73))
 * 日程管理にカレンダーからのまとめ登録を追加する ([937e880](https://github.com/kchan-lab/hoopo/commit/937e88080079179b19c3af74211d8fc34eff2be3)), closes [#142](https://github.com/kchan-lab/hoopo/issues/142)
-* 管理画面の部員管理で生年月日・身長を表示し、行詳細から直せるようにする ([b067558](https://github.com/kchan-lab/hoopo/commit/b067558a1f16ecf75dd985a52bc7287fb05b2837))
 * 管理画面の部員管理で生年月日・身長を表示し、行詳細から直せるようにする ([816522f](https://github.com/kchan-lab/hoopo/commit/816522fadc0b4555f8d4df373b713f3fad9175fd)), closes [#133](https://github.com/kchan-lab/hoopo/issues/133)
-* 練習日のまとめ登録 API と時間帯プリセットを追加する ([3c6ff2c](https://github.com/kchan-lab/hoopo/commit/3c6ff2c81593ae7df147ee4d163b83080f7bf21c))
 * 練習日のまとめ登録 API と時間帯プリセットを追加する ([cb4b560](https://github.com/kchan-lab/hoopo/commit/cb4b560cdcc52df8624e277d89aebbf4d4f73d2a)), closes [#141](https://github.com/kchan-lab/hoopo/issues/141)
 
 
