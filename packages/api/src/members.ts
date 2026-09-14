@@ -9,7 +9,8 @@ import {
 } from "@hoopo/db";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { AUDIT_LOG_DEFAULT_LIMIT, clampAuditLimit } from "./audit-shared";
-import type { Gender, Relation } from "./registration-shared";
+import { applyChildPatch, type UpdateChildResult } from "./registration";
+import type { ChildPatch, Gender, Relation } from "./registration-shared";
 import { isUuid } from "./uuid";
 
 // 管理側の認定管理・部員管理(child-registration/plan.md 12b)。
@@ -165,6 +166,9 @@ export interface MemberRow {
   name: string;
   nicknameKana: string | null;
   grade: number;
+  /** "YYYY-MM-DD"。0010 より前に登録された部員は null(child-birthdate-height/plan.md 設計判断3) */
+  birthDate: string | null;
+  heightCm: number | null;
   gender: Gender;
   guardianCount: number;
   coachNote: string | null;
@@ -182,6 +186,8 @@ export async function listMembers(teamId: string): Promise<MemberRow[]> {
         name: children.name,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
+        birthDate: children.birthDate,
+        heightCm: children.heightCm,
         gender: children.gender,
         coachNote: children.coachNote,
         inviteCode: children.inviteCode,
@@ -217,6 +223,8 @@ export async function listMembers(teamId: string): Promise<MemberRow[]> {
       name: r.name,
       nicknameKana: r.nicknameKana,
       grade: r.grade,
+      birthDate: r.birthDate,
+      heightCm: r.heightCm,
       gender: r.gender as Gender,
       guardianCount: r.guardianCount,
       coachNote: r.coachNote,
@@ -229,6 +237,23 @@ export async function listMembers(teamId: string): Promise<MemberRow[]> {
           endTime: s.endTime.slice(0, 5),
         })),
     }));
+  });
+}
+
+/**
+ * 部員情報の編集(child-birthdate-height/plan.md 設計判断5)。RLS 配下なので自チームのみ。
+ * 生年月日を直したときは学年を再計算する。卒団(アーカイブ済み)でも直せる
+ */
+export async function updateMemberByCoach(
+  teamId: string,
+  childId: string,
+  patch: ChildPatch,
+): Promise<UpdateChildResult> {
+  return withTeam(teamId, async (tx) => {
+    const updated = await applyChildPatch(tx, childId, patch);
+    return updated
+      ? { ok: true, value: updated }
+      : { ok: false, reason: "not_found" };
   });
 }
 

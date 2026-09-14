@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
+import { birthDateForGrade } from "../src/grade-shared";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
@@ -69,7 +70,7 @@ async function coachClient(
     body: JSON.stringify({ email, password: "coach-pass-1" }),
   });
   const cookie = cookieOf(res, ADMIN_SESSION_COOKIE_NAME);
-  return (path: string, method: "GET" | "POST", body?: unknown) =>
+  return (path: string, method: "GET" | "POST" | "PATCH", body?: unknown) =>
     app.request(path, {
       method,
       headers: { "Content-Type": "application/json", Cookie: cookie },
@@ -78,7 +79,15 @@ async function coachClient(
 }
 
 const registration = (name: string, grade: number) => ({
-  children: [{ name, grade, gender: "male" }],
+  // 学年は生年月日からの算出値なので、欲しい学年になる生年月日を逆算して渡す
+  children: [
+    {
+      name,
+      birthDate: birthDateForGrade(grade),
+      heightCm: 120 + grade * 5,
+      gender: "male",
+    },
+  ],
   relation: "father",
   weekdays: [6],
   startTime: "09:00",
@@ -307,5 +316,66 @@ describe("部員管理(GET /members)", () => {
     expect(body.members[0]?.availabilities).toEqual([
       { weekday: 6, startTime: "09:00", endTime: "12:00" },
     ]);
+  });
+
+  it("一覧に生年月日・身長が出る", async () => {
+    const a = await guardianClient(guardianApi(), "a");
+    await a("/children", "POST", registration("粉浜 太郎", 6));
+    const coach = await coachClient(adminApi());
+    const body = (await (await coach("/members", "GET")).json()) as {
+      members: { birthDate: string | null; heightCm: number | null }[];
+    };
+    expect(body.members[0]).toMatchObject({
+      birthDate: birthDateForGrade(6),
+      heightCm: 150,
+    });
+  });
+});
+
+describe("部員情報の編集(PATCH /members/:childId)", () => {
+  it("生年月日を直すと学年が再計算され、身長も保存される", async () => {
+    const a = await guardianClient(guardianApi(), "a");
+    const created = (await (
+      await a("/children", "POST", registration("粉浜 太郎", 6))
+    ).json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    const coach = await coachClient(adminApi());
+    const res = await coach(`/members/${childId}`, "PATCH", {
+      birthDate: birthDateForGrade(3),
+      heightCm: 128,
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { member: unknown }).member).toMatchObject({
+      grade: 3,
+      birthDate: birthDateForGrade(3),
+      heightCm: 128,
+    });
+    const rows = await owner`
+      SELECT grade, birth_date::text AS birth_date, height_cm
+      FROM children WHERE id = ${childId}`;
+    expect(rows[0]?.grade).toBe(3);
+    expect(rows[0]?.birth_date).toBe(birthDateForGrade(3));
+    expect(rows[0]?.height_cm).toBe(128);
+  });
+
+  it("入力不正は 400、他チームの部員は 404(RLS)", async () => {
+    const a = await guardianClient(guardianApi(), "a");
+    const created = (await (
+      await a("/children", "POST", registration("粉浜 太郎", 6))
+    ).json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    const coach = await coachClient(adminApi());
+    const bad = await coach(`/members/${childId}`, "PATCH", { heightCm: 10 });
+    expect(bad.status).toBe(400);
+
+    const other = await coachClient(adminApi(otherTeamId), "other@example.com");
+    expect(
+      (await other(`/members/${childId}`, "PATCH", { heightCm: 128 })).status,
+    ).toBe(404);
+    const rows =
+      await owner`SELECT height_cm FROM children WHERE id = ${childId}`;
+    expect(rows[0]?.height_cm).toBe(150);
   });
 });

@@ -653,12 +653,21 @@ a.abtn {
 }
 
 .atable .c-name {
-  width: 27%;
+  width: 22%;
 }
 
 .atable .c-kana,
 .atable .c-note {
-  width: 17%;
+  width: 13%;
+}
+
+/* 生年月日・身長(child-birthdate-height)。PC のみの列で、モバイルは行詳細の編集フォーム側 */
+.atable .c-birth {
+  width: 15%;
+}
+
+.atable .c-height {
+  width: 9%;
 }
 
 .atable .sp {
@@ -912,6 +921,139 @@ a.abtn {
 .pubcard .confirm {
   flex: 1;
   justify-content: flex-start;
+}
+
+/* ---- 日程カレンダーからのまとめ登録(schedule-bulk-entry/plan.md 設計判断1・6) ----
+ * 格子は保護者アプリと同じ monthGrid(日曜始まり)を使い、配色だけ管理のモノトーンにする。
+ * 選択中 = 塗り / ● = 練習が登録済み / 太枠 = 今日 の3つを色に頼らず区別する(絶対原則6) */
+/* 曜日見出しの行と日付の行を1つの格子に入れて、列を確実に揃える */
+.cal2 {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3em;
+  max-width: 30em;
+  margin-top: 0.6em;
+}
+
+/* 曜日見出しはボタン(タップでその曜日をまとめて選ぶ)。タップ領域44px以上(DESIGN_GUIDELINES §2.2) */
+.calwk {
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--asub);
+  font-size: 0.82em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calwk[aria-pressed="true"] {
+  background: var(--afield);
+  border-color: var(--ahair);
+  color: var(--aink);
+}
+
+.calday {
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1em;
+  padding: 0.2em;
+  border: 1px solid var(--ahair);
+  border-radius: 9px;
+  background: var(--acard);
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.calday .dnum {
+  font-weight: 600;
+}
+
+.calday .dmark {
+  font-size: 0.62em;
+  line-height: 1;
+  color: var(--asub);
+}
+
+.calday[aria-pressed="true"] {
+  background: var(--aacc);
+  border-color: var(--aacc);
+  color: var(--aon);
+}
+
+.calday[aria-pressed="true"] .dmark {
+  color: var(--aon);
+}
+
+/* 今日は太枠。塗り(選択中)と重なっても分かる */
+.calday.today {
+  box-shadow: inset 0 0 0 2px var(--aink);
+}
+
+.calday[aria-pressed="true"].today {
+  box-shadow: inset 0 0 0 2px var(--acard);
+}
+
+.calday:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* 前後の月の埋め草。選べないので素の文字にする */
+.calday.mute {
+  border-color: transparent;
+  background: transparent;
+  color: var(--asub);
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 選択バー(1日以上選ばれたときだけ出る) */
+.calbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  margin-top: 0.8em;
+  padding-top: 0.8em;
+  border-top: 1px solid var(--ahair);
+}
+
+.calhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  flex-wrap: wrap;
+}
+
+.calcount {
+  font-size: 1.05em;
+}
+
+.calmsg {
+  margin: 0;
+}
+
+.calpre {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  flex-wrap: wrap;
+}
+
+.calpre .abtn {
+  min-height: 40px;
+  padding: 0.4em 0.8em;
+  font-weight: 500;
+}
+
+.calfoot {
+  align-items: center;
+  margin: 0;
 }
 
 @media (max-width: 639px) {
@@ -1345,4 +1487,28 @@ textarea.afld {
 .lgin .privacy a {
   color: var(--asub);
   text-decoration: underline;
+}
+
+/* 行詳細の編集フォーム(child-birthdate-height)。日程管理の .pform/.pgrid/.afld を流用し、
+   定義リストとの間にだけ区切りを足す */
+.atable .medit {
+  margin-top: 0.7em;
+  padding-top: 0.7em;
+  border-top: 1px solid var(--ahair);
+}
+
+.atable .medit .anote {
+  margin: 0;
+}
+
+/* 行詳細の地色(--afield)と同じ背景だと沈むので、通知・エラーはカード色で浮かせる */
+.atable .medit .anotice,
+.atable .medit .lgerr {
+  margin: 0;
+  background: var(--acard);
+}
+
+.atable .medit .pfoot {
+  margin: 0;
+  justify-content: flex-end;
 }

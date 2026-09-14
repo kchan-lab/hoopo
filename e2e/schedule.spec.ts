@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の日程(リスト/カレンダー/詳細)とホームの次回練習(Issue #72 受入条件)。
@@ -92,7 +93,14 @@ test("ホームに次回の練習が出て、タブバーから日程へ移動�
   // 子ども未連携だと分岐画面になるため、先に登録しておく
   const reg = await page.context().request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name: "日程 太郎", grade: 3, gender: "male" }],
+      children: [
+        {
+          name: "日程 太郎",
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [6],
       startTime: "09:00",

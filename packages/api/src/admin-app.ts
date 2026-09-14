@@ -59,16 +59,21 @@ import {
   listRegistrations,
   parseRevoke,
   revokeRegistration,
+  updateMemberByCoach,
 } from "./members";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
 import {
   createPractice,
+  createPracticesBulk,
   deletePractice,
+  listPracticePresets,
   listPracticesByMonth,
+  parseBulkPracticeInput,
   parseMonth,
   parsePracticeInput,
   updatePractice,
 } from "./practices";
+import { parseChildPatch } from "./registration-shared";
 import { getPublishStatus, publishSchedule } from "./schedule-publish";
 import {
   ADMIN_SESSION_COOKIE_NAME,
@@ -508,6 +513,23 @@ export function createAdminApi(deps: AdminApiDeps) {
     return c.json({ members: await listArchivedMembers(session.teamId) });
   });
 
+  // 部員情報の編集(child-birthdate-height/plan.md 設計判断5)。学年は生年月日から再計算する。
+  // 固定パス(/members/year-rollover・/members/archived)より後に置くこと
+  app.patch("/members/:childId", coach, async (c) => {
+    const childId = c.req.param("childId");
+    if (!isUuid(childId)) return c.json({ error: "対象が見つかりません" }, 404);
+    const parsed = parseChildPatch(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const result = await updateMemberByCoach(
+      session.teamId,
+      childId,
+      parsed.value,
+    );
+    if (!result.ok) return c.json({ error: "対象が見つかりません" }, 404);
+    return c.json({ member: result.value });
+  });
+
   // 破壊的操作: 確認は UI 側の二段階確認。実行ログは audit_logs に残る(CLAUDE.md 開発ルール)。
   // 削除できるのは卒団済みだけ(設計判断1)。関連行は FK CASCADE、孤立した保護者も消える(判断2)
   app.delete("/members/:childId", coach, async (c) => {
@@ -560,6 +582,24 @@ export function createAdminApi(deps: AdminApiDeps) {
       { practice: await createPractice(session.teamId, parsed.value) },
       201,
     );
+  });
+
+  // カレンダーからのまとめ登録(plan.md 設計判断3)。1 トランザクションで全件成功か全件失敗。
+  // /practices/:id より前に置いて、:id に "bulk" が吸われないようにする
+  app.post("/practices/bulk", coach, async (c) => {
+    const parsed = parseBulkPracticeInput(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    return c.json(
+      { practices: await createPracticesBulk(session.teamId, parsed.value) },
+      201,
+    );
+  });
+
+  // まとめ登録の時間帯・場所プリセット(plan.md 設計判断2。専用テーブルは作らず実績から集計)
+  app.get("/practices/presets", coach, async (c) => {
+    const session = c.get("session");
+    return c.json({ presets: await listPracticePresets(session.teamId) });
   });
 
   app.put("/practices/:id", coach, async (c) => {

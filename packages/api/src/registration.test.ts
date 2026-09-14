@@ -1,12 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { parseLink, parseRegistration } from "./registration-shared";
+import { birthDateForGrade } from "./grade-shared";
+import {
+  parseChildPatch,
+  parseLink,
+  parseRegistration,
+} from "./registration-shared";
 
-// 入力境界の検証(REQUIREMENTS §3 の項目だけを受け付け、それ以外は 400 に落とす)
+// 入力境界の検証(REQUIREMENTS §3 の項目だけを受け付け、それ以外は 400 に落とす)。
+// 学年は生年月日から算出するので、テストの生年月日は「今日」から逆算して固定する
 
 const valid = {
   children: [
-    { name: " 山田 太郎 ", nicknameKana: "たろう", grade: 4, gender: "male" },
-    { name: "山田 花子", nicknameKana: "", grade: 2, gender: "female" },
+    {
+      name: " 山田 太郎 ",
+      nicknameKana: "たろう",
+      birthDate: birthDateForGrade(4),
+      heightCm: 135,
+      gender: "male",
+    },
+    {
+      name: "山田 花子",
+      nicknameKana: "",
+      birthDate: birthDateForGrade(2),
+      heightCm: 120,
+      gender: "female",
+    },
   ],
   relation: "father",
   weekdays: [6, 0, 3, 3],
@@ -21,6 +39,8 @@ describe("parseRegistration", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.value.children[0]?.name).toBe("山田 太郎");
+    expect(r.value.children[0]?.birthDate).toBe(birthDateForGrade(4));
+    expect(r.value.children[0]?.heightCm).toBe(135);
     expect(r.value.children[1]?.nicknameKana).toBeNull();
     expect(r.value.weekdays).toEqual([0, 3, 6]);
     expect(r.value.coachNote).toBeNull();
@@ -34,9 +54,25 @@ describe("parseRegistration", () => {
       "お名前",
     ],
     [
-      "学年範囲外",
-      { ...valid, children: [{ ...valid.children[0], grade: 7 }] },
-      "学年",
+      "小学生にならない生年月日",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], birthDate: birthDateForGrade(7) }],
+      },
+      "小学生",
+    ],
+    [
+      "生年月日なし",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], birthDate: undefined }],
+      },
+      "生年月日",
+    ],
+    [
+      "身長範囲外",
+      { ...valid, children: [{ ...valid.children[0], heightCm: 79 }] },
+      "身長",
     ],
     [
       "性別不正",
@@ -73,5 +109,37 @@ describe("parseLink", () => {
   it("形式不正・続柄不正は拒否する", () => {
     expect(parseLink({ code: "MH7K", relation: "mother" }).ok).toBe(false);
     expect(parseLink({ code: "MH7K42QD9X", relation: "" }).ok).toBe(false);
+  });
+});
+
+describe("parseChildPatch", () => {
+  it("渡した項目だけを取り出す", () => {
+    const r = parseChildPatch({ heightCm: "142" });
+    expect(r).toEqual({ ok: true, value: { heightCm: 142 } });
+  });
+
+  it("呼び名は空文字で消せる(null になる)", () => {
+    expect(parseChildPatch({ nicknameKana: "" })).toEqual({
+      ok: true,
+      value: { nicknameKana: null },
+    });
+  });
+
+  it("項目が1つも無ければ拒否する", () => {
+    const r = parseChildPatch({});
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("変更する項目");
+  });
+
+  it.each([
+    ["名前が空", { name: " " }, "お名前"],
+    ["生年月日が不正", { birthDate: "2019/06/01" }, "生年月日"],
+    ["小学生にならない", { birthDate: birthDateForGrade(0) }, "小学生"],
+    ["身長が範囲外", { heightCm: 221 }, "身長"],
+    ["性別が不正", { gender: "x" }, "性別"],
+  ])("%s は拒否する", (_label, body, expected) => {
+    const r = parseChildPatch(body);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain(expected);
   });
 });

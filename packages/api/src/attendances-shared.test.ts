@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { nextAnswer, parseSubmitAttendance } from "./attendances-shared";
+import {
+  nextAnswer,
+  parseSubmitAttendance,
+  submissionState,
+} from "./attendances-shared";
 
 const CHILD = "11111111-1111-4111-8111-111111111111";
 const P1 = "22222222-2222-4222-8222-222222222222";
@@ -83,5 +87,36 @@ describe("parseSubmitAttendance", () => {
     const r = parseSubmitAttendance(body);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain(expected);
+  });
+});
+
+describe("submissionState(提出タブ上部の常時表示)", () => {
+  it("未提出 → 提出済み(日時)→ 未提出の変更があります", () => {
+    expect(submissionState("2026-09", null, false)).toEqual({
+      kind: "unsubmitted",
+      mark: "−",
+      text: "9月分 未提出",
+    });
+    expect(
+      submissionState("2026-09", "2026-09-14T03:30:00.000Z", false),
+    ).toEqual({
+      kind: "submitted",
+      mark: "✓",
+      text: "9月分 提出済み(9/14 12:30)",
+    });
+    expect(
+      submissionState("2026-09", "2026-09-14T03:30:00.000Z", true),
+    ).toEqual({
+      kind: "changed",
+      mark: "!",
+      text: "9月分 未提出の変更があります",
+    });
+  });
+
+  it("未提出でも触ったら「未提出の変更があります」になる", () => {
+    expect(submissionState("2026-12", null, true).kind).toBe("changed");
+    expect(submissionState("2026-12", null, true).text).toBe(
+      "12月分 未提出の変更があります",
+    );
   });
 });
