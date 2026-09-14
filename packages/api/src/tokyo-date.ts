@@ -163,3 +163,22 @@ export function monthGrid(month: string): CalendarCell[][] {
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
   return weeks;
 }
+
+/**
+ * ISO 日時 → "9/14 12:30"(Asia/Tokyo 固定)。
+ * 提出済みの日時など「いつ操作したか」を短く見せる用途。日付ライブラリは足さず Intl で固定する
+ */
+export function formatDateTimeShort(iso: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TOKYO_TZ,
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  // 月日は formatDateLabel と同じくゼロ埋めしない(ICU は 2-digit の時刻に引きずられて
+  // month/day も埋めることがあるため、ここで明示的に落とす)
+  return `${Number(get("month"))}/${Number(get("day"))} ${get("hour")}:${get("minute")}`;
+}

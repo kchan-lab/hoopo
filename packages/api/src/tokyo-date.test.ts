@@ -3,6 +3,7 @@ import {
   addDays,
   addMonths,
   formatDateLabel,
+  formatDateTimeShort,
   formatMonthLabel,
   formatTimeShort,
   isDateString,
@@ -52,6 +53,15 @@ describe("Asia/Tokyo の日付処理", () => {
     expect(addDays("2028-02-27", 2)).toBe("2028-02-29");
     expect(addDays("2026-03-01", -2)).toBe("2026-02-27");
     expect(() => addDays("2026-9-6", 2)).toThrow();
+  });
+
+  it("日時の短縮表示は Asia/Tokyo 固定(実行環境の TZ に依存しない)", () => {
+    // UTC 03:30 = Tokyo 12:30
+    expect(formatDateTimeShort("2026-09-14T03:30:00.000Z")).toBe("9/14 12:30");
+    // 日付をまたぐ時刻でも東京の暦日で出す(UTC 15:00 = 翌日 00:00)
+    expect(formatDateTimeShort("2026-09-14T15:00:00.000Z")).toBe("9/15 00:00");
+    // 一桁の月日はゼロ埋めしない / 時刻はゼロ埋めする
+    expect(formatDateTimeShort("2026-01-02T00:05:00.000Z")).toBe("1/2 09:05");
   });
 
   it("カレンダー格子は日曜始まりで、必要な週数だけ返す", () => {

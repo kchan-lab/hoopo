@@ -89,6 +89,7 @@ interface Sheet {
     string,
     Record<string, { status: string; comment: string | null }>
   >;
+  submittedAt: Record<string, string | null>;
 }
 
 async function registerTwoChildren(call: ReturnType<typeof json>) {
@@ -158,6 +159,8 @@ describe("提出シート(GET /attendance)", () => {
     ]);
     expect(sheet.answers[taro]).toEqual({});
     expect(sheet.answers[hanako]).toEqual({});
+    // 未提出は null(お子さん全員分のキーを持つ)
+    expect(sheet.submittedAt).toEqual({ [taro]: null, [hanako]: null });
 
     // 不正な month は 400
     expect((await call("/attendance?month=2099-13", "GET")).status).toBe(400);
@@ -281,6 +284,117 @@ describe("一括保存(PUT /attendance)", () => {
   });
 });
 
+describe("最終提出日時(Issue #145)", () => {
+  it("提出で日時が入り、再提出で進み、全件を未回答に戻すと null に戻る", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const [taro, hanako] = await registerTwoChildren(call);
+
+    const before = (await (
+      await call("/attendance?month=2099-05", "GET")
+    ).json()) as Sheet;
+    expect(before.submittedAt[taro]).toBeNull();
+
+    const put = await call("/attendance", "PUT", {
+      childId: taro,
+      answers: [
+        { practiceId: practiceA, status: "full", comment: null },
+        { practiceId: practiceB, status: null, comment: null },
+      ],
+    });
+    expect(put.status).toBe(200);
+    const putBody = (await put.json()) as {
+      saved: number;
+      submittedAt: string | null;
+    };
+    expect(putBody.saved).toBe(2);
+    expect(putBody.submittedAt).not.toBeNull();
+
+    const after = (await (
+      await call("/attendance?month=2099-05", "GET")
+    ).json()) as Sheet;
+    const first = after.submittedAt[taro];
+    if (first == null) throw new Error("提出日時が入っていません");
+    // PUT の戻り値とシートの値は同じ提出を指す
+    expect(new Date(first).getTime()).toBe(
+      new Date(putBody.submittedAt as string).getTime(),
+    );
+    // 兄弟は未提出のまま
+    expect(after.submittedAt[hanako]).toBeNull();
+
+    // 再提出すると日時が進む(同じ行の上書きでも submitted_at を更新する)
+    await new Promise((r) => setTimeout(r, 20));
+    const again = await call("/attendance", "PUT", {
+      childId: taro,
+      answers: [{ practiceId: practiceA, status: "absent", comment: null }],
+    });
+    expect(again.status).toBe(200);
+    const second = (
+      (await (await call("/attendance?month=2099-05", "GET")).json()) as Sheet
+    ).submittedAt[taro];
+    if (second == null) throw new Error("提出日時が入っていません");
+    expect(new Date(second).getTime()).toBeGreaterThan(
+      new Date(first).getTime(),
+    );
+
+    // 全件を未回答に戻すと行が消えるので null(= 未提出)に戻る
+    const cleared = await call("/attendance", "PUT", {
+      childId: taro,
+      answers: [
+        { practiceId: practiceA, status: null, comment: null },
+        { practiceId: practiceB, status: null, comment: null },
+      ],
+    });
+    expect(
+      ((await cleared.json()) as { submittedAt: string | null }).submittedAt,
+    ).toBeNull();
+    const emptied = (await (
+      await call("/attendance?month=2099-05", "GET")
+    ).json()) as Sheet;
+    expect(emptied.submittedAt[taro]).toBeNull();
+  });
+
+  it("月をまたいだ提出は、その月のシートにだけ出る", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const [taro] = await registerTwoChildren(call);
+    await call("/attendance", "PUT", {
+      childId: taro,
+      answers: [{ practiceId: practiceA, status: "full", comment: null }],
+    });
+    // 6月の練習には回答していないので 6月分は未提出のまま
+    const june = (await (
+      await call("/attendance?month=2099-06", "GET")
+    ).json()) as Sheet;
+    expect(june.submittedAt[taro]).toBeNull();
+  });
+
+  it("他の保護者・他チームからは提出日時が見えない", async () => {
+    const app = api();
+    const a = json(app, await loginAs(app, USER_A));
+    const [taro] = await registerTwoChildren(a);
+    await a("/attendance", "PUT", {
+      childId: taro,
+      answers: [{ practiceId: practiceA, status: "full", comment: null }],
+    });
+
+    // 連携していない同チームの保護者(お子さんが1人もいない)
+    const b = json(app, await loginAs(app, USER_B));
+    const forB = (await (
+      await b("/attendance?month=2099-05", "GET")
+    ).json()) as Sheet;
+    expect(forB.submittedAt).toEqual({});
+
+    // 他チームの保護者
+    const other = api(otherTeamId);
+    const o = json(other, await loginAs(other, USER_B));
+    const forOther = (await (
+      await o("/attendance?month=2099-05", "GET")
+    ).json()) as Sheet;
+    expect(forOther.submittedAt).toEqual({});
+  });
+});
+
 describe("未提出の件数(GET /attendance/summary)", () => {
   it("月内の練習 × 自分の子で数え、回答した分だけ減る", async () => {
     const app = api();
@@ -324,6 +438,7 @@ describe("未提出の件数(GET /attendance/summary)", () => {
     ).json()) as Sheet;
     expect(sheet.children).toEqual([]);
     expect(sheet.answers).toEqual({});
+    expect(sheet.submittedAt).toEqual({});
     // 練習(チーム公開情報)は見える
     expect(sheet.practices).toHaveLength(2);
   });

@@ -349,7 +349,7 @@ export function createApi(deps: ApiDeps) {
         ? c.json({ error: "お子さんが見つかりません" }, 404)
         : c.json({ error: "練習が見つかりません" }, 400);
     }
-    return c.json({ saved: result.saved });
+    return c.json({ saved: result.saved, submittedAt: result.submittedAt });
   });
 
   // ---- 月謝の確認(fees/plan.md 5a。ロジックは fees-guardian.ts) ----

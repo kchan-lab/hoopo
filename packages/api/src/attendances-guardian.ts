@@ -26,6 +26,11 @@ export interface AttendanceSheet {
   children: ChildSummary[];
   practices: Practice[];
   answers: AttendanceAnswers;
+  /**
+   * childId → その月の練習に対する回答の submitted_at の最大値(ISO 文字列)。
+   * 回答が1件も無ければ null。提出タブの「提出済み(日時)」表示に使う(Issue #145)
+   */
+  submittedAt: Record<string, string | null>;
 }
 
 /** 提出画面の初期表示(お子さん・月内の練習・回答済みの内容) */
@@ -37,9 +42,13 @@ export async function getAttendanceSheet(
   const children = await listChildrenForGuardian(teamId, guardianId);
   const list = await listPracticesByMonth(teamId, month);
   const answers: AttendanceAnswers = {};
-  for (const child of children) answers[child.id] = {};
+  const submittedAt: Record<string, string | null> = {};
+  for (const child of children) {
+    answers[child.id] = {};
+    submittedAt[child.id] = null;
+  }
   if (children.length === 0 || list.length === 0) {
-    return { month, children, practices: list, answers };
+    return { month, children, practices: list, answers, submittedAt };
   }
   const childIds = children.map((c) => c.id);
   const practiceIds = list.map((p) => p.id);
@@ -50,6 +59,7 @@ export async function getAttendanceSheet(
         practiceId: attendances.practiceId,
         status: attendances.status,
         comment: attendances.comment,
+        submittedAt: attendances.submittedAt,
       })
       .from(attendances)
       .where(
@@ -66,12 +76,19 @@ export async function getAttendanceSheet(
       status: r.status as AttendanceStatus,
       comment: r.comment,
     };
+    // 追加クエリを増やさず、同じ rows から最終提出日時(最大値)を集計する
+    const iso = r.submittedAt.toISOString();
+    const current = submittedAt[r.childId];
+    if (current === null || current === undefined || current < iso) {
+      submittedAt[r.childId] = iso;
+    }
   }
-  return { month, children, practices: list, answers };
+  return { month, children, practices: list, answers, submittedAt };
 }
 
 export type SubmitAttendanceResult =
-  | { ok: true; saved: number }
+  /** submittedAt は保存後の最終提出日時(ISO)。全件を未回答に戻したときは null */
+  | { ok: true; saved: number; submittedAt: string | null }
   /** 自分の active な連携ではない childId(存在を漏らさないため 404 にする) */
   | { ok: false; reason: "not_found" }
   /** チームに無い practiceId(他チームの練習は RLS で見えない) */
@@ -139,8 +156,24 @@ export async function submitAttendance(
           },
         });
     }
+    // 画面が即時に「提出済み(日時)」を出せるよう、保存後の最終提出日時も返す。
+    // 対象はこの提出に含めた練習だけ(= 提出タブが送るその月の全練習)
+    const after = await tx
+      .select({ submittedAt: attendances.submittedAt })
+      .from(attendances)
+      .where(
+        and(
+          eq(attendances.childId, input.childId),
+          inArray(attendances.practiceId, practiceIds),
+        ),
+      );
+    let last: string | null = null;
+    for (const r of after) {
+      const iso = r.submittedAt.toISOString();
+      if (last === null || last < iso) last = iso;
+    }
     // 削除も含めて「受け付けた回答の件数」を返す
-    return { ok: true, saved: input.answers.length };
+    return { ok: true, saved: input.answers.length, submittedAt: last };
   });
 }
 

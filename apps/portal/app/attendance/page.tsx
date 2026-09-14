@@ -75,6 +75,7 @@ export default async function AttendancePage({
         childId={child.id}
         practices={sheet.practices}
         answers={sheet.answers[child.id] ?? {}}
+        initialSubmittedAt={sheet.submittedAt[child.id] ?? null}
       />
       <TabBar active="send" />
     </>

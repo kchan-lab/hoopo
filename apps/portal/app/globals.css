@@ -863,6 +863,76 @@ textarea.inbox {
   background: var(--accent);
 }
 
+/* ---- 参加予定の提出: 現在の状態(常時表示)と提出直後の成功表示(Issue #145) ---- */
+.sub-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  color: var(--sub);
+}
+/* 記号は色と併記する(色だけに頼らない) */
+.sub-state .mk,
+.sub-ok .mk {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 99px;
+  font-size: 11px;
+  line-height: 1;
+  background: var(--field);
+  color: var(--faint);
+  border: 1px solid var(--hair);
+}
+/* 提出直後だけ出る成功表示。数秒で消え、以降は .sub-state が状態を伝える */
+.sub-ok {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: var(--tint);
+  color: var(--deep);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.sub-ok .mk {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sub-state.submitted {
+  background: var(--tint);
+  border-color: transparent;
+  color: var(--deep);
+}
+.sub-state.submitted .mk {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.sub-state.changed {
+  background: var(--paper);
+  border: 1px dashed var(--accent);
+  color: var(--deep);
+}
+.sub-state.changed .mk {
+  background: var(--paper);
+  border-color: var(--accent);
+  color: var(--deep);
+}
 /* ---- 参加予定の提出: 一括チップ・提出行(ワイヤー10) ---- */
 .chip-row {
   display: flex;
