@@ -7,7 +7,14 @@ import {
   parseHeightCm,
   todayTokyo,
 } from "@hoopo/api/grade-shared";
-import { type Gender, type Relation, WEEKDAY_LABELS } from "@hoopo/api/shared";
+import {
+  type Gender,
+  NAME_PART_MAX,
+  parseNameKana,
+  parseNamePart,
+  type Relation,
+  WEEKDAY_LABELS,
+} from "@hoopo/api/shared";
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { GradeHint } from "../grade-hint";
@@ -19,7 +26,12 @@ import { RelationSelect } from "../relation-select";
 
 interface ChildDraft {
   key: number;
-  name: string;
+  // 姓・名とそれぞれの読み(child-name-split/plan.md 設計判断1・2)。
+  // 入力欄の並びは 姓 → 姓のよみ → 名 → 名のよみ → 呼び名(設計判断6)
+  familyName: string;
+  familyNameKana: string;
+  givenName: string;
+  givenNameKana: string;
   nicknameKana: string;
   /** "YYYY-MM-DD"(input[type=date] の値)。未入力は "" */
   birthDate: string;
@@ -30,7 +42,10 @@ interface ChildDraft {
 
 const newChild = (key: number): ChildDraft => ({
   key,
-  name: "",
+  familyName: "",
+  familyNameKana: "",
+  givenName: "",
+  givenNameKana: "",
   nicknameKana: "",
   birthDate: "",
   heightCm: "",
@@ -59,9 +74,15 @@ export function RegisterForm() {
   function goStep2(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     for (const [i, k] of kids.entries()) {
-      if (!k.name.trim())
-        return setError(`${i + 1}人目のお名前を入力してください`);
       // サーバーと同じ純関数で先に弾く(文言もそろう)。正はあくまでサーバー
+      for (const check of [
+        parseNamePart(k.familyName, "姓"),
+        parseNameKana(k.familyNameKana, "姓"),
+        parseNamePart(k.givenName, "名"),
+        parseNameKana(k.givenNameKana, "名"),
+      ]) {
+        if (!check.ok) return setError(`${i + 1}人目の${check.error}`);
+      }
       const birthDate = parseBirthDate(k.birthDate, today);
       if (!birthDate.ok) return setError(`${i + 1}人目の${birthDate.error}`);
       const heightCm = parseHeightCm(k.heightCm);
@@ -85,7 +106,10 @@ export function RegisterForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           children: kids.map((k) => ({
-            name: k.name,
+            familyName: k.familyName,
+            givenName: k.givenName,
+            familyNameKana: k.familyNameKana,
+            givenNameKana: k.givenNameKana,
             nicknameKana: k.nicknameKana,
             birthDate: k.birthDate,
             heightCm: Number(k.heightCm),
@@ -147,14 +171,60 @@ export function RegisterForm() {
                 </div>
               )}
               <div className="fld2">
-                <label htmlFor={`name-${k.key}`}>お名前</label>
+                <label htmlFor={`family-name-${k.key}`}>姓</label>
                 <input
-                  id={`name-${k.key}`}
+                  id={`family-name-${k.key}`}
                   className="inbox"
-                  value={k.name}
-                  onChange={(e) => update(k.key, { name: e.target.value })}
-                  placeholder="山田 太郎"
+                  value={k.familyName}
+                  onChange={(e) =>
+                    update(k.key, { familyName: e.target.value })
+                  }
+                  placeholder="粉浜"
                   autoComplete="off"
+                  maxLength={NAME_PART_MAX}
+                  required
+                />
+              </div>
+              <div className="fld2">
+                <label htmlFor={`family-name-kana-${k.key}`}>姓のよみ</label>
+                <input
+                  id={`family-name-kana-${k.key}`}
+                  className="inbox"
+                  value={k.familyNameKana}
+                  onChange={(e) =>
+                    update(k.key, { familyNameKana: e.target.value })
+                  }
+                  placeholder="こはま"
+                  autoComplete="off"
+                  maxLength={NAME_PART_MAX}
+                  required
+                />
+              </div>
+              <div className="fld2">
+                <label htmlFor={`given-name-${k.key}`}>名</label>
+                <input
+                  id={`given-name-${k.key}`}
+                  className="inbox"
+                  value={k.givenName}
+                  onChange={(e) => update(k.key, { givenName: e.target.value })}
+                  placeholder="太郎"
+                  autoComplete="off"
+                  maxLength={NAME_PART_MAX}
+                  required
+                />
+              </div>
+              <div className="fld2">
+                <label htmlFor={`given-name-kana-${k.key}`}>名のよみ</label>
+                <input
+                  id={`given-name-kana-${k.key}`}
+                  className="inbox"
+                  value={k.givenNameKana}
+                  onChange={(e) =>
+                    update(k.key, { givenNameKana: e.target.value })
+                  }
+                  placeholder="たろう"
+                  autoComplete="off"
+                  maxLength={NAME_PART_MAX}
                   required
                 />
               </div>

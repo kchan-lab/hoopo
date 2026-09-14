@@ -11,10 +11,11 @@ import {
 // 管理側の月謝ロジック(fees/plan.md 5b)。現金運用の可視化のみで決済はしない(絶対原則7)。
 // 「未来」は行を持たず year/month から導出する(§7)ので、ジョブ未実行でもグリッドは成立する
 
-/** グリッドの行に出す部員の最小情報(個人情報は最小保持。氏名・呼び名・学年のみ) */
+/** グリッドの行に出す部員の最小情報(個人情報は最小保持。姓名・呼び名・学年のみ) */
 export interface FeeChild {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   nicknameKana: string | null;
   grade: number;
 }
@@ -48,7 +49,7 @@ function toRecord(row: {
 
 /**
  * 部員(行)×1〜12月(列)の封筒グリッド(§5.2 月謝管理)。
- * 並び順は出欠管理・部員管理(listMembers)と同じ 学年降順→名前
+ * 並び順は出欠管理・部員管理(listMembers)と同じ 学年降順→姓のよみ→名のよみ
  */
 export async function getFeeGrid(
   teamId: string,
@@ -59,13 +60,18 @@ export async function getFeeGrid(
     const members = await tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
       })
       .from(children)
       .where(and(eq(children.archived, false), eq(children.status, "active")))
-      .orderBy(desc(children.grade), asc(children.name));
+      .orderBy(
+        desc(children.grade),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
+      );
     if (members.length === 0) return [];
     // 1年分をまとめて1クエリで引く(RLS 配下なので自チームの行だけが返る)
     const records = await tx

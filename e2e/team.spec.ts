@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 保護者のチーム名簿(Issue #28 受入条件)。
@@ -25,7 +29,7 @@ test("タブバーの「チーム」から名簿を開くと、登録した部�
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           nicknameKana: "ろすたー",
           birthDate: birthDateForGrade(6),
           heightCm: heightForGrade(6),

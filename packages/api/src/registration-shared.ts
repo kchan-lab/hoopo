@@ -28,11 +28,21 @@ export const WEEKDAY_LABELS = [
 ] as const;
 
 const NAME_MAX = 50;
+/**
+ * 姓・名それぞれの上限(child-name-split/plan.md 設計判断6)。
+ * フルネーム1本だった頃の 50 文字を「1項目あたり」の基準に直した値
+ */
+export const NAME_PART_MAX = 25;
 const NOTE_MAX = 500;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export interface ChildInput {
-  name: string;
+  familyName: string;
+  givenName: string;
+  /** ひらがなのみ。五十音順の並べ替えに使う(plan.md 設計判断2) */
+  familyNameKana: string;
+  givenNameKana: string;
+  /** 練習で呼ばれる通称。名の読み(givenNameKana)とは別物で、任意 */
   nicknameKana: string | null;
   /** "YYYY-MM-DD"。学年はここからサーバーで算出する(plan.md 設計判断2) */
   birthDate: string;
@@ -68,18 +78,93 @@ function optionalText(value: unknown, max: number): string | null | undefined {
   return text === "" ? null : text;
 }
 
-function parseName(value: unknown): string | null {
-  const name = typeof value === "string" ? value.trim() : "";
-  return name && name.length <= NAME_MAX ? name : null;
+/**
+ * 姓・名それぞれの検証(設計判断4)。label は「姓」または「名」。
+ * 未入力と長すぎるを区別して、保護者がどこを直せばよいか分かる文言にする
+ */
+export function parseNamePart(
+  value: unknown,
+  label: string,
+): ParseResult<string> {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return { ok: false, error: `${label}を入力してください` };
+  if (text.length > NAME_PART_MAX) {
+    return {
+      ok: false,
+      error: `${label}は${NAME_PART_MAX}文字以内で入力してください`,
+    };
+  }
+  return { ok: true, value: text };
+}
+
+/**
+ * よみの許容文字(設計判断2)。ひらがな(U+3041..U+3093)と、
+ * 長音記号「ー」(U+30FC)・結合用の濁点/半濁点(U+3099/U+309A)だけを通す。
+ * カタカナ・漢字・英数字・空白を弾くことで、DB の並びがそのまま五十音順になる
+ */
+const KANA_PATTERN = /^[\u3041-\u3093\u3099\u309A\u30FC]+$/u;
+
+/**
+ * 姓・名それぞれの読みの検証(設計判断2)。label は「姓」または「名」。
+ * 未入力・長すぎる・ひらがな以外 をそれぞれ別の文言で返す
+ */
+export function parseNameKana(
+  value: unknown,
+  label: string,
+): ParseResult<string> {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return { ok: false, error: `${label}のよみを入力してください` };
+  if (text.length > NAME_PART_MAX) {
+    return {
+      ok: false,
+      error: `${label}のよみは${NAME_PART_MAX}文字以内で入力してください`,
+    };
+  }
+  if (!KANA_PATTERN.test(text)) {
+    return {
+      ok: false,
+      error: `${label}のよみをひらがなで入力してください`,
+    };
+  }
+  return { ok: true, value: text };
+}
+
+/**
+ * 表示用のフルネーム(設計判断3)。区切りは半角スペース1つ。
+ * 名簿・出欠・月謝・編成・予定表画像・LINE 文面はすべてこれを通し、
+ * 表示の揺れを1か所で直せるようにする
+ */
+export function fullName(child: {
+  familyName: string;
+  givenName: string;
+}): string {
+  return `${child.familyName} ${child.givenName}`;
+}
+
+/** 頭文字アバター(設計判断3): 姓の先頭1文字。姓が空になることは検証で防いでいる */
+export function nameInitial(child: { familyName: string }): string {
+  return Array.from(child.familyName)[0] ?? "?";
 }
 
 function parseChild(value: unknown, index: number): ParseResult<ChildInput> {
   const label = `${index + 1}人目`;
   const r = asRecord(value);
   if (!r) return { ok: false, error: `${label}の情報が不正です` };
-  const name = parseName(r.name);
-  if (!name) {
-    return { ok: false, error: `${label}のお名前を入力してください` };
+  const familyName = parseNamePart(r.familyName, "姓");
+  if (!familyName.ok) {
+    return { ok: false, error: `${label}の${familyName.error}` };
+  }
+  const familyNameKana = parseNameKana(r.familyNameKana, "姓");
+  if (!familyNameKana.ok) {
+    return { ok: false, error: `${label}の${familyNameKana.error}` };
+  }
+  const givenName = parseNamePart(r.givenName, "名");
+  if (!givenName.ok) {
+    return { ok: false, error: `${label}の${givenName.error}` };
+  }
+  const givenNameKana = parseNameKana(r.givenNameKana, "名");
+  if (!givenNameKana.ok) {
+    return { ok: false, error: `${label}の${givenNameKana.error}` };
   }
   const nicknameKana = optionalText(r.nicknameKana, NAME_MAX);
   if (nicknameKana === undefined) {
@@ -97,7 +182,10 @@ function parseChild(value: unknown, index: number): ParseResult<ChildInput> {
   return {
     ok: true,
     value: {
-      name,
+      familyName: familyName.value,
+      givenName: givenName.value,
+      familyNameKana: familyNameKana.value,
+      givenNameKana: givenNameKana.value,
       nicknameKana,
       birthDate: birthDate.value,
       heightCm: heightCm.value,
@@ -185,7 +273,10 @@ export function parseLink(body: unknown): ParseResult<LinkInput> {
 /** 子ども情報(編集フォームの初期値・PATCH の応答。保護者とコーチで同形) */
 export interface ChildDetail {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
+  familyNameKana: string;
+  givenNameKana: string;
   nicknameKana: string | null;
   /** birthDate からの算出値(保存済み) */
   grade: number;
@@ -197,7 +288,10 @@ export interface ChildDetail {
 
 /** 子ども情報の部分更新(保護者の家族の設定・コーチの部員管理。plan.md 設計判断5) */
 export interface ChildPatch {
-  name?: string;
+  familyName?: string;
+  givenName?: string;
+  familyNameKana?: string;
+  givenNameKana?: string;
   nicknameKana?: string | null;
   birthDate?: string;
   heightCm?: number;
@@ -212,10 +306,25 @@ export function parseChildPatch(body: unknown): ParseResult<ChildPatch> {
   const r = asRecord(body);
   if (!r) return { ok: false, error: "入力内容が不正です" };
   const patch: ChildPatch = {};
-  if (r.name !== undefined) {
-    const name = parseName(r.name);
-    if (!name) return { ok: false, error: "お名前を入力してください" };
-    patch.name = name;
+  if (r.familyName !== undefined) {
+    const familyName = parseNamePart(r.familyName, "姓");
+    if (!familyName.ok) return familyName;
+    patch.familyName = familyName.value;
+  }
+  if (r.givenName !== undefined) {
+    const givenName = parseNamePart(r.givenName, "名");
+    if (!givenName.ok) return givenName;
+    patch.givenName = givenName.value;
+  }
+  if (r.familyNameKana !== undefined) {
+    const familyNameKana = parseNameKana(r.familyNameKana, "姓");
+    if (!familyNameKana.ok) return familyNameKana;
+    patch.familyNameKana = familyNameKana.value;
+  }
+  if (r.givenNameKana !== undefined) {
+    const givenNameKana = parseNameKana(r.givenNameKana, "名");
+    if (!givenNameKana.ok) return givenNameKana;
+    patch.givenNameKana = givenNameKana.value;
   }
   if ("nicknameKana" in r) {
     const nicknameKana = optionalText(r.nicknameKana, NAME_MAX);

@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 子ども登録・家族連携の導線(Issue #66 受入条件)。
@@ -29,7 +33,12 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await expect(page.locator("h1")).toContainText("お子さんの登録");
 
   // ①子ども情報(兄弟を追加)。学年は選ばず、生年月日から決まる
-  await page.getByLabel("お名前").fill("粉浜 太郎");
+  // 姓・名とそれぞれのよみは別の欄(child-name-split/plan.md 設計判断6)。
+  // 「姓」は「姓のよみ」にも部分一致するので exact で絞る
+  await page.getByLabel("姓", { exact: true }).fill("粉浜");
+  await page.getByLabel("姓のよみ").fill("こはま");
+  await page.getByLabel("名", { exact: true }).fill("太郎");
+  await page.getByLabel("名のよみ").fill("たろう");
   await page.getByLabel("呼び名(ひらがな)").fill("たろう");
   await page.getByLabel("生年月日").fill(birthDateForGrade(4));
   await page
@@ -41,7 +50,10 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await page.getByRole("button", { name: "男子" }).click();
   await page.getByRole("button", { name: "兄弟・姉妹を追加" }).click();
   const second = page.locator("fieldset.child-block").nth(1);
-  await second.getByLabel("お名前").fill("粉浜 花子");
+  await second.getByLabel("姓", { exact: true }).fill("粉浜");
+  await second.getByLabel("姓のよみ").fill("こはま");
+  await second.getByLabel("名", { exact: true }).fill("花子");
+  await second.getByLabel("名のよみ").fill("はなこ");
   await second.getByLabel("生年月日").fill(birthDateForGrade(2));
   await second
     .getByRole("spinbutton", { name: "身長", exact: true })
@@ -85,7 +97,10 @@ test("小学生にならない生年月日では次へ進めない", async ({ co
   // クライアントの検証はサーバー(parseBirthDate)と同じ純関数なので文言もそろう
   await loginAsNewGuardian(context);
   await page.goto(`${urls.portal}/register`);
-  await page.getByLabel("お名前").fill("粉浜 未就学");
+  await page.getByLabel("姓", { exact: true }).fill("粉浜");
+  await page.getByLabel("姓のよみ").fill("こはま");
+  await page.getByLabel("名", { exact: true }).fill("未就学");
+  await page.getByLabel("名のよみ").fill("みしゅうがく");
   // 小学1年生より1学年下 = まだ入学していない
   await page.getByLabel("生年月日").fill(birthDateForGrade(0));
   await page
@@ -115,7 +130,7 @@ test("第二保護者が招待コードで連携すると同じ子どもが見�
     data: {
       children: [
         {
-          name: "北粉浜 次郎",
+          ...childNameInput("北粉浜 次郎", "きたこはま じろう"),
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
           gender: "male",

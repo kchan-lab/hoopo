@@ -6,7 +6,11 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 管理ダッシュボードの導線(Issue #30 受入条件)。
@@ -97,7 +101,7 @@ async function registerChild(
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           nicknameKana: "てすと",
           birthDate: birthDateForGrade(4),
           heightCm: heightForGrade(4),

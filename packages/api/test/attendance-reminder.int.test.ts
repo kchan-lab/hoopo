@@ -14,6 +14,7 @@ import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { addDays, formatDateLabel, todayInTokyo } from "../src/tokyo-date";
 import { adminDeps } from "./admin-deps";
+import { childNameParts } from "./child-name";
 
 // 出欠リマインド(#20。attendance-reminder/plan.md)を RLS 配下で検証する。
 // - 手動送信 POST /line/send/reminder: 未来 かつ 未回答 1 人以上のときだけ 201
@@ -97,9 +98,13 @@ async function coachClient(app: ReturnType<typeof adminApi>) {
 }
 
 async function insertChild(name: string, code: string): Promise<string> {
+  const parts = childNameParts(name);
   const [row] = await owner`
-    INSERT INTO children (team_id, name, nickname_kana, grade, gender, invite_code)
-    VALUES (${teamId}, ${name}, 'たろう', 5, 'male', ${code})
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          nickname_kana, grade, gender, invite_code)
+    VALUES (${teamId}, ${parts.familyName}, ${parts.givenName},
+            ${parts.familyNameKana}, ${parts.givenNameKana},
+            'たろう', 5, 'male', ${code})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);
   return row.id as string;

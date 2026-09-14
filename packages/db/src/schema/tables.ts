@@ -118,7 +118,15 @@ export const children = pgTable(
     teamId: uuid("team_id")
       .notNull()
       .references(() => teams.id),
-    name: text("name").notNull(),
+    // 姓と名を別々に持つ(child-name-split/plan.md 設計判断1)。フルネームは表示時に
+    // fullName() で組み立てるため name 列は持たない(二重管理を避ける)
+    familyName: text("family_name").notNull(),
+    givenName: text("given_name").notNull(),
+    // 五十音順に並べるための読み(設計判断2・4)。検証でひらがなだけに限定しているので
+    // Postgres の既定の照合順序でそのまま五十音順になる
+    familyNameKana: text("family_name_kana").notNull(),
+    givenNameKana: text("given_name_kana").notNull(),
+    // 呼び名。練習で呼ばれる通称で、名の読み(given_name_kana)とは別物なので残す
     nicknameKana: text("nickname_kana"),
     grade: smallint("grade").notNull(),
     // 生年月日・身長(child-birthdate-height/plan.md 設計判断1・3)。学年は birth_date から

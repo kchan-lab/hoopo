@@ -6,24 +6,30 @@ import { and, asc, desc, eq } from "drizzle-orm";
 
 export interface TeamMember {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   nicknameKana: string | null;
   grade: number;
 }
 
-// 全メンバー一覧: 有効(active)かつ非アーカイブの部員を学年降順→名前で返す
+// 全メンバー一覧: 有効(active)かつ非アーカイブの部員を学年降順→姓のよみ→名のよみで返す
 // (部員管理・出欠と同じ並び規則)
 export async function listTeamMembers(teamId: string): Promise<TeamMember[]> {
   return withTeam(teamId, async (tx) =>
     tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
       })
       .from(children)
       .where(and(eq(children.archived, false), eq(children.status, "active")))
-      .orderBy(desc(children.grade), asc(children.name)),
+      .orderBy(
+        desc(children.grade),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
+      ),
   );
 }

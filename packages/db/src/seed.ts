@@ -88,7 +88,10 @@ await withTeam(skcId, async (tx) => {
       // 基準日にすると下の生年月日から grade が算出される。年度が進んだら合わせて更新する
       [
         {
-          name: "粉浜 太郎",
+          familyName: "粉浜",
+          givenName: "太郎",
+          familyNameKana: "こはま",
+          givenNameKana: "たろう",
           nicknameKana: "たろう",
           grade: 6,
           birthDate: "2014-06-15",
@@ -96,7 +99,10 @@ await withTeam(skcId, async (tx) => {
           gender: "male",
         },
         {
-          name: "粉浜 花子",
+          familyName: "粉浜",
+          givenName: "花子",
+          familyNameKana: "こはま",
+          givenNameKana: "はなこ",
           nicknameKana: "はなちゃん",
           grade: 4,
           birthDate: "2016-08-20",
@@ -104,7 +110,10 @@ await withTeam(skcId, async (tx) => {
           gender: "female",
         },
         {
-          name: "北粉浜 次郎",
+          familyName: "北粉浜",
+          givenName: "次郎",
+          familyNameKana: "きたこはま",
+          givenNameKana: "じろう",
           nicknameKana: "じろう",
           grade: 2,
           birthDate: "2018-11-03",
@@ -245,7 +254,10 @@ await withTeam(otherId, async (tx) => {
     .insert(schema.children)
     .values({
       teamId: otherId,
-      name: "東 三郎",
+      familyName: "東",
+      givenName: "三郎",
+      familyNameKana: "ひがし",
+      givenNameKana: "さぶろう",
       grade: 5,
       birthDate: "2015-05-05",
       heightCm: 145,

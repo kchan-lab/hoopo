@@ -3,7 +3,9 @@ import { createFakeIdTokenVerifier } from "@hoopo/line";
 import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApi } from "../src/app";
+import { fullName } from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
+import { childNameParts } from "./child-name";
 
 // 保護者の出場メンバー API(lineups/plan.md 7b-2)を RLS 配下で検証する。
 // 編成の投入は owner 接続の SQL で行う(保存 API は 7b-1 の管理側)
@@ -54,9 +56,13 @@ async function createChild(
   grade: number,
   code: string,
 ): Promise<string> {
+  const parts = childNameParts(name);
   const [row] = await owner`
-    INSERT INTO children (team_id, name, nickname_kana, grade, gender, invite_code)
-    VALUES (${teamId}, ${name}, ${"たろう"}, ${grade}, 'male', ${code})
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          nickname_kana, grade, gender, invite_code)
+    VALUES (${teamId}, ${parts.familyName}, ${parts.givenName},
+            ${parts.familyNameKana}, ${parts.givenNameKana},
+            ${"たろう"}, ${grade}, 'male', ${code})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);
   return row.id as string;
@@ -92,7 +98,7 @@ beforeEach(async () => {
   // スターターは学年順とポジション順がずれるように作る(並びが POSITIONS 順であることの確認)
   const pg = await createChild("山田 太郎", 4, "LINEUP0001");
   const sg = await createChild("田中 蓮", 6, "LINEUP0002");
-  // ベンチは学年降順→名前(鈴木6年 → 佐藤4年)
+  // ベンチは学年降順→よみ(鈴木6年 → 佐藤4年)
   const bench1 = await createChild("佐藤 花子", 4, "LINEUP0003");
   const bench2 = await createChild("鈴木 一郎", 6, "LINEUP0004");
   await owner`
@@ -111,10 +117,15 @@ afterAll(async () => {
 interface LineupBody {
   practice: { id: string; heldOn: string; location: string | null };
   starters: {
-    child: { name: string; nicknameKana: string | null; grade: number };
+    child: {
+      familyName: string;
+      givenName: string;
+      nicknameKana: string | null;
+      grade: number;
+    };
     position: string;
   }[];
-  bench: { child: { name: string; grade: number } }[];
+  bench: { child: { familyName: string; givenName: string; grade: number } }[];
 }
 
 describe("保護者の出場メンバー API", () => {
@@ -124,14 +135,14 @@ describe("保護者の出場メンバー API", () => {
     ).toBe(401);
   });
 
-  it("スターターは POSITIONS 順、ベンチは学年降順→名前で返す", async () => {
+  it("スターターは POSITIONS 順、ベンチは学年降順→よみで返す", async () => {
     const g = await guardianClient(api());
     const res = await g(`/practices/${practiceId}/lineup`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as LineupBody;
     expect(body.practice.id).toBe(practiceId);
     expect(body.practice.location).toBe("粉浜小");
-    expect(body.starters.map((s) => [s.position, s.child.name])).toEqual([
+    expect(body.starters.map((s) => [s.position, fullName(s.child)])).toEqual([
       ["PG", "山田 太郎"],
       ["SG", "田中 蓮"],
     ]);
@@ -139,7 +150,7 @@ describe("保護者の出場メンバー API", () => {
     expect(body.starters).toHaveLength(2);
     expect(body.starters[0]?.child.grade).toBe(4);
     expect(body.starters[0]?.child.nicknameKana).toBe("たろう");
-    expect(body.bench.map((b) => b.child.name)).toEqual([
+    expect(body.bench.map((b) => fullName(b.child))).toEqual([
       "鈴木 一郎",
       "佐藤 花子",
     ]);

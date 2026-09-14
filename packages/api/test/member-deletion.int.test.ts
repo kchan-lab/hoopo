@@ -5,6 +5,7 @@ import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
+import { childNameParts } from "./child-name";
 
 // 卒団後のデータ削除 API(member-deletion/plan.md。REQUIREMENTS §5.2・§7)を RLS 配下で検証する。
 // 削除できるのは卒団(アーカイブ済み)だけ(設計判断1)、関連行は FK CASCADE で消え、
@@ -71,9 +72,13 @@ async function insertChild(
   code: string,
   options: { archived?: boolean } = {},
 ): Promise<string> {
+  const parts = childNameParts(name);
   const [row] = await owner`
-    INSERT INTO children (team_id, name, grade, gender, invite_code, archived, archived_at)
-    VALUES (${team}, ${name}, ${grade}, 'male', ${code},
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          grade, gender, invite_code, archived, archived_at)
+    VALUES (${team}, ${parts.familyName}, ${parts.givenName},
+            ${parts.familyNameKana}, ${parts.givenNameKana},
+            ${grade}, 'male', ${code},
             ${options.archived ?? false},
             ${options.archived ? ARCHIVED_AT : null})
     RETURNING id`;
@@ -133,7 +138,8 @@ async function auditRows(): Promise<AuditRow[]> {
 interface ArchivedBody {
   members: {
     id: string;
-    name: string;
+    familyName: string;
+    givenName: string;
     nicknameKana: string | null;
     grade: number;
     archivedAt: string | null;
@@ -233,7 +239,8 @@ describe("卒団した部員の一覧(GET /members/archived)", () => {
     expect(body.members).toHaveLength(1);
     expect(body.members[0]).toMatchObject({
       id: graduated,
-      name: "卒団 太郎",
+      familyName: "卒団",
+      givenName: "太郎",
       grade: 6,
       archivedAt: ARCHIVED_AT.toISOString(),
     });

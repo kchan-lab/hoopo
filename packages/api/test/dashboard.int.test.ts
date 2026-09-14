@@ -3,9 +3,11 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { hashPassword } from "../src/password";
+import { fullName } from "../src/registration-shared";
 import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { daysInMonth, monthOf, todayInTokyo } from "../src/tokyo-date";
 import { adminDeps } from "./admin-deps";
+import { childNameParts } from "./child-name";
 
 // 管理ダッシュボード API(admin-dashboard/plan.md 7c)を RLS 配下で検証する。
 // 集計は「Tokyo の今日」基準なので、練習日は固定値ではなく今日から組み立てる。
@@ -64,9 +66,13 @@ async function insertChild(
   code: string,
   options: { archived?: boolean; status?: "active" | "revoked" } = {},
 ): Promise<string> {
+  const parts = childNameParts(name);
   const [row] = await owner`
-    INSERT INTO children (team_id, name, nickname_kana, grade, gender, invite_code, status, archived)
-    VALUES (${team}, ${name}, ${"たろう"}, ${grade}, 'male', ${code},
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          nickname_kana, grade, gender, invite_code, status, archived)
+    VALUES (${team}, ${parts.familyName}, ${parts.givenName},
+            ${parts.familyNameKana}, ${parts.givenNameKana},
+            ${"たろう"}, ${grade}, 'male', ${code},
             ${options.status ?? "active"}, ${options.archived ?? false})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);
@@ -169,7 +175,8 @@ type DashboardBody = {
   fees: { unpaidCount: number; total: number };
   unansweredMembers: {
     id: string;
-    name: string;
+    familyName: string;
+    givenName: string;
     grade: number;
     unanswered: number;
   }[];
@@ -203,9 +210,15 @@ describe("ダッシュボード(GET /dashboard)", () => {
     // 月謝は「未」の部員数。アーカイブ・無効化の部員は分母にも入らない
     expect(body.fees).toEqual({ unpaidCount: 1, total: 2 });
 
-    // 未回答が1件以上ある部員だけを学年降順→名前で返す(全部回答した太郎は出ない)
+    // 未回答が1件以上ある部員だけを学年降順→よみで返す(全部回答した太郎は出ない)
     expect(body.unansweredMembers).toEqual([
-      { id: ichiro, name: "粉浜 一郎", grade: 4, unanswered: 2 },
+      {
+        id: ichiro,
+        familyName: "粉浜",
+        givenName: "一郎",
+        grade: 4,
+        unanswered: 2,
+      },
     ]);
   });
 
@@ -218,7 +231,13 @@ describe("ダッシュボード(GET /dashboard)", () => {
     expect(body.nextPractice?.partial).toBe(1);
     expect(body.nextPractice?.unanswered).toBe(0);
     expect(body.unansweredMembers).toEqual([
-      { id: ichiro, name: "粉浜 一郎", grade: 4, unanswered: 1 },
+      {
+        id: ichiro,
+        familyName: "粉浜",
+        givenName: "一郎",
+        grade: 4,
+        unanswered: 1,
+      },
     ]);
   });
 
@@ -245,6 +264,6 @@ describe("ダッシュボード(GET /dashboard)", () => {
     expect(body.nextPractice?.practice.id).not.toBe(pToday);
     expect(body.nextPractice?.unanswered).toBe(1);
     expect(body.fees).toEqual({ unpaidCount: 1, total: 1 });
-    expect(body.unansweredMembers.map((m) => m.name)).toEqual(["他 花子"]);
+    expect(body.unansweredMembers.map((m) => fullName(m))).toEqual(["他 花子"]);
   });
 });

@@ -5,7 +5,11 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // チーム編成の導線(Issue #101 受入条件)。
@@ -79,7 +83,7 @@ async function registerChildren(page: Page, names: string[]) {
   const created = await ctx.request.post(`${urls.portal}/api/children`, {
     data: {
       children: names.map((name) => ({
-        name,
+        ...childNameInput(name),
         nicknameKana: null,
         birthDate: birthDateForGrade(4),
         heightCm: heightForGrade(4),

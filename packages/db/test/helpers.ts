@@ -43,11 +43,13 @@ export async function resetAndSeedTwoTeams(
   if (!a || !b) throw new Error("チームの作成に失敗しました");
 
   const [childA] = await owner`
-    INSERT INTO children (team_id, name, grade, gender, invite_code)
-    VALUES (${a.id}, 'A子', 3, 'female', 'CODEA00001') RETURNING id`;
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          grade, gender, invite_code)
+    VALUES (${a.id}, 'あ', 'A子', 'あ', 'えーこ', 3, 'female', 'CODEA00001') RETURNING id`;
   const [childB] = await owner`
-    INSERT INTO children (team_id, name, grade, gender, invite_code)
-    VALUES (${b.id}, 'B男', 4, 'male', 'CODEB00001') RETURNING id`;
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          grade, gender, invite_code)
+    VALUES (${b.id}, 'い', 'B男', 'い', 'びーお', 4, 'male', 'CODEB00001') RETURNING id`;
   const [practiceA] = await owner`
     INSERT INTO practices (team_id, held_on, start_time, end_time)
     VALUES (${a.id}, '2026-09-05', '09:00', '12:00') RETURNING id`;
