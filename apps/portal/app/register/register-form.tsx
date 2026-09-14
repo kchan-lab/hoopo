@@ -9,8 +9,10 @@ import {
 } from "@hoopo/api/grade-shared";
 import {
   fullName,
+  GENDER_LABELS,
   type Gender,
   NAME_PART_MAX,
+  NOT_SET,
   parseNameKana,
   parseNamePart,
   RELATION_LABELS,
@@ -46,10 +48,6 @@ interface ChildDraft {
 }
 
 /** ③の表示用。①の選択ボタンと同じ文言(家族の設定の表示ともそろえる) */
-const GENDER_LABELS: Record<Gender, string> = { male: "男子", female: "女子" };
-
-/** 任意項目(呼び名・伝達事項)が空のときの表示。色ではなく文字で示す(設計判断7) */
-const NOT_SET = "未入力";
 
 const newChild = (key: number): ChildDraft => ({
   key,
@@ -496,7 +494,9 @@ export function RegisterForm() {
               <li className="row">
                 <span>呼び名(ひらがな)</span>
                 <span className="val">
-                  {k.nicknameKana === "" ? NOT_SET : k.nicknameKana}
+                  {k.nicknameKana.trim() === ""
+                    ? NOT_SET
+                    : k.nicknameKana.trim()}
                 </span>
               </li>
               <li className="row">

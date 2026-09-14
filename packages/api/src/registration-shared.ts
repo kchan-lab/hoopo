@@ -16,6 +16,13 @@ export const RELATION_LABELS: Record<Relation, string> = {
 
 export const GENDERS = ["male", "female"] as const;
 export type Gender = (typeof GENDERS)[number];
+export const GENDER_LABELS: Record<Gender, string> = {
+  male: "男子",
+  female: "女子",
+};
+
+/** 任意項目が空のときの表示(登録の確認画面・家族の設定で共通) */
+export const NOT_SET = "未入力";
 
 export const WEEKDAY_LABELS = [
   "日",
