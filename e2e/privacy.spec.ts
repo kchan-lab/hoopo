@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // プライバシーポリシーの掲示(Issue #21 前半の受入条件)。
@@ -7,7 +8,7 @@ import { urls } from "./urls";
 // ページはログイン不要の公開ページ(privacy-policy/plan.md 設計判断1)なので、
 // セッションを張らずに開けることをまず確かめる
 
-const LAST_UPDATED = "2026-09-07";
+const LAST_UPDATED = "2026-09-13";
 
 /** ホーム最下部の powered by hoopo はお子さん連携済みのときだけ出るので、team.spec と同じ手順で作る */
 async function loginAndRegisterChild(context: BrowserContext) {
@@ -21,7 +22,8 @@ async function loginAndRegisterChild(context: BrowserContext) {
         {
           name: `規約 ${randomBytes(2).toString("hex")}`,
           nicknameKana: "きやく",
-          grade: 3,
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
           gender: "male",
         },
       ],
@@ -46,6 +48,23 @@ test("ログインなしで /privacy が開き、見出しと最終更新日が�
   await expect(page).toHaveURL(/\/privacy$/);
   const cookies = await page.context().cookies();
   expect(cookies.find((c) => c.name === "hoopo_session")).toBeUndefined();
+});
+
+test("取得する情報にお子さんの生年月日・身長があり、保護者本人の生年月日は聞かないと書いてある", async ({
+  page,
+}) => {
+  // child-birthdate-height/plan.md 設計判断1: 子ども本人の生年月日・身長は保存する。
+  // 「生年月日はお聞きしません」は保護者ご本人に限る、と読めることを確かめる
+  await page.goto(`${urls.portal}/privacy`);
+  const section = page
+    .locator("section.legal")
+    .filter({ has: page.getByRole("heading", { name: "取得する情報" }) });
+  await expect(section).toContainText(
+    "お子さんの名前・呼び名(ひらがな)・生年月日・身長・性別",
+  );
+  await expect(section).toContainText("学年は生年月日から決まります");
+  await expect(section).toContainText("保護者ご本人の生年月日");
+  await expect(section).toContainText("身長は成長の記録として");
 });
 
 test("ホーム最下部のリンクからプライバシーポリシーへ遷移できる", async ({

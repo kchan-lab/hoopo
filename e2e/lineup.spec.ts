@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の出場メンバー 2D(Issue #102 受入条件)。
@@ -49,7 +50,8 @@ async function registerChildren(context: BrowserContext, names: string[]) {
       children: names.map((name) => ({
         name,
         nicknameKana: "らいん",
-        grade: 6,
+        birthDate: birthDateForGrade(6),
+        heightCm: heightForGrade(6),
         gender: "male",
       })),
       relation: "mother",

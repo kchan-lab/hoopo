@@ -152,6 +152,12 @@ a {
   border: 1px solid var(--card-hair);
   overflow: hidden;
 }
+/* ul として使う .news(家族の設定)は既定のリスト装飾を消す */
+ul.news {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 .news .row {
   padding: 10px 14px;
   font-size: 12.5px;
@@ -297,6 +303,20 @@ textarea.inbox {
 .time-range .inbox {
   flex: 1;
 }
+/* 単位付きの入力(身長の cm)。入力欄の右に単位を添える */
+.with-unit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.with-unit .inbox {
+  flex: 1;
+}
+.with-unit .unit {
+  flex: none;
+  font-size: 12px;
+  color: var(--sub);
+}
 .seg2 {
   display: flex;
   background: #eae4da;
@@ -417,6 +437,20 @@ textarea.inbox {
 .cta:disabled {
   opacity: 0.5;
   cursor: default;
+}
+/* お子さんの情報の編集(家族の設定): 入力欄を縦に積み、キャンセル / 保存 を横並びにする */
+.child-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.form-btns {
+  display: flex;
+  gap: 8px;
+}
+.form-btns .cta {
+  margin-top: 0;
+  flex: 1;
 }
 /* 連携の解除の二段階確認(7d): 質問と キャンセル/解除する を縦に積む */
 .unlink-confirm {
@@ -827,6 +861,77 @@ textarea.inbox {
 }
 .tb.center.on .orb {
   background: var(--accent);
+}
+
+/* ---- 参加予定の提出: 現在の状態(常時表示)と提出直後の成功表示(Issue #145) ---- */
+.sub-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  color: var(--sub);
+}
+/* 記号は色と併記する(色だけに頼らない) */
+.sub-state .mk,
+.sub-ok .mk {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 99px;
+  font-size: 11px;
+  line-height: 1;
+  background: var(--field);
+  color: var(--faint);
+  border: 1px solid var(--hair);
+}
+/* 提出直後だけ出る成功表示。数秒で消え、以降は .sub-state が状態を伝える */
+.sub-ok {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: var(--tint);
+  color: var(--deep);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.sub-ok .mk {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sub-state.submitted {
+  background: var(--tint);
+  border-color: transparent;
+  color: var(--deep);
+}
+.sub-state.submitted .mk {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.sub-state.changed {
+  background: var(--paper);
+  border: 1px dashed var(--accent);
+  color: var(--deep);
+}
+.sub-state.changed .mk {
+  background: var(--paper);
+  border-color: var(--accent);
+  color: var(--deep);
 }
 
 /* ---- 参加予定の提出: 一括チップ・提出行(ワイヤー10) ---- */

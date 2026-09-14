@@ -4,6 +4,7 @@ import type {
   LineMessageLogEntry,
   LineUsageSummary,
   Practice,
+  PracticePreset,
   PublishStatus,
 } from "@hoopo/api";
 import { trimTrailingSlash } from "@hoopo/api/line-shared";
@@ -12,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LineMessageLog, LineMeter } from "../line-meter";
+import { BulkCalendar } from "./bulk-calendar";
 
 // 月の練習一覧と行編集。API 契約は packages/api/admin-app.ts の /practices(CRUD)。
 // - 行は「表示」と「編集」を切り替え、保存は行単位(POST / PUT)
@@ -75,17 +77,21 @@ function toDraft(p: Practice | null, month: string): Draft {
 export function ScheduleEditor({
   month,
   monthLabel,
+  today,
   initialPractices,
   publishStatus,
   lineUsage,
   lineMessages,
+  presets,
 }: {
   month: string;
   monthLabel: string;
+  today: string;
   initialPractices: Practice[];
   publishStatus: PublishStatus;
   lineUsage: LineUsageSummary;
   lineMessages: LineMessageLogEntry[];
+  presets: PracticePreset[];
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -427,6 +433,16 @@ export function ScheduleEditor({
           </Link>
         </nav>
       </div>
+
+      {/* カレンダーからのまとめ登録(schedule-bulk-entry/plan.md 設計判断1)。
+          月が変わったら選択は引き継がないので key で作り直す */}
+      <BulkCalendar
+        key={month}
+        month={month}
+        today={today}
+        practices={initialPractices}
+        presets={presets}
+      />
 
       <div className="acard">
         {initialPractices.length === 0 && editingId !== "new" && (

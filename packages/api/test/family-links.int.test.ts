@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
+import { birthDateForGrade } from "../src/grade-shared";
 import { hashPassword } from "../src/password";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
@@ -96,7 +97,13 @@ async function coachClient(app: ReturnType<typeof adminApi>): Promise<Call> {
 
 const registration = {
   children: [
-    { name: "粉浜 太郎", nicknameKana: "たろう", grade: 4, gender: "male" },
+    {
+      name: "粉浜 太郎",
+      nicknameKana: "たろう",
+      birthDate: birthDateForGrade(4),
+      heightCm: 135,
+      gender: "male",
+    },
   ],
   relation: "father",
   weekdays: [0, 6],

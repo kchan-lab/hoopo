@@ -5,6 +5,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 出欠リマインドの手動送信(Issue #20 受入条件。attendance-reminder/plan.md)。
@@ -74,7 +75,15 @@ async function registerChild(page: Page, name: string) {
   expect(login.ok()).toBe(true);
   const created = await ctx.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name, nicknameKana: "てすと", grade: 4, gender: "male" }],
+      children: [
+        {
+          name,
+          nicknameKana: "てすと",
+          birthDate: birthDateForGrade(4),
+          heightCm: heightForGrade(4),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [6],
       startTime: "09:00",

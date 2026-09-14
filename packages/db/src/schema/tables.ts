@@ -121,6 +121,10 @@ export const children = pgTable(
     name: text("name").notNull(),
     nicknameKana: text("nickname_kana"),
     grade: smallint("grade").notNull(),
+    // 生年月日・身長(child-birthdate-height/plan.md 設計判断1・3)。学年は birth_date から
+    // 登録・編集時に算出して grade に保存する(設計判断2)。既存部員のために NULL 許容
+    birthDate: date("birth_date"),
+    heightCm: smallint("height_cm"),
     gender: text("gender").notNull(),
     coachNote: text("coach_note"),
     inviteCode: text("invite_code").notNull().unique(),
@@ -135,6 +139,10 @@ export const children = pgTable(
   (t) => [
     unique("children_id_team_id_unique").on(t.id, t.teamId),
     check("children_grade_check", sql`${t.grade} BETWEEN 1 AND 6`),
+    check(
+      "children_height_cm_check",
+      sql`${t.heightCm} IS NULL OR ${t.heightCm} BETWEEN 80 AND 220`,
+    ),
     check("children_gender_check", sql`${t.gender} IN ('male', 'female')`),
     index("children_team_id_idx").on(t.teamId),
   ],

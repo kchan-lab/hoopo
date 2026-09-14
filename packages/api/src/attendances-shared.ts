@@ -1,3 +1,5 @@
+import { formatDateTimeShort } from "./tokyo-date";
+
 // 参加予定(attendance)の定数・型・入力検証。DB 非依存(クライアントからも import 可)。
 // 3値+未回答: full=参加(全時間) / partial=途中参加・早退 / absent=不参加 / null=未回答(行なし)。
 // コメントは partial のときだけ保持する(DB の CHECK 制約と同じ規則)
@@ -110,4 +112,46 @@ export function parseSubmitAttendance(
     answers.push({ practiceId, status: status as AttendanceAnswer, comment });
   }
   return { ok: true, value: { childId, answers } };
+}
+
+/** 提出タブ上部に常時出す状態(Issue #145)。色だけに頼らないよう記号も持つ */
+export type SubmissionStateKind = "submitted" | "changed" | "unsubmitted";
+
+export interface SubmissionState {
+  kind: SubmissionStateKind;
+  /** 記号だけでも区別できるようにする(DESIGN_GUIDELINES: 色に依存しない) */
+  mark: string;
+  text: string;
+}
+
+/**
+ * 「9月分 提出済み(9/14 12:30)」/「9月分 未提出の変更があります」/「9月分 未提出」を出し分ける。
+ * dirty(画面で回答を触ったがまだ提出していない)を最優先にするのは、
+ * 古い提出日時を見て「提出済み」と誤解させないため
+ *
+ * @param month "YYYY-MM"
+ * @param submittedAt その月・そのお子さんの最終提出日時(ISO)。未提出は null
+ * @param dirty 提出後に回答を変更したか
+ */
+export function submissionState(
+  month: string,
+  submittedAt: string | null,
+  dirty: boolean,
+): SubmissionState {
+  const prefix = `${Number(month.slice(5, 7))}月分`;
+  if (dirty) {
+    return {
+      kind: "changed",
+      mark: "!",
+      text: `${prefix} 未提出の変更があります`,
+    };
+  }
+  if (submittedAt !== null) {
+    return {
+      kind: "submitted",
+      mark: "✓",
+      text: `${prefix} 提出済み(${formatDateTimeShort(submittedAt)})`,
+    };
+  }
+  return { kind: "unsubmitted", mark: "−", text: `${prefix} 未提出` };
 }

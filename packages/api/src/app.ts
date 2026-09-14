@@ -36,10 +36,12 @@ import {
   getFamily,
   linkChildByInviteCode,
   listChildrenForGuardian,
+  parseChildPatch,
   parseLink,
   parseRegistration,
   registerChildren,
   unlinkChild,
+  updateChildByGuardian,
 } from "./registration";
 import {
   createSessionToken,
@@ -206,6 +208,24 @@ export function createApi(deps: ApiDeps) {
     return c.json({ children: created }, 201);
   });
 
+  // 子ども情報の編集(家族の設定。child-birthdate-height/plan.md 設計判断5)。
+  // 学年は生年月日から再計算する。見えない子(他チーム・未連携・無効化済み)は 404
+  app.patch("/children/:id", guardian, async (c) => {
+    const childId = c.req.param("id");
+    if (!isUuid(childId)) return c.json({ error: "部員が見つかりません" }, 404);
+    const parsed = parseChildPatch(await c.req.json().catch(() => null));
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const session = c.get("session");
+    const result = await updateChildByGuardian(
+      session.teamId,
+      session.sub,
+      childId,
+      parsed.value,
+    );
+    if (!result.ok) return c.json({ error: "部員が見つかりません" }, 404);
+    return c.json({ child: result.value });
+  });
+
   // 招待コードで既存の子どもと連携(第二保護者)
   app.post("/family-links", guardian, async (c) => {
     const parsed = parseLink(await c.req.json().catch(() => null));
@@ -329,7 +349,7 @@ export function createApi(deps: ApiDeps) {
         ? c.json({ error: "お子さんが見つかりません" }, 404)
         : c.json({ error: "練習が見つかりません" }, 400);
     }
-    return c.json({ saved: result.saved });
+    return c.json({ saved: result.saved, submittedAt: result.submittedAt });
   });
 
   // ---- 月謝の確認(fees/plan.md 5a。ロジックは fees-guardian.ts) ----

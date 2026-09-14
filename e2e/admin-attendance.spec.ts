@@ -5,6 +5,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 出欠管理・欠席者管理の導線(Issue #77 受入条件)。
@@ -84,7 +85,15 @@ async function registerAndSubmit(
   expect(login.ok()).toBe(true);
   const created = await ctx.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name, nicknameKana: "てすと", grade: 4, gender: "male" }],
+      children: [
+        {
+          name,
+          nicknameKana: "てすと",
+          birthDate: birthDateForGrade(4),
+          heightCm: heightForGrade(4),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [6],
       startTime: "09:00",

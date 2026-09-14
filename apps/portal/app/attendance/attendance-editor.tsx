@@ -7,6 +7,7 @@ import {
   type AttendanceStatus,
   COMMENT_MAX,
   nextAnswer,
+  submissionState,
   UNANSWERED_LABEL,
 } from "@hoopo/api/attendances-shared";
 import {
@@ -19,7 +20,7 @@ import {
 } from "@hoopo/api/tokyo-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "../icons";
 import {
   ATTENDANCE_VIEW_COOKIE_NAME,
@@ -49,6 +50,9 @@ interface Answer {
   status: AttendanceStatus;
   comment: string | null;
 }
+
+/** 提出直後の成功表示を出しておく時間。その後は上部の常時表示(submissionState)に委ねる */
+const SUCCESS_FLASH_MS = 5000;
 
 /** 未回答は "none"(DB では行を持たない)。<select> の値としても使う */
 const NONE = "none";
@@ -80,6 +84,7 @@ export function AttendanceEditor({
   childId,
   practices,
   answers,
+  initialSubmittedAt,
 }: {
   month: string;
   initialView: ScheduleView;
@@ -87,6 +92,8 @@ export function AttendanceEditor({
   childId: string;
   practices: PracticeItem[];
   answers: Record<string, Answer>;
+  /** この月・このお子さんの最終提出日時(ISO)。未提出は null */
+  initialSubmittedAt: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<ScheduleView>(initialView);
@@ -94,6 +101,20 @@ export function AttendanceEditor({
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 月・お子さんの組み合わせごとの状態。親が key で作り直すので初期値のままで良い
+  const [submittedAt, setSubmittedAt] = useState<string | null>(
+    initialSubmittedAt,
+  );
+  // 回答を触ったら「未提出の変更があります」に変え、提出に成功したら戻す
+  const [dirty, setDirty] = useState(false);
+  const state = submissionState(month, submittedAt, dirty);
+
+  // 成功表示は数秒で消す(以降は上部の常時表示が現在の状態を伝える)
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), SUCCESS_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   const answered = practices.filter(
     (p) => (draft[p.id]?.status ?? null) !== null,
@@ -101,6 +122,7 @@ export function AttendanceEditor({
 
   function edit(practiceId: string, patch: Partial<Draft[string]>) {
     setSaved(false);
+    setDirty(true);
     setDraft((prev) => ({
       ...prev,
       [practiceId]: {
@@ -114,6 +136,7 @@ export function AttendanceEditor({
   // 一括チップ(すべて「参加」にする / 未回答に戻す)
   function bulk(status: AttendanceAnswer) {
     setSaved(false);
+    setDirty(true);
     setDraft((prev) => {
       const next: Draft = {};
       for (const p of practices) {
@@ -146,6 +169,13 @@ export function AttendanceEditor({
         }),
       });
       if (res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          submittedAt?: string | null;
+        } | null;
+        // サーバーが返した保存後の日時をそのまま使う(再取得を待たず即時に正しく出せる)。
+        // 本文が読めなかったときだけ、直前の表示を保つ(誤って「未提出」に戻さない)
+        if (body) setSubmittedAt(body.submittedAt ?? null);
+        setDirty(false);
         setSaved(true);
         setSubmitting(false);
         router.refresh();
@@ -177,6 +207,7 @@ export function AttendanceEditor({
     if (!head) return;
     const next = nextAnswer(draft[head.id]?.status ?? null);
     setSaved(false);
+    setDirty(true);
     setDraft((prev) => {
       const updated = { ...prev };
       for (const p of list) {
@@ -223,6 +254,15 @@ export function AttendanceEditor({
             <Icon name="chevr" />
           </Link>
         </nav>
+
+        {practices.length > 0 && (
+          <p className={`sub-state ${state.kind}`}>
+            <span className="mk" aria-hidden="true">
+              {state.mark}
+            </span>
+            {state.text}
+          </p>
+        )}
 
         {error !== null && (
           <p className="err" role="alert">
@@ -375,7 +415,10 @@ export function AttendanceEditor({
         {practices.length > 0 && (
           <>
             {saved && (
-              <p className="sync" role="status">
+              <p className="sub-ok" role="status">
+                <span className="mk" aria-hidden="true">
+                  ✓
+                </span>
                 提出しました
               </p>
             )}

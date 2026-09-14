@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { birthDateForGrade, heightForGrade } from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の参加予定の提出(Issue #76 受入条件)。
@@ -38,7 +39,14 @@ async function registerChildAsNewGuardian(
   expect(login.ok()).toBe(true);
   const res = await context.request.post(`${urls.portal}/api/children`, {
     data: {
-      children: [{ name, grade: 3, gender: "male" }],
+      children: [
+        {
+          name,
+          birthDate: birthDateForGrade(3),
+          heightCm: heightForGrade(3),
+          gender: "male",
+        },
+      ],
       relation: "father",
       weekdays: [0, 6],
       startTime: "09:00",
@@ -124,6 +132,74 @@ test("リストで提出 → 再表示で保持され、カレンダーと同期
   await page.getByRole("button", { name: "未回答に戻す" }).click();
   await expect(page.locator(".cta")).toContainText("( 回答 0 / 2 件 )");
   await expect(rows.first().locator("select")).toHaveValue("none");
+});
+
+test("提出の状態が画面上部に常時出て、変更・提出で切り替わる(Issue #145)", async ({
+  browser,
+  page,
+}) => {
+  const tag = randomBytes(2).toString("hex");
+  const month = uniqueMonth();
+  const monthNo = Number(month.slice(5));
+  const coach = await browser.newContext();
+  await createPracticeAsCoach(coach, `${month}-10`, `体育館C ${tag}`);
+  await coach.close();
+
+  await registerChildAsNewGuardian(page.context(), `状態 太郎 ${tag}`);
+  await page.goto(`${urls.portal}/attendance?month=${month}`);
+
+  // 未提出(記号つき。色だけに頼らない)
+  const state = page.locator(".sub-state");
+  await expect(state).toHaveClass(/unsubmitted/);
+  await expect(state).toContainText(`${monthNo}月分 未提出`);
+
+  // 回答を触っただけでは「未提出の変更があります」
+  await page
+    .locator(".sbr")
+    .first()
+    .locator("select")
+    .selectOption({ label: "参加(全時間)" });
+  await expect(state).toHaveClass(/changed/);
+  await expect(state).toContainText(`${monthNo}月分 未提出の変更があります`);
+
+  // 提出すると成功表示(role="status")が出て、上部は「提出済み(日時)」になる
+  await page.getByRole("button", { name: "この内容で提出する" }).click();
+  const flash = page.getByRole("status");
+  await expect(flash).toContainText("提出しました");
+  await expect(state).toHaveClass(/submitted/);
+  await expect(state).toContainText(`${monthNo}月分 提出済み(`);
+  // 成功表示は数秒で消え、以降は上部の常時表示が状態を伝える
+  await expect(flash).toBeHidden({ timeout: 15000 });
+  await expect(state).toContainText(`${monthNo}月分 提出済み(`);
+
+  // 再訪しても「提出済み(日時)」が残る
+  await page.reload();
+  const reloaded = page.locator(".sub-state");
+  await expect(reloaded).toHaveClass(/submitted/);
+  await expect(reloaded).toContainText(`${monthNo}月分 提出済み(`);
+
+  // 提出後に回答を変えると、また「未提出の変更があります」に戻る
+  await page
+    .locator(".sbr")
+    .first()
+    .locator("select")
+    .selectOption({ label: "不参加" });
+  await expect(reloaded).toHaveClass(/changed/);
+  await expect(reloaded).toContainText(`${monthNo}月分 未提出の変更があります`);
+
+  // 月を移ると、その月の状態を出す(練習が無い月は状態表示ごと出ない)
+  await page.getByRole("link", { name: "前の月" }).click();
+  await expect(page.locator("main")).toContainText(
+    "の練習はまだ登録されていません",
+  );
+  await expect(page.locator(".sub-state")).toHaveCount(0);
+
+  // 戻ると、提出済みのまま(未提出の変更は保存していないので残らない)
+  await page.getByRole("link", { name: "次の月" }).click();
+  await expect(page.locator(".sub-state")).toHaveClass(/submitted/);
+  await expect(page.locator(".sbr").first().locator("select")).toHaveValue(
+    "full",
+  );
 });
 
 test("ホームに今月の未提出アラートが出て、提出画面へ移動できる", async ({
