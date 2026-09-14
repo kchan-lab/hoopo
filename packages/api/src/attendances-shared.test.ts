@@ -119,7 +119,7 @@ describe("submissionState(提出タブ上部の常時表示)", () => {
       submissionState("2026-09", "2026-09-14T03:30:00.000Z", false, 1),
     ).toEqual({
       kind: "partial",
-      mark: "!",
+      mark: "?",
       text: "9月分 未回答が1件あります(提出済み 9/14 12:30)",
     });
     expect(

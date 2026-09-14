@@ -160,7 +160,9 @@ export function submissionState(
     if (unanswered > 0) {
       return {
         kind: "partial",
-        mark: "!",
+        // 「!」(未提出の変更あり)と記号でも見分けられるようにする。
+        // 未回答は「まだ答えていない」ので ?(レビュー指摘 #156)
+        mark: "?",
         text: `${prefix} 未回答が${unanswered}件あります(提出済み ${formatDateTimeShort(submittedAt)})`,
       };
     }
