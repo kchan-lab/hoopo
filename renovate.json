@@ -38,8 +38,9 @@
     "schedule": ["* 0-7 * * 1"]
   },
   "vulnerabilityAlerts": {
-    "description": "脆弱性由来の更新はスケジュールと待機期間を無視して即座に PR を出す(公開直後は pnpm の供給網チェックで CI が落ちるため、24 時間後に再実行する)",
+    "description": "脆弱性由来の更新はスケジュールと待機期間を無視して即座に PR を出し、最優先(p1)として扱う。公開直後は pnpm の供給網チェック(公開から24時間)で CI が落ちるため、その場合は Renovate の次回実行で lockfile が作り直されるのを待つか、CI を手で再実行する",
     "schedule": ["at any time"],
-    "minimumReleaseAge": null
+    "minimumReleaseAge": null,
+    "labels": ["p1"]
   }
 }
