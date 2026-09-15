@@ -24,7 +24,7 @@
 
 - [ ] Supabase プロジェクト作成 → Drizzle でスキーマ(確定ER図の通り)+ RLSポリシー + シードデータ
 - [ ] Vercel に portal / admin の2プロジェクトを接続(モノレポの Root Directory 設定)
-- [ ] Cloudflare でドメイン取得 → Vercel へ CNAME
+- [x] ドメイン取得(`hoopo.jp` / ムームードメイン)→ Vercel へ CNAME(2026-09-16)
 - [ ] LINE Developers: チャネル開設 → LIFF登録 → Botをテスト用グループに招待し Webhook で groupId 取得(詳細は別紙手順書)
 - [ ] Sentry / UptimeRobot / Discord Webhook(アラート用)を接続
 

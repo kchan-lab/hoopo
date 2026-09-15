@@ -10,7 +10,8 @@ UI規範は `docs/DESIGN_GUIDELINES.md` を正とする。仕様変更はまず�
 
 ## 絶対原則(違反する実装は提案しない)
 
-1. **ランニングコスト原則ゼロ。** Vercel Hobby + Supabase Free + Cloudflare(ドメイン/R2)の無料枠内で動かす。
+1. **ランニングコスト原則ゼロ。** Vercel Hobby + Supabase Free + Cloudflare R2(バックアップ)の無料枠内で動かす。
+   固定費はドメイン(`hoopo.jp`・ムームードメイン)の更新料のみ。
    有料化が必要な設計変更は必ず事前に相談として提示する。月5,000円は明確に予算オーバー。
 2. **保護者の操作負担を最小に。** LINEグループのLIFFリンクをタップ→自動ログインが基本導線。
    メール登録・パスワード・重複入力を保護者に求めない。入力は初回登録の1回だけ。
@@ -30,7 +31,8 @@ UI規範は `docs/DESIGN_GUIDELINES.md` を正とする。仕様変更はまず�
 - 言語: **TypeScript一本**(strict)。フォーマット/リント: **Biome**
 - DB: **Supabase (PostgreSQL)** + **Drizzle ORM**(マイグレーションはDrizzle Kitで管理、`supabase db push` 禁止run手動SQL禁止)
 - 認証: **LIFF / LINEログイン**(保護者)、LINEまたはメール+パスワード(管理者)。セッションはhttpOnly Cookie
-- ホスティング: **Vercel**(Hobby)。ドメインはCloudflare Registrar、DNSはCloudflare
+- ホスティング: **Vercel**(Hobby)。ドメインは **`hoopo.jp`(ムームードメインで取得・DNS もムームー DNS)**。
+  Cloudflare Registrar は `.jp` を扱っていないため使わない(R2 はバックアップ先として別途利用)
 - 画像: 予定表はDBから**動的生成**(satori / @vercel/og)。保存が必要な場合のみ Supabase Storage → 将来R2
 - 監視/運用: Sentry、UptimeRobot(死活)、アラートはDiscord Webhook(**LINE Notifyは終了済みのため使用不可**)
 - CI/CD: GitHub Actions(型/リント/テスト/E2E/マイグレーション整合)、Renovate、デプロイはVercel連携
@@ -78,7 +80,7 @@ docs/              … REQUIREMENTS.md / DESIGN_GUIDELINES.md ほか
 - 保護者アプリへのパスワード/メール認証の導入
 - localStorage 依存の状態管理(セッションはCookie、状態はDB)
 - `team_id` なしのテーブル追加、RLSなしのテーブル公開
-- お名前.com の利用、Fly.io 等の常時課金インフラの追加
+- お名前.com の利用、Fly.io 等の常時課金インフラの追加(ドメインはムームードメインの `hoopo.jp` を使う)
 - 決済機能・キャッシュレス連携の実装
 
 ## 実装フェーズの進め方(Claude Code)
