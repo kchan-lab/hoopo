@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApi } from "../src/app";
 import { birthDateForGrade } from "../src/grade-shared";
+import { fullName } from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 保護者の参加予定 API(attendance/plan.md 4a)を RLS 配下で検証する。
@@ -60,14 +61,20 @@ function json(app: ReturnType<typeof api>, cookie: string) {
 const registration = {
   children: [
     {
-      name: "粉浜 太郎",
+      familyName: "粉浜",
+      givenName: "太郎",
+      familyNameKana: "こはま",
+      givenNameKana: "たろう",
       nicknameKana: "たろう",
       birthDate: birthDateForGrade(4),
       heightCm: 135,
       gender: "male",
     },
     {
-      name: "粉浜 花子",
+      familyName: "粉浜",
+      givenName: "花子",
+      familyNameKana: "こはま",
+      givenNameKana: "はなこ",
       nicknameKana: null,
       birthDate: birthDateForGrade(2),
       heightCm: 120,
@@ -83,7 +90,7 @@ const registration = {
 
 interface Sheet {
   month: string;
-  children: { id: string; name: string }[];
+  children: { id: string; familyName: string; givenName: string }[];
   practices: { id: string; heldOn: string }[];
   answers: Record<
     string,
@@ -149,7 +156,7 @@ describe("提出シート(GET /attendance)", () => {
       await call("/attendance?month=2099-05", "GET")
     ).json()) as Sheet;
     expect(sheet.month).toBe("2099-05");
-    expect(sheet.children.map((c) => c.name)).toEqual([
+    expect(sheet.children.map((c) => fullName(c))).toEqual([
       "粉浜 太郎",
       "粉浜 花子",
     ]);

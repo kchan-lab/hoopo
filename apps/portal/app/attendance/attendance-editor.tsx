@@ -10,6 +10,7 @@ import {
   submissionState,
   UNANSWERED_LABEL,
 } from "@hoopo/api/attendances-shared";
+import { fullName } from "@hoopo/api/shared";
 import {
   addMonths,
   formatDateLabel,
@@ -43,7 +44,8 @@ interface PracticeItem {
 
 interface ChildItem {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
 }
 
 interface Answer {
@@ -107,7 +109,6 @@ export function AttendanceEditor({
   );
   // 回答を触ったら「未提出の変更があります」に変え、提出に成功したら戻す
   const [dirty, setDirty] = useState(false);
-  const state = submissionState(month, submittedAt, dirty);
 
   // 成功表示は数秒で消す(以降は上部の常時表示が現在の状態を伝える)
   useEffect(() => {
@@ -119,6 +120,13 @@ export function AttendanceEditor({
   const answered = practices.filter(
     (p) => (draft[p.id]?.status ?? null) !== null,
   ).length;
+  // 提出後に練習日が増えると未回答が生まれるので、件数も見て状態を決める(Issue #154)
+  const state = submissionState(
+    month,
+    submittedAt,
+    dirty,
+    practices.length - answered,
+  );
 
   function edit(practiceId: string, patch: Partial<Draft[string]>) {
     setSaved(false);
@@ -239,7 +247,7 @@ export function AttendanceEditor({
                 href={hrefFor(month, c.id)}
                 aria-current={c.id === childId ? "true" : undefined}
               >
-                {c.name}
+                {fullName(c)}
               </Link>
             ))}
           </nav>

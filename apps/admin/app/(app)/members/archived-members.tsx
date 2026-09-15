@@ -2,6 +2,7 @@
 
 import type { ArchivedMemberRow } from "@hoopo/api";
 import { formatDateTokyo } from "@hoopo/api/audit-shared";
+import { fullName } from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -49,16 +50,16 @@ export function ArchivedMembers({ members }: { members: ArchivedMemberRow[] }) {
       ) : (
         members.map((m) => (
           <div className="arow gone" key={m.id}>
-            <b>{m.name}</b>
+            <b>{fullName(m)}</b>
             <span>
               {m.grade}年 / 卒団{" "}
               {m.archivedAt === null ? "−" : formatDateTokyo(m.archivedAt)}
             </span>
             {confirmId === m.id ? (
               <fieldset className="confirm">
-                <legend className="sr-only">{`${m.name}のデータを削除する確認`}</legend>
+                <legend className="sr-only">{`${fullName(m)}のデータを削除する確認`}</legend>
                 <span className="q">
-                  {`${m.name}のデータを削除します。削除すると元に戻せません。紐づく保護者の登録も、他にお子さんがいなければ削除されます。削除しますか?`}
+                  {`${fullName(m)}のデータを削除します。削除すると元に戻せません。紐づく保護者の登録も、他にお子さんがいなければ削除されます。削除しますか?`}
                 </span>
                 <button
                   type="button"

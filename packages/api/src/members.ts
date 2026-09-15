@@ -10,7 +10,12 @@ import {
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { AUDIT_LOG_DEFAULT_LIMIT, clampAuditLimit } from "./audit-shared";
 import { applyChildPatch, type UpdateChildResult } from "./registration";
-import type { ChildPatch, Gender, Relation } from "./registration-shared";
+import {
+  type ChildPatch,
+  fullName,
+  type Gender,
+  type Relation,
+} from "./registration-shared";
 import { isUuid } from "./uuid";
 
 // 管理側の認定管理・部員管理(child-registration/plan.md 12b)。
@@ -23,6 +28,7 @@ export interface RegistrationEntry {
   key: string;
   kind: RegistrationKind;
   childId: string;
+  /** 表示用のフルネーム(fullName()。child-name-split/plan.md 設計判断3) */
   childName: string;
   grade: number;
   /** link のときの連携した保護者(child は登録した保護者) */
@@ -41,18 +47,20 @@ export async function listRegistrations(
     const kids = await tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
         grade: children.grade,
         status: children.status,
         createdAt: children.createdAt,
       })
       .from(children)
       .where(eq(children.archived, false))
-      // 同時登録の兄弟は created_at が同一なので学年降順→名前で安定させる(registration.ts と同じ規則)
+      // 同時登録の兄弟は created_at が同一なので学年降順→姓のよみ→名のよみで安定させる(registration.ts と同じ規則)
       .orderBy(
         asc(children.createdAt),
         desc(children.grade),
-        asc(children.name),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
       );
     const links = await tx
       .select({
@@ -74,7 +82,7 @@ export async function listRegistrations(
         key: k.id,
         kind: "child",
         childId: k.id,
-        childName: k.name,
+        childName: fullName(k),
         grade: k.grade,
         guardianId: registrant?.guardianId ?? null,
         relation: (registrant?.relation as Relation | undefined) ?? null,
@@ -86,7 +94,7 @@ export async function listRegistrations(
           key: `${l.guardianId}:${l.childId}`,
           kind: "link",
           childId: k.id,
-          childName: k.name,
+          childName: fullName(k),
           grade: k.grade,
           guardianId: l.guardianId,
           relation: l.relation as Relation,
@@ -95,7 +103,7 @@ export async function listRegistrations(
         });
       }
     }
-    // 新着順。同時刻は上の kids / links の取得順(学年降順→名前、連携は作成順)を保つ安定ソート
+    // 新着順。同時刻は上の kids / links の取得順(学年降順→姓のよみ→名のよみ、連携は作成順)を保つ安定ソート
     return entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }
@@ -163,7 +171,10 @@ export async function revokeRegistration(
 
 export interface MemberRow {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
+  familyNameKana: string;
+  givenNameKana: string;
   nicknameKana: string | null;
   grade: number;
   /** "YYYY-MM-DD"。0010 より前に登録された部員は null(child-birthdate-height/plan.md 設計判断3) */
@@ -183,7 +194,10 @@ export async function listMembers(teamId: string): Promise<MemberRow[]> {
     const rows = await tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
+        familyNameKana: children.familyNameKana,
+        givenNameKana: children.givenNameKana,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
         birthDate: children.birthDate,
@@ -198,7 +212,11 @@ export async function listMembers(teamId: string): Promise<MemberRow[]> {
       })
       .from(children)
       .where(and(eq(children.archived, false), eq(children.status, "active")))
-      .orderBy(desc(children.grade), asc(children.name));
+      .orderBy(
+        desc(children.grade),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
+      );
     if (rows.length === 0) return [];
     const slots = await tx
       .select({
@@ -220,7 +238,10 @@ export async function listMembers(teamId: string): Promise<MemberRow[]> {
       );
     return rows.map((r) => ({
       id: r.id,
-      name: r.name,
+      familyName: r.familyName,
+      givenName: r.givenName,
+      familyNameKana: r.familyNameKana,
+      givenNameKana: r.givenNameKana,
       nicknameKana: r.nicknameKana,
       grade: r.grade,
       birthDate: r.birthDate,
@@ -264,7 +285,8 @@ export async function updateMemberByCoach(
 
 export interface ArchivedMemberRow {
   id: string;
-  name: string;
+  familyName: string;
+  givenName: string;
   nicknameKana: string | null;
   grade: number;
   /** 卒団日(ISO)。年度更新を経ずにアーカイブされた古いデータでは null */
@@ -279,18 +301,24 @@ export async function listArchivedMembers(
     const rows = await tx
       .select({
         id: children.id,
-        name: children.name,
+        familyName: children.familyName,
+        givenName: children.givenName,
         nicknameKana: children.nicknameKana,
         grade: children.grade,
         archivedAt: children.archivedAt,
       })
       .from(children)
       .where(eq(children.archived, true))
-      // 同じ年度更新で卒団した部員は archived_at が同一なので名前で安定させる
-      .orderBy(desc(children.archivedAt), asc(children.name));
+      // 同じ年度更新で卒団した部員は archived_at が同一なので姓のよみ→名のよみで安定させる
+      .orderBy(
+        desc(children.archivedAt),
+        asc(children.familyNameKana),
+        asc(children.givenNameKana),
+      );
     return rows.map((r) => ({
       id: r.id,
-      name: r.name,
+      familyName: r.familyName,
+      givenName: r.givenName,
       nicknameKana: r.nicknameKana,
       grade: r.grade,
       archivedAt: r.archivedAt?.toISOString() ?? null,

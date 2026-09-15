@@ -48,7 +48,7 @@ describe("① 越境の遮断(SELECT/INSERT/UPDATE/DELETE)", () => {
   it("SELECT: 自チームの行だけが見える", async () => {
     const rows = await withTeam(fx.teamA, (tx) => tx.select().from(children));
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.name).toBe("A子");
+    expect(rows[0]?.givenName).toBe("A子");
   });
 
   it("INSERT: 他チームの team_id を指定した行は作れない(WITH CHECK)", async () => {
@@ -56,7 +56,10 @@ describe("① 越境の遮断(SELECT/INSERT/UPDATE/DELETE)", () => {
       withTeam(fx.teamA, (tx) =>
         tx.insert(children).values({
           teamId: fx.teamB,
-          name: "越境 太郎",
+          familyName: "越境",
+          givenName: "太郎",
+          familyNameKana: "えっきょう",
+          givenNameKana: "たろう",
           grade: 1,
           gender: "male",
           inviteCode: "XBORDER001",
@@ -69,12 +72,12 @@ describe("① 越境の遮断(SELECT/INSERT/UPDATE/DELETE)", () => {
   it("UPDATE: 他チームの行は更新できない(0件)", async () => {
     await withTeam(fx.teamA, async (tx) => {
       await tx.execute(
-        sql`UPDATE children SET name = '書き換え' WHERE id = ${fx.childB}`,
+        sql`UPDATE children SET given_name = '書き換え' WHERE id = ${fx.childB}`,
       );
     });
     const [row] =
-      await owner`SELECT name FROM children WHERE id = ${fx.childB}`;
-    expect(row?.name).toBe("B男");
+      await owner`SELECT given_name FROM children WHERE id = ${fx.childB}`;
+    expect(row?.given_name).toBe("B男");
   });
 
   it("DELETE: 他チームの行は削除できない(0件)", async () => {
@@ -109,8 +112,9 @@ describe("③ コンテキスト未設定時は全遮断(fail-closed)", () => {
 
   it("set_config なしでは INSERT も拒否される", async () => {
     await expect(
-      app`INSERT INTO children (team_id, name, grade, gender, invite_code)
-          VALUES (${fx.teamA}, 'X', 1, 'male', 'XNOCTX0001')`,
+      app`INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                                given_name_kana, grade, gender, invite_code)
+          VALUES (${fx.teamA}, 'X', 'Y', 'えっくす', 'わい', 1, 'male', 'XNOCTX0001')`,
     ).rejects.toThrow(/row-level security/);
   });
 });

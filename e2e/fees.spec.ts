@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の月謝確認(Issue #81 受入条件)。
@@ -23,7 +27,7 @@ async function registerChildAsNewGuardian(
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
           gender: "male",

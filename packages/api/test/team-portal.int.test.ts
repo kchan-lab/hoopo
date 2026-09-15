@@ -3,6 +3,7 @@ import { createFakeIdTokenVerifier } from "@hoopo/line";
 import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApi } from "../src/app";
+import { fullName } from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 保護者のチーム名簿 API(team-roster/plan.md 7a)を RLS 配下で検証する
@@ -42,9 +43,12 @@ async function guardianClient(app: ReturnType<typeof api>) {
     });
 }
 
+// name / kana はどちらも「姓 名」形式で渡し、ここで分割して 4 列に入れる
+// (child-name-split/plan.md 設計判断1・2)。並びは kana で決まる
 async function insertChild(
   team: string,
   name: string,
+  kana: string,
   grade: number,
   code: string,
   options: {
@@ -53,16 +57,22 @@ async function insertChild(
     nicknameKana?: string | null;
   } = {},
 ): Promise<void> {
+  const [familyName, givenName] = name.split(" ");
+  const [familyNameKana, givenNameKana] = kana.split(" ");
   await owner`
-    INSERT INTO children (team_id, name, nickname_kana, grade, gender, invite_code, status, archived)
-    VALUES (${team}, ${name}, ${options.nicknameKana === undefined ? "はな" : options.nicknameKana},
+    INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
+                          nickname_kana, grade, gender, invite_code, status, archived)
+    VALUES (${team}, ${familyName ?? ""}, ${givenName ?? ""},
+            ${familyNameKana ?? ""}, ${givenNameKana ?? ""},
+            ${options.nicknameKana === undefined ? "はな" : options.nicknameKana},
             ${grade}, 'female', ${code}, ${options.status ?? "active"}, ${options.archived ?? false})`;
 }
 
 type MembersBody = {
   members: {
     id: string;
-    name: string;
+    familyName: string;
+    givenName: string;
     nicknameKana: string | null;
     grade: number;
   }[];
@@ -81,20 +91,22 @@ beforeEach(async () => {
   teamId = a.id;
   otherTeamId = b.id;
 
-  // 学年降順→名前。同学年は「一郎 < 二郎」で名前順を検証する
-  await insertChild(teamId, "粉浜 二郎", 4, "TEAM000002");
-  await insertChild(teamId, "粉浜 太郎", 6, "TEAM000001");
+  // 学年降順→よみ。同学年は「いちろう < じろう」で五十音順を検証する
+  await insertChild(teamId, "粉浜 二郎", "こはま じろう", 4, "TEAM000002");
+  await insertChild(teamId, "粉浜 太郎", "こはま たろう", 6, "TEAM000001");
   // 呼び名なし(null)の部員も一覧に出る
-  await insertChild(teamId, "粉浜 一郎", 4, "TEAM000003", {
+  await insertChild(teamId, "粉浜 一郎", "こはま いちろう", 4, "TEAM000003", {
     nicknameKana: null,
   });
   // 卒団アーカイブ済み・無効化済みは名簿に出さない
-  await insertChild(teamId, "粉浜 卒郎", 6, "TEAM000004", { archived: true });
-  await insertChild(teamId, "粉浜 無郎", 5, "TEAM000005", {
+  await insertChild(teamId, "粉浜 卒郎", "こはま そつろう", 6, "TEAM000004", {
+    archived: true,
+  });
+  await insertChild(teamId, "粉浜 無郎", "こはま むろう", 5, "TEAM000005", {
     status: "revoked",
   });
   // 他チームの部員(RLS で見えないこと)
-  await insertChild(otherTeamId, "他町 花子", 6, "TEAM000006");
+  await insertChild(otherTeamId, "他町 花子", "たまち はなこ", 6, "TEAM000006");
 });
 
 afterAll(async () => {
@@ -107,25 +119,25 @@ describe("保護者のチーム名簿 API", () => {
     expect((await api().request("/team/members")).status).toBe(401);
   });
 
-  it("学年降順→名前で並び、アーカイブ・無効化・他チームは出ない", async () => {
+  it("学年降順→よみで並び、アーカイブ・無効化・他チームは出ない", async () => {
     const g = await guardianClient(api());
     const res = await g("/team/members");
     expect(res.status).toBe(200);
     const body = (await res.json()) as MembersBody;
-    expect(body.members.map((m) => [m.name, m.grade])).toEqual([
+    expect(body.members.map((m) => [fullName(m), m.grade])).toEqual([
       ["粉浜 太郎", 6],
       ["粉浜 一郎", 4],
       ["粉浜 二郎", 4],
     ]);
     expect(body.members[0]?.nicknameKana).toBe("はな");
     expect(
-      body.members.find((m) => m.name === "粉浜 一郎")?.nicknameKana,
+      body.members.find((m) => fullName(m) === "粉浜 一郎")?.nicknameKana,
     ).toBeNull();
   });
 
   it("他チームのセッションでは自チームの部員だけが見える", async () => {
     const g = await guardianClient(api(otherTeamId));
     const body = (await (await g("/team/members")).json()) as MembersBody;
-    expect(body.members.map((m) => m.name)).toEqual(["他町 花子"]);
+    expect(body.members.map((m) => fullName(m))).toEqual(["他町 花子"]);
   });
 });

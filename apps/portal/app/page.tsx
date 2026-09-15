@@ -2,12 +2,14 @@ import {
   formatDateLabel,
   formatShortDate,
   formatTimeShort,
+  fullName,
   getNextPractice,
   getUnansweredSummary,
   HOME_ANNOUNCEMENT_LIMIT,
   listChildrenForGuardian,
   listPublishedAnnouncements,
   monthOf,
+  nameInitial,
   todayInTokyo,
 } from "@hoopo/api";
 import Link from "next/link";
@@ -65,7 +67,7 @@ export default async function Home() {
           <div className="divider">または</div>
           <Link href="/register" className="card choice">
             お子さんを新しく登録する
-            <small>登録画面(1/2)へ進みます</small>
+            <small>登録画面(1/3)へ進みます</small>
           </Link>
           {/* 登録前に方針を読めるようにする(privacy-policy/plan.md 設計判断1) */}
           <p className="legal-link">
@@ -100,7 +102,7 @@ export default async function Home() {
             {TEAM_NAME[1]}
           </h1>
           <span className="avatar" aria-hidden="true">
-            {first?.name.charAt(0)}
+            {first ? nameInitial(first) : ""}
           </span>
         </div>
       </header>
@@ -135,7 +137,7 @@ export default async function Home() {
           {children.map((c) => (
             <li key={c.id} className="row">
               <span>
-                {c.name}
+                {fullName(c)}
                 {c.nicknameKana && (
                   <span className="meta" style={{ marginLeft: 6 }}>
                     {c.nicknameKana}

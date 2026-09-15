@@ -25,3 +25,39 @@ export function birthDateForGrade(
 export function heightForGrade(grade: number): number {
   return 110 + grade * 5;
 }
+
+/** 登録 API に渡す名前の4項目(child-name-split/plan.md 設計判断1・2) */
+export interface ChildNameInput {
+  familyName: string;
+  givenName: string;
+  familyNameKana: string;
+  givenNameKana: string;
+}
+
+/**
+ * 表示名("名簿 ab12" のような「姓 名」)から登録 API のフィールドを作る。
+ * 画面に出るのは漢字のフルネーム(fullName)なので、期待値は表示名のまま使える。
+ * よみはひらがな必須なので既定値を入れる。並び順(学年降順→姓のよみ→名のよみ)を
+ * 検証したいテストは kana を「姓のよみ 名のよみ」で明示する
+ */
+export function childNameInput(
+  display: string,
+  kana = "てすと たろう",
+): ChildNameInput {
+  const [familyName, ...rest] = display.split(" ");
+  const [familyNameKana, ...restKana] = kana.split(" ");
+  return {
+    familyName: familyName ?? display,
+    givenName: rest.join(" ") || display,
+    familyNameKana: familyNameKana ?? "てすと",
+    givenNameKana: restKana.join(" ") || "たろう",
+  };
+}
+
+/** API 応答の姓・名から表示名を組み立てる(packages/api の fullName と同じ規則) */
+export function fullName(child: {
+  familyName: string;
+  givenName: string;
+}): string {
+  return `${child.familyName} ${child.givenName}`;
+}

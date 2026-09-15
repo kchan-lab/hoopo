@@ -1,4 +1,11 @@
-import { COURT_SPOTS, formatDateLabel, getLineup, isUuid } from "@hoopo/api";
+import {
+  COURT_SPOTS,
+  formatDateLabel,
+  fullName,
+  getLineup,
+  isUuid,
+  nameInitial,
+} from "@hoopo/api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getGuardianSession } from "../../../../lib/session";
@@ -10,13 +17,8 @@ export const dynamic = "force-dynamic";
 // 出場メンバー(2D)(REQUIREMENTS §4.2-5・§4.2-7。ワイヤー8)。
 // コートは「リングを下」にした向き = 基準 SVG(viewBox 300×316)を180度回転する(DESIGN §1.3)。
 // チップは回転させないので、配置は COURT_SPOTS(left/top %)で絶対配置する。
-// 顔写真は未対応(§9 の合意待ち)なので名簿と同じ頭文字アバターで代替する。
+// 顔写真は未対応(§9 の合意待ち)なので名簿と同じ頭文字アバター(姓の先頭1文字)で代替する。
 // 3D(§4.2-7)は後追いなのでタブは無効表示のみ
-
-/** 頭文字アバター。氏名の先頭1文字 */
-function initial(name: string): string {
-  return Array.from(name)[0] ?? "?";
-}
 
 /** 「8/16 (日) 練習試合 — スターティングメンバー」。備考があれば場所より優先する */
 function caption(
@@ -142,10 +144,10 @@ export default async function LineupPage({
                 style={{ left: `${spot.left}%`, top: `${spot.top}%` }}
               >
                 <div className="ini">
-                  {initial(s.child.name)}
+                  {nameInitial(s.child)}
                   <span className="pos">{s.position}</span>
                 </div>
-                <div className="nm">{s.child.name}</div>
+                <div className="nm">{fullName(s.child)}</div>
               </div>
             );
           })}
@@ -158,9 +160,9 @@ export default async function LineupPage({
               {bench.map((b) => (
                 <div key={b.child.id} className="bp">
                   <div className="ini" aria-hidden="true">
-                    {initial(b.child.name)}
+                    {nameInitial(b.child)}
                   </div>
-                  <div className="nm">{b.child.name}</div>
+                  <div className="nm">{fullName(b.child)}</div>
                 </div>
               ))}
             </div>
