@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/kchan-lab/hoopo/compare/v0.2.0...v0.3.0) (2026-09-15)
+
+
+### Features
+
+* お子さんの名前を姓と名に分け、よみで五十音順に並べる ([#158](https://github.com/kchan-lab/hoopo/issues/158)) ([701472a](https://github.com/kchan-lab/hoopo/commit/701472a1263c42f209e59d6e981ef8794be1f3a5))
+* 初回登録に確認画面を挟む ([#159](https://github.com/kchan-lab/hoopo/issues/159)) ([469d65c](https://github.com/kchan-lab/hoopo/commit/469d65cc06927e322b3fc011503738bbdb950d9d))
+
+
+### Bug Fixes
+
+* 提出後に練習日が増えたら未回答があると分かるようにする ([#156](https://github.com/kchan-lab/hoopo/issues/156)) ([71678e8](https://github.com/kchan-lab/hoopo/commit/71678e8dc86f1d7860f3414a185eafa74268aaf8))
+
 ## [0.2.0](https://github.com/kchan-lab/hoopo/compare/v0.1.0...v0.2.0) (2026-09-14)
 
 
