@@ -115,7 +115,11 @@ export function parseSubmitAttendance(
 }
 
 /** 提出タブ上部に常時出す状態(Issue #145)。色だけに頼らないよう記号も持つ */
-export type SubmissionStateKind = "submitted" | "changed" | "unsubmitted";
+export type SubmissionStateKind =
+  | "submitted"
+  | "partial"
+  | "changed"
+  | "unsubmitted";
 
 export interface SubmissionState {
   kind: SubmissionStateKind;
@@ -125,18 +129,24 @@ export interface SubmissionState {
 }
 
 /**
- * 「9月分 提出済み(9/14 12:30)」/「9月分 未提出の変更があります」/「9月分 未提出」を出し分ける。
- * dirty(画面で回答を触ったがまだ提出していない)を最優先にするのは、
- * 古い提出日時を見て「提出済み」と誤解させないため
+ * 「9月分 提出済み(9/14 12:30)」/「9月分 未回答が1件あります(提出済み 9/14 12:30)」/
+ * 「9月分 未提出の変更があります」/「9月分 未提出」を出し分ける。
+ *
+ * - dirty(画面で回答を触ったがまだ提出していない)を最優先にするのは、
+ *   古い提出日時を見て「提出済み」と誤解させないため
+ * - 提出後にコーチが練習日を足すと未回答が生まれる。提出日時があるだけで
+ *   「提出済み」と出すと answered が足りていないことに気づけない(Issue #154)
  *
  * @param month "YYYY-MM"
  * @param submittedAt その月・そのお子さんの最終提出日時(ISO)。未提出は null
  * @param dirty 提出後に回答を変更したか
+ * @param unanswered その月・そのお子さんの未回答の練習数
  */
 export function submissionState(
   month: string,
   submittedAt: string | null,
   dirty: boolean,
+  unanswered = 0,
 ): SubmissionState {
   const prefix = `${Number(month.slice(5, 7))}月分`;
   if (dirty) {
@@ -147,6 +157,15 @@ export function submissionState(
     };
   }
   if (submittedAt !== null) {
+    if (unanswered > 0) {
+      return {
+        kind: "partial",
+        // 「!」(未提出の変更あり)と記号でも見分けられるようにする。
+        // 未回答は「まだ答えていない」ので ?(レビュー指摘 #156)
+        mark: "?",
+        text: `${prefix} 未回答が${unanswered}件あります(提出済み ${formatDateTimeShort(submittedAt)})`,
+      };
+    }
     return {
       kind: "submitted",
       mark: "✓",

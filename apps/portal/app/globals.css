@@ -169,6 +169,14 @@ ul.news {
 .news .row + .row {
   border-top: 1px solid var(--hair);
 }
+/* 項目名 + 値の行(家族の設定・初回登録③)の値側。伝達事項のような長い自由入力は
+ * 改行を保ったまま右側で折り返す(registration-confirm/plan.md 設計判断5) */
+.news .row .val {
+  min-width: 0;
+  text-align: right;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .news time,
 .news .meta {
   font-size: 11px;
@@ -923,12 +931,15 @@ textarea.inbox {
   border-color: var(--accent);
   color: #fff;
 }
-.sub-state.changed {
+.sub-state.changed,
+/* 提出後に練習日が増えたとき(Issue #154)。変更ありと同じ「要対応」の見た目にする */
+.sub-state.partial {
   background: var(--paper);
   border: 1px dashed var(--accent);
   color: var(--deep);
 }
-.sub-state.changed .mk {
+.sub-state.changed .mk,
+.sub-state.partial .mk {
   background: var(--paper);
   border-color: var(--accent);
   color: var(--deep);

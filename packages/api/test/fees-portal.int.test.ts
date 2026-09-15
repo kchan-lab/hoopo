@@ -5,6 +5,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApi } from "../src/app";
 import type { FeeState } from "../src/fees-shared";
 import { birthDateForGrade } from "../src/grade-shared";
+import { fullName } from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 保護者の月謝 API(fees/plan.md 5a)を RLS 配下で検証する。
@@ -85,14 +86,20 @@ function json(app: ReturnType<typeof api>, cookie: string) {
 const registration = {
   children: [
     {
-      name: "粉浜 太郎",
+      familyName: "粉浜",
+      givenName: "太郎",
+      familyNameKana: "こはま",
+      givenNameKana: "たろう",
       nicknameKana: "たろう",
       birthDate: birthDateForGrade(4),
       heightCm: 135,
       gender: "male",
     },
     {
-      name: "粉浜 花子",
+      familyName: "粉浜",
+      givenName: "花子",
+      familyNameKana: "こはま",
+      givenNameKana: "はなこ",
       nicknameKana: null,
       birthDate: birthDateForGrade(2),
       heightCm: 120,
@@ -110,7 +117,12 @@ interface Sheet {
   year: number;
   currentMonth: string;
   children: {
-    child: { id: string; name: string; grade: number };
+    child: {
+      id: string;
+      familyName: string;
+      givenName: string;
+      grade: number;
+    };
     months: { month: number; state: FeeState; receivedAt: string | null }[];
   }[];
 }
@@ -183,7 +195,7 @@ describe("月謝シート(GET /fees)", () => {
     const sheet = (await res.json()) as Sheet;
     expect(sheet.year).toBe(THIS_YEAR);
     expect(sheet.currentMonth).toBe(CURRENT_MONTH);
-    expect(sheet.children.map((r) => r.child.name)).toEqual([
+    expect(sheet.children.map((r) => fullName(r.child))).toEqual([
       "粉浜 太郎",
       "粉浜 花子",
     ]);
@@ -219,8 +231,10 @@ describe("月謝シート(GET /fees)", () => {
     const call = json(app, await loginAs(app, USER_A));
     await registerTwoChildren(call);
     const [outsider] = await owner`
-      INSERT INTO children (team_id, name, grade, gender, invite_code)
-      VALUES (${teamId}, '別家庭 次郎', 5, 'male', 'ZZZZZZ') RETURNING id`;
+      INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                            given_name_kana, grade, gender, invite_code)
+      VALUES (${teamId}, '別家庭', '次郎', 'べつかてい', 'じろう', 5, 'male', 'ZZZZZZ')
+      RETURNING id`;
     const outsiderId = outsider?.id as string;
     await putRecord(outsiderId, THIS_YEAR, 1, "paid");
 

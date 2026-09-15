@@ -113,6 +113,34 @@ describe("submissionState(提出タブ上部の常時表示)", () => {
     });
   });
 
+  it("提出後に練習日が増えたら未回答の件数を出す(Issue #154)", () => {
+    // 提出日時はあるが、その月にまだ答えていない練習が残っている状態
+    expect(
+      submissionState("2026-09", "2026-09-14T03:30:00.000Z", false, 1),
+    ).toEqual({
+      kind: "partial",
+      mark: "?",
+      text: "9月分 未回答が1件あります(提出済み 9/14 12:30)",
+    });
+    expect(
+      submissionState("2026-09", "2026-09-14T03:30:00.000Z", false, 2).text,
+    ).toBe("9月分 未回答が2件あります(提出済み 9/14 12:30)");
+    // 全部答えていれば従来どおり
+    expect(
+      submissionState("2026-09", "2026-09-14T03:30:00.000Z", false, 0).kind,
+    ).toBe("submitted");
+  });
+
+  it("触っているあいだは未回答が残っていても「変更があります」を優先する", () => {
+    expect(
+      submissionState("2026-09", "2026-09-14T03:30:00.000Z", true, 3).kind,
+    ).toBe("changed");
+  });
+
+  it("一度も提出していなければ未回答が残っていても「未提出」", () => {
+    expect(submissionState("2026-09", null, false, 3).kind).toBe("unsubmitted");
+  });
+
   it("未提出でも触ったら「未提出の変更があります」になる", () => {
     expect(submissionState("2026-12", null, true).kind).toBe("changed");
     expect(submissionState("2026-12", null, true).text).toBe(

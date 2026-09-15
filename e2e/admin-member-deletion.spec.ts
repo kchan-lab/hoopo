@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 卒団後のデータ削除(Issue #21 受入条件。member-deletion/plan.md):
@@ -28,7 +32,7 @@ async function registerChildViaPortal(
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           nicknameKana: "てすと",
           birthDate: birthDateForGrade(grade),
           heightCm: heightForGrade(grade),

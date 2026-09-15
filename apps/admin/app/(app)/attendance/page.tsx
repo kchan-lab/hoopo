@@ -2,6 +2,7 @@ import {
   ATTENDANCE_MARKS,
   addMonths,
   formatMonthLabel,
+  fullName,
   getAttendanceMatrix,
   monthOf,
   parseMonth,
@@ -91,7 +92,7 @@ export default async function AttendancePage({
                       return (
                         <tr key={r.child.id} className={silent ? "muted" : ""}>
                           <td className="c-member">
-                            {r.child.name}
+                            {fullName(r.child)}
                             <span className="pc">({r.child.grade}年)</span>
                           </td>
                           {practices.map((p) => {
@@ -109,7 +110,7 @@ export default async function AttendancePage({
                                 <td key={p.id} className={tone}>
                                   <details>
                                     <summary
-                                      aria-label={`${r.child.name} ${shortDate(p.heldOn)} 途中参加・早退のコメント`}
+                                      aria-label={`${fullName(r.child)} ${shortDate(p.heldOn)} 途中参加・早退のコメント`}
                                     >
                                       {mark}
                                     </summary>

@@ -1,6 +1,10 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { birthDateForGrade, heightForGrade } from "./child-input";
+import {
+  birthDateForGrade,
+  childNameInput,
+  heightForGrade,
+} from "./child-input";
 import { urls } from "./urls";
 
 // 保護者の参加予定の提出(Issue #76 受入条件)。
@@ -41,7 +45,7 @@ async function registerChildAsNewGuardian(
     data: {
       children: [
         {
-          name,
+          ...childNameInput(name),
           birthDate: birthDateForGrade(3),
           heightCm: heightForGrade(3),
           gender: "male",
@@ -200,6 +204,49 @@ test("提出の状態が画面上部に常時出て、変更・提出で切り�
   await expect(page.locator(".sbr").first().locator("select")).toHaveValue(
     "full",
   );
+});
+
+test("提出後にコーチが練習日を足すと、未回答があると分かる(Issue #154)", async ({
+  browser,
+  page,
+}) => {
+  const tag = randomBytes(2).toString("hex");
+  const month = uniqueMonth();
+  const monthNo = Number(month.slice(5));
+  const coach = await browser.newContext();
+  await createPracticeAsCoach(coach, `${month}-10`, `体育館D ${tag}`);
+
+  await registerChildAsNewGuardian(page.context(), `追加 太郎 ${tag}`);
+  await page.goto(`${urls.portal}/attendance?month=${month}`);
+  await page
+    .locator(".sbr")
+    .first()
+    .locator("select")
+    .selectOption({ label: "参加(全時間)" });
+  await page.getByRole("button", { name: "この内容で提出する" }).click();
+  await expect(page.locator(".sub-state")).toHaveClass(/submitted/);
+
+  // コーチが同じ月に練習日を足す(保護者はまだ答えていない)
+  await createPracticeAsCoach(coach, `${month}-20`, `体育館E ${tag}`);
+  await coach.close();
+
+  // 開き直すと「提出済み」ではなく、未回答が残っていると分かる
+  await page.reload();
+  const state = page.locator(".sub-state");
+  await expect(state).toHaveClass(/partial/);
+  await expect(state).toContainText(`${monthNo}月分 未回答が1件あります`);
+  await expect(state).toContainText("提出済み");
+
+  // 追加分に答えて提出すると「提出済み(日時)」に戻る
+  await page
+    .locator(".sbr")
+    .nth(1)
+    .locator("select")
+    .selectOption({ label: "不参加" });
+  await expect(state).toHaveClass(/changed/);
+  await page.getByRole("button", { name: "この内容で提出する" }).click();
+  await expect(state).toHaveClass(/submitted/);
+  await expect(state).toContainText(`${monthNo}月分 提出済み(`);
 });
 
 test("ホームに今月の未提出アラートが出て、提出画面へ移動できる", async ({

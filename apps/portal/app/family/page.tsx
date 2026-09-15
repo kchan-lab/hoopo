@@ -1,4 +1,4 @@
-import { getFamily, RELATION_LABELS } from "@hoopo/api";
+import { fullName, getFamily, RELATION_LABELS } from "@hoopo/api";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getGuardianSession } from "../../lib/session";
@@ -8,7 +8,7 @@ import { UnlinkButton } from "./unlink-button";
 
 // 家族の設定(REQUIREMENTS §4.2-9。ワイヤー14): 子どもごとの招待コードと連携済みの家族(続柄のみ)。
 // 自分の行からは連携を解除できる(family-links/plan.md。最後の保護者は API が断る)。
-// お子さんの情報(名前・呼び名・生年月日・身長・性別)もここから直せる
+// お子さんの情報(姓・名・呼び名・生年月日・身長・性別)もここから直せる
 // (child-birthdate-height/plan.md 設計判断5。学年は生年月日から再計算される)
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function FamilyPage() {
         {family.map((child) => (
           <section key={child.id} className="child-block">
             <div className="card">
-              <div className="label">{child.name}さんの招待コード</div>
+              <div className="label">{fullName(child)}さんの招待コード</div>
               <div className="invite-code">{child.inviteCode}</div>
               <CopyButton text={child.inviteCode} />
             </div>
@@ -51,7 +51,10 @@ export default async function FamilyPage() {
                       : RELATION_LABELS[g.relation]}
                   </span>
                   {g.isMe ? (
-                    <UnlinkButton childId={child.id} childName={child.name} />
+                    <UnlinkButton
+                      childId={child.id}
+                      childName={fullName(child)}
+                    />
                   ) : (
                     <span className="linked">連携済み</span>
                   )}

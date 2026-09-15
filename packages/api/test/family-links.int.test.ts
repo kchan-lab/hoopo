@@ -6,6 +6,7 @@ import { createAdminApi } from "../src/admin-app";
 import { createApi } from "../src/app";
 import { birthDateForGrade } from "../src/grade-shared";
 import { hashPassword } from "../src/password";
+import { fullName } from "../src/registration-shared";
 import { ADMIN_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
 
@@ -98,7 +99,10 @@ async function coachClient(app: ReturnType<typeof adminApi>): Promise<Call> {
 const registration = {
   children: [
     {
-      name: "粉浜 太郎",
+      familyName: "粉浜",
+      givenName: "太郎",
+      familyNameKana: "こはま",
+      givenNameKana: "たろう",
       nicknameKana: "たろう",
       birthDate: birthDateForGrade(4),
       heightCm: 135,
@@ -233,13 +237,13 @@ describe("家族間の整合", () => {
 
     // 中身も確認する(空同士が一致しただけ、を防ぐ)
     const sheet = (await (await b(`/attendance?month=${MONTH}`)).json()) as {
-      children: { id: string; name: string }[];
+      children: { id: string; familyName: string; givenName: string }[];
       answers: Record<
         string,
         Record<string, { status: string; comment: string | null }>
       >;
     };
-    expect(sheet.children.map((c) => c.name)).toEqual(["粉浜 太郎"]);
+    expect(sheet.children.map((c) => fullName(c))).toEqual(["粉浜 太郎"]);
     expect(sheet.answers[child.id]?.[practiceId]).toEqual({
       status: "partial",
       comment: "10時から参加します",
@@ -298,10 +302,12 @@ describe("連携の解除(DELETE /family-links/:childId)", () => {
     expect(
       (
         (await (await a("/children")).json()) as {
-          children: { name: string }[];
+          children: { familyName: string; givenName: string }[];
         }
       ).children,
-    ).toEqual([expect.objectContaining({ name: "粉浜 太郎" })]);
+    ).toEqual([
+      expect.objectContaining({ familyName: "粉浜", givenName: "太郎" }),
+    ]);
 
     // 無効化(revoked)ではなく物理削除なので、家族の設定にも残らない
     const family = (await (await a("/family")).json()) as {
@@ -321,7 +327,7 @@ describe("連携の解除(DELETE /family-links/:childId)", () => {
     expect(
       (
         (await (await b("/children")).json()) as {
-          children: { name: string }[];
+          children: { familyName: string; givenName: string }[];
         }
       ).children,
     ).toHaveLength(1);
@@ -354,8 +360,10 @@ describe("連携の解除(DELETE /family-links/:childId)", () => {
 
     // 自分が連携していない子(存在は漏らさない)
     const [outsider] = await owner`
-      INSERT INTO children (team_id, name, grade, gender, invite_code)
-      VALUES (${teamId}, '別家庭 次郎', 5, 'male', 'OUTSD00001') RETURNING id`;
+      INSERT INTO children (team_id, family_name, given_name, family_name_kana,
+                            given_name_kana, grade, gender, invite_code)
+      VALUES (${teamId}, '別家庭', '次郎', 'べつかてい', 'じろう', 5, 'male', 'OUTSD00001')
+      RETURNING id`;
     const res = await b(`/family-links/${outsider?.id as string}`, "DELETE");
     expect(res.status).toBe(404);
     expect(((await res.json()) as { error: string }).error).toContain(
