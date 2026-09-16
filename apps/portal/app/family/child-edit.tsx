@@ -15,7 +15,7 @@ import { GradeHint } from "../grade-hint";
 
 // お子さんの情報の修正(REQUIREMENTS §4.2-9。child-birthdate-height/plan.md 設計判断5)。
 // 名前は姓・名とそれぞれの読みの4欄(child-name-split/plan.md 設計判断1・2・6。
-// 並びは 姓 → 姓のよみ → 名 → 名のよみ → 呼び名)。
+// 並びは 1段目=姓・名、2段目=姓のよみ・名のよみ、続けて呼び名)。
 // 登録は初回の1回だけという原則(絶対原則2)の裏返しで、あとから直す手段が無いと
 // 打ち間違い・身長の伸びを保護者が自分で直せない。画面遷移を増やさず、行内で
 // 「編集」→ 入力 →「保存」だけで完結させる。学年は生年月日から再計算され、
@@ -154,55 +154,64 @@ export function ChildEdit({ child }: { child: ChildDetail }) {
             {error}
           </p>
         )}
-        <div className="fld2">
-          <label htmlFor={`edit-family-name-${detail.id}`}>姓</label>
-          <input
-            id={`edit-family-name-${detail.id}`}
-            className="inbox"
-            value={familyName}
-            onChange={(e) => setFamilyName(e.target.value)}
-            autoComplete="off"
-            maxLength={NAME_PART_MAX}
-            required
-          />
+        {/* 漢字の2欄 → よみの2欄 の順に横並び(登録フォームと同じ。2026-09-16) */}
+        <div className="name-row">
+          <div className="fld2">
+            <label htmlFor={`edit-family-name-${detail.id}`}>姓</label>
+            <input
+              id={`edit-family-name-${detail.id}`}
+              className="inbox"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+              autoComplete="off"
+              maxLength={NAME_PART_MAX}
+              required
+            />
+          </div>
+          <div className="fld2">
+            <label htmlFor={`edit-given-name-${detail.id}`}>名</label>
+            <input
+              id={`edit-given-name-${detail.id}`}
+              className="inbox"
+              value={givenName}
+              onChange={(e) => setGivenName(e.target.value)}
+              autoComplete="off"
+              maxLength={NAME_PART_MAX}
+              required
+            />
+          </div>
         </div>
-        <div className="fld2">
-          <label htmlFor={`edit-family-name-kana-${detail.id}`}>姓のよみ</label>
-          <input
-            id={`edit-family-name-kana-${detail.id}`}
-            className="inbox"
-            value={familyNameKana}
-            onChange={(e) => setFamilyNameKana(e.target.value)}
-            placeholder="こはま"
-            autoComplete="off"
-            maxLength={NAME_PART_MAX}
-            required
-          />
-        </div>
-        <div className="fld2">
-          <label htmlFor={`edit-given-name-${detail.id}`}>名</label>
-          <input
-            id={`edit-given-name-${detail.id}`}
-            className="inbox"
-            value={givenName}
-            onChange={(e) => setGivenName(e.target.value)}
-            autoComplete="off"
-            maxLength={NAME_PART_MAX}
-            required
-          />
-        </div>
-        <div className="fld2">
-          <label htmlFor={`edit-given-name-kana-${detail.id}`}>名のよみ</label>
-          <input
-            id={`edit-given-name-kana-${detail.id}`}
-            className="inbox"
-            value={givenNameKana}
-            onChange={(e) => setGivenNameKana(e.target.value)}
-            placeholder="たろう"
-            autoComplete="off"
-            maxLength={NAME_PART_MAX}
-            required
-          />
+        <div className="name-row">
+          <div className="fld2">
+            <label htmlFor={`edit-family-name-kana-${detail.id}`}>
+              姓のよみ
+            </label>
+            <input
+              id={`edit-family-name-kana-${detail.id}`}
+              className="inbox"
+              value={familyNameKana}
+              onChange={(e) => setFamilyNameKana(e.target.value)}
+              placeholder="こはま"
+              autoComplete="off"
+              maxLength={NAME_PART_MAX}
+              required
+            />
+          </div>
+          <div className="fld2">
+            <label htmlFor={`edit-given-name-kana-${detail.id}`}>
+              名のよみ
+            </label>
+            <input
+              id={`edit-given-name-kana-${detail.id}`}
+              className="inbox"
+              value={givenNameKana}
+              onChange={(e) => setGivenNameKana(e.target.value)}
+              placeholder="たろう"
+              autoComplete="off"
+              maxLength={NAME_PART_MAX}
+              required
+            />
+          </div>
         </div>
         <div className="fld2">
           <label htmlFor={`edit-kana-${detail.id}`}>呼び名(ひらがな)</label>

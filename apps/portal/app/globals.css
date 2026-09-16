@@ -311,6 +311,13 @@ textarea.inbox {
 .time-range .inbox {
   flex: 1;
 }
+/* 姓と名を横並びにする(漢字の行・よみの行)。狭い画面でも2列を保つ */
+.name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 /* 単位付きの入力(身長の cm)。入力欄の右に単位を添える */
 .with-unit {
   display: flex;

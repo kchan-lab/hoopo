@@ -844,6 +844,14 @@ a.abtn {
   color: var(--asub);
 }
 
+/* 姓・名と、そのよみを常に2列で並べる(漢字の行 → よみの行) */
+.namegrid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6em;
+}
+
 .pgrid .wide {
   grid-column: 1 / -1;
 }
