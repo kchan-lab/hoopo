@@ -146,7 +146,7 @@ function MemberRows({
 
 interface Draft {
   // 姓・名とそれぞれの読み(child-name-split/plan.md 設計判断1・2)。
-  // 編集欄は 姓 → 姓のよみ → 名 → 名のよみ → 呼び名 の順(設計判断6)
+  // 編集欄は 1段目=姓・名、2段目=姓のよみ・名のよみ、続けて呼び名(2026-09-16 改定)
   familyName: string;
   familyNameKana: string;
   givenName: string;
@@ -252,44 +252,48 @@ function MemberEditForm({ member }: { member: MemberRow }) {
     <div className="pform medit">
       <div className="k">部員情報を編集</div>
       <div className="pgrid">
-        <label>
-          姓
-          <input
-            className="afld"
-            value={draft.familyName}
-            onChange={(e) => update({ familyName: e.target.value })}
-            maxLength={NAME_PART_MAX}
-          />
-        </label>
-        <label>
-          姓のよみ
-          <input
-            className="afld"
-            value={draft.familyNameKana}
-            onChange={(e) => update({ familyNameKana: e.target.value })}
-            placeholder="こはま"
-            maxLength={NAME_PART_MAX}
-          />
-        </label>
-        <label>
-          名
-          <input
-            className="afld"
-            value={draft.givenName}
-            onChange={(e) => update({ givenName: e.target.value })}
-            maxLength={NAME_PART_MAX}
-          />
-        </label>
-        <label>
-          名のよみ
-          <input
-            className="afld"
-            value={draft.givenNameKana}
-            onChange={(e) => update({ givenNameKana: e.target.value })}
-            placeholder="たろう"
-            maxLength={NAME_PART_MAX}
-          />
-        </label>
+        {/* 漢字の2欄 → よみの2欄 の順に、常に2列で並べる(保護者アプリと同じ。
+            漢字とよみが交互だと入力方式の切り替えが増えるため。2026-09-16) */}
+        <div className="namegrid">
+          <label>
+            姓
+            <input
+              className="afld"
+              value={draft.familyName}
+              onChange={(e) => update({ familyName: e.target.value })}
+              maxLength={NAME_PART_MAX}
+            />
+          </label>
+          <label>
+            名
+            <input
+              className="afld"
+              value={draft.givenName}
+              onChange={(e) => update({ givenName: e.target.value })}
+              maxLength={NAME_PART_MAX}
+            />
+          </label>
+          <label>
+            姓のよみ
+            <input
+              className="afld"
+              value={draft.familyNameKana}
+              onChange={(e) => update({ familyNameKana: e.target.value })}
+              placeholder="こはま"
+              maxLength={NAME_PART_MAX}
+            />
+          </label>
+          <label>
+            名のよみ
+            <input
+              className="afld"
+              value={draft.givenNameKana}
+              onChange={(e) => update({ givenNameKana: e.target.value })}
+              placeholder="たろう"
+              maxLength={NAME_PART_MAX}
+            />
+          </label>
+        </div>
         <label>
           呼び名
           <input
