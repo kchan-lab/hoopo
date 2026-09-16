@@ -6,6 +6,7 @@ import {
   fullName,
   heightForGrade,
 } from "./child-input";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 家族連携の解除(family-links/plan.md。Issue #31 受入条件)。
@@ -119,7 +120,7 @@ test("第二保護者は自分の連携を解除でき、最後の保護者は�
   const contextB = await browser.newContext();
   await loginAsNewGuardian(contextB);
   const pageB = await contextB.newPage();
-  await pageB.goto(urls.portal);
+  await gotoReady(pageB, urls.portal);
   await expect(pageB.locator("h1")).toContainText("はじめての方");
   await expect(pageB.locator("main")).toContainText("二重登録を防ぐため");
   await pageB.getByLabel("招待コード").fill(code);

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 管理者の LINE ログイン(Issue #61 受入条件、admin-line-login/plan.md 完了条件)。
@@ -17,7 +18,7 @@ const fakeUser = `U${randomUUID().replaceAll("-", "")}`;
 test("メールでログイン → LINE を連携 → LINE でログイン → 解除できる", async ({
   page,
 }) => {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

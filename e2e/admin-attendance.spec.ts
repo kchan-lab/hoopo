@@ -10,6 +10,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 出欠管理・欠席者管理の導線(Issue #77 受入条件)。
@@ -34,7 +35,7 @@ function label(date: string, withWeekday = false): string {
 }
 
 async function loginAsCoach(page: Page) {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
