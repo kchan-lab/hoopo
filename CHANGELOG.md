@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/kchan-lab/hoopo/compare/v0.3.0...v0.4.0) (2026-09-16)
+
+
+### Features
+
+* 名前の入力欄を漢字の行とよみの行に分ける ([#166](https://github.com/kchan-lab/hoopo/issues/166)) ([c4ebe17](https://github.com/kchan-lab/hoopo/commit/c4ebe17f7b61ba0ca9414bd434a117991b029273))
+
+
+### Bug Fixes
+
+* バックアップで PostgreSQL 17 の pg_dump を使うようにする ([#168](https://github.com/kchan-lab/hoopo/issues/168)) ([be21636](https://github.com/kchan-lab/hoopo/commit/be21636476f209a8ceebdc5e6488316eeecd51ca))
+
 ## [0.3.0](https://github.com/kchan-lab/hoopo/compare/v0.2.0...v0.3.0) (2026-09-15)
 
 
