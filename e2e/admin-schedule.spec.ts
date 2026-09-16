@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 日程管理の導線(Issue #71 受入条件)。
@@ -7,7 +8,7 @@ import { urls } from "./urls";
 // シードの練習(2026-09)と衝突しないよう、テストは 2027-01 の月で行う
 
 async function loginAsCoach(page: Page) {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

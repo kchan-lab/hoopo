@@ -5,6 +5,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 認定管理・部員管理の導線(Issue #67 受入条件)。
@@ -46,7 +47,7 @@ async function registerChildViaPortal(page: Page, name: string) {
 }
 
 async function loginAsCoach(page: Page) {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

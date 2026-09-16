@@ -431,7 +431,7 @@ export function RegisterForm() {
               className="inbox"
               value={coachNote}
               onChange={(e) => setCoachNote(e.target.value)}
-              placeholder="例: ぜん息があるため、長時間の連続走は配慮をお願いします"
+              placeholder="例: 送り迎えは祖父母が行うことがあります"
               maxLength={500}
             />
           </div>
