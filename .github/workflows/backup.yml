@@ -65,7 +65,8 @@ jobs:
             file="${lower}-${date_jst}.dump"
             # -Fc(カスタム形式)はそれ自体が圧縮される。所有者・権限は移行先で作り直すので落とす。
             # stderr は接続情報を含みうるため捨てる(supabase-ping.yml と同じ方針)
-            if ! pg_dump -Fc --no-owner --no-privileges -f "$file" "$url" 2>/dev/null; then
+            if ! pg_dump -Fc --no-owner --no-privileges -f "$file" "$url" 2>/tmp/dumperr; then
+              sed -E 's#postgres[^@]*@#***@#g' /tmp/dumperr | head -5
               echo "::error::${env_name}: pg_dump に失敗しました(接続文字列は 5432 のセッションモードか確認)"
               failed_envs="${failed_envs}${failed_envs:+, }${env_name}"
               continue
