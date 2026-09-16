@@ -5,6 +5,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 子ども登録・家族連携の導線(Issue #66 受入条件)。
@@ -26,7 +27,7 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   page,
 }) => {
   await loginAsNewGuardian(context);
-  await page.goto(urls.portal);
+  await gotoReady(page, urls.portal);
   await expect(page.locator("h1")).toContainText("はじめての方");
 
   await page.getByRole("link", { name: /お子さんを新しく登録する/ }).click();
@@ -69,7 +70,9 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await page.getByLabel("参加可能な時間帯").fill("09:00");
   await page.getByLabel("終了時刻").fill("12:00");
   await page.getByRole("button", { name: "父", exact: true }).click();
-  await page.getByLabel("コーチへの伝達事項(任意)").fill("ぜん息があります");
+  await page
+    .getByLabel("コーチへの伝達事項(任意)")
+    .fill("送迎は祖父母が行います");
   await page.getByRole("button", { name: "確認へ進む" }).click();
 
   // ③入力内容の確認(registration-confirm/plan.md)。①②で入れた値がそのまま出る
@@ -90,7 +93,7 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   const confirmForm = page.locator("form");
   await expect(confirmForm).toContainText("日・土");
   await expect(confirmForm).toContainText("09:00 〜 12:00");
-  await expect(confirmForm).toContainText("ぜん息があります");
+  await expect(confirmForm).toContainText("送迎は祖父母が行います");
   await page.getByRole("button", { name: "この内容で登録する" }).click();
 
   // 自動認定で即時ホームへ
@@ -120,7 +123,7 @@ test("確認画面から修正して戻ると、直した内容で登録され�
   // ③で気づいた間違いを①②に戻って直せること。戻っても入力は消えない
   // (registration-confirm/plan.md 設計判断2・3)
   await loginAsNewGuardian(context);
-  await page.goto(`${urls.portal}/register`);
+  await gotoReady(page, `${urls.portal}/register`);
 
   // ①わざと違う名前で入力する
   await page.getByLabel("姓", { exact: true }).fill("粉浜");
@@ -131,10 +134,16 @@ test("確認画面から修正して戻ると、直した内容で登録され�
   await page
     .getByRole("spinbutton", { name: "身長", exact: true })
     .fill(String(heightForGrade(5)));
+  // 入力がちゃんと React 側に入ったことを、生年月日から出る学年で確かめてから進む
+  await expect(page.locator("fieldset.child-block").first()).toContainText(
+    "小学5年生",
+  );
   await page.getByRole("button", { name: "男子" }).click();
   await page.getByRole("button", { name: "次へ" }).click();
 
-  // ②(伝達事項は入れずに進む)
+  // ②(伝達事項は入れずに進む)。画面が切り替わる前に曜日を押すと取りこぼすので、
+  // ②の見出しが出るのを待ってから操作する
+  await expect(page.locator("h1")).toContainText("参加について");
   await page.getByRole("button", { name: "土", exact: true }).click();
   await page.getByRole("button", { name: "母", exact: true }).click();
   await page.getByRole("button", { name: "確認へ進む" }).click();
@@ -187,7 +196,7 @@ test("小学生にならない生年月日では次へ進めない", async ({ co
   // 学年が 1〜6 に入らない生年月日は登録できない(REQUIREMENTS §3)。
   // クライアントの検証はサーバー(parseBirthDate)と同じ純関数なので文言もそろう
   await loginAsNewGuardian(context);
-  await page.goto(`${urls.portal}/register`);
+  await gotoReady(page, `${urls.portal}/register`);
   await page.getByLabel("姓", { exact: true }).fill("粉浜");
   await page.getByLabel("姓のよみ").fill("こはま");
   await page.getByLabel("名", { exact: true }).fill("未就学");
@@ -244,7 +253,7 @@ test("第二保護者が招待コードで連携すると同じ子どもが見�
   const contextB = await browser.newContext();
   await loginAsNewGuardian(contextB);
   const page = await contextB.newPage();
-  await page.goto(urls.portal);
+  await gotoReady(page, urls.portal);
   await expect(page.locator("h1")).toContainText("はじめての方");
   await page
     .getByLabel("招待コード")

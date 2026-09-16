@@ -5,6 +5,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // プライバシーポリシーの掲示(Issue #21 前半の受入条件)。
@@ -105,7 +106,7 @@ test("チーム画面の末尾からもプライバシーポリシーへ遷移�
 test("管理ログイン画面にプライバシーポリシーのリンクがある", async ({
   page,
 }) => {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   const link = page.getByRole("link", { name: "プライバシーポリシー" });
   await expect(link).toBeVisible();
   // 保護者アプリ側の公開ページ(NEXT_PUBLIC_PORTAL_URL)を指す

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // お知らせ管理の導線(Issue #86 受入条件)。
@@ -7,7 +8,7 @@ import { urls } from "./urls";
 // シードのお知らせと衝突しないよう、タイトルは実行ごとにユニークにする
 
 async function loginAsCoach(page: Page) {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

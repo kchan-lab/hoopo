@@ -10,6 +10,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // チーム編成の導線(Issue #101 受入条件)。
@@ -31,7 +32,7 @@ function uniqueMonth(): string {
 }
 
 async function loginAsCoach(page: Page) {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

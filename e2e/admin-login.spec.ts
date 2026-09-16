@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
 // 管理者ログイン導線(Issue #24 受入条件)。
@@ -13,7 +14,7 @@ test("未ログインで管理画面を開くとログイン画面へリダイ�
 });
 
 test("メール+パスワードでログインし、ログアウトできる", async ({ page }) => {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("hoopo-dev-login");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
@@ -41,7 +42,7 @@ test("メール+パスワードでログインし、ログアウトできる", a
 test("誤ったパスワードではエラーが表示されログインできない", async ({
   page,
 }) => {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   await page.getByLabel("メールアドレス").fill("coach@example.com");
   await page.getByLabel("パスワード").fill("wrong-password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
@@ -58,7 +59,7 @@ test("誤ったパスワードではエラーが表示されログインでき�
 test("5回続けて間違えると、正しいパスワードでも同じ文言で入れない", async ({
   page,
 }) => {
-  await page.goto(`${urls.admin}/login`);
+  await gotoReady(page, `${urls.admin}/login`);
   for (let i = 0; i < 5; i++) {
     await page.getByLabel("メールアドレス").fill("lockout@example.com");
     await page.getByLabel("パスワード").fill(`wrong-password-${i}`);
