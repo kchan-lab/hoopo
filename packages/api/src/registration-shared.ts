@@ -358,7 +358,16 @@ export interface ChildPatch {
  * PATCH の入力。渡された項目だけを更新するので全項目が任意だが、
  * 「何も無い」更新は受け付けない。学年は birthDate から保存時に再計算する
  */
-export function parseChildPatch(body: unknown): ParseResult<ChildPatch> {
+export function parseChildPatch(
+  body: unknown,
+  /**
+   * 参加できる時間帯を受け付けるか。保護者(家族の設定)だけが直せる項目で、
+   * コーチの部員管理では編集できない(REQUIREMENTS §5.2 の編集項目に無い)。
+   * 検証をコーチと共有しているため、受け付ける範囲は呼び出し側で絞る
+   */
+  options: { allowAvailabilities?: boolean } = {},
+): ParseResult<ChildPatch> {
+  const { allowAvailabilities = true } = options;
   const r = asRecord(body);
   if (!r) return { ok: false, error: "入力内容が不正です" };
   const patch: ChildPatch = {};
@@ -406,6 +415,12 @@ export function parseChildPatch(body: unknown): ParseResult<ChildPatch> {
     patch.gender = r.gender as Gender;
   }
   if (r.availabilities !== undefined) {
+    if (!allowAvailabilities) {
+      return {
+        ok: false,
+        error: "参加できる時間帯はご家族の画面から変更してください",
+      };
+    }
     const availabilities = parseAvailabilities(r.availabilities);
     if (!availabilities.ok) return availabilities;
     patch.availabilities = availabilities.value;

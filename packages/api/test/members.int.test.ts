@@ -360,6 +360,29 @@ describe("部員情報の編集(PATCH /members/:childId)", () => {
     expect(rows[0]?.height_cm).toBe(128);
   });
 
+  it("コーチは参加できる時間帯を変更できない(#177 のレビュー指摘)", async () => {
+    // 検証を保護者側(家族の設定)と共有しているが、§5.2 の編集項目に参加できる時間帯は無い
+    const a = await guardianClient(guardianApi(), "a");
+    const created = (await (
+      await a("/children", "POST", registration("粉浜 太郎", 5))
+    ).json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    const coach = await coachClient(adminApi());
+    const res = await coach(`/members/${childId}`, "PATCH", {
+      availabilities: [{ weekday: 3, startTime: "18:00", endTime: "20:00" }],
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain(
+      "ご家族の画面",
+    );
+
+    // 登録時の枠がそのまま残っている
+    const rows = await owner`
+      SELECT weekday FROM child_availabilities WHERE child_id = ${childId}`;
+    expect(rows.map((r) => r.weekday)).toEqual([6]);
+  });
+
   it("入力不正は 400、他チームの部員は 404(RLS)", async () => {
     const a = await guardianClient(guardianApi(), "a");
     const created = (await (

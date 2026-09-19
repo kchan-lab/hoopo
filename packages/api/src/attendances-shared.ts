@@ -179,25 +179,13 @@ export function submissionState(
 export const UNANSWERED_MARK = "?";
 
 /**
- * 提出前の確認に出す「未回答の日数」(Issue #176)。未回答の判定は画面上部の状態表示
- * (submissionState に渡す件数)と同じ「status が null」。
- * 同じ日に練習が複数あっても 1 日として数えるのは、確認の文言が「未回答が N 日あります」で、
- * 保護者はカレンダーと同じく日で数えるため(plan.md 設計判断3)
+ * 確認の先頭に出す警告の文言(Issue #176)。未回答が 0 件なら警告そのものを出さない。
+ * 未回答のままでも提出はできるので、止める文言にはしない。
+ *
+ * 数え方と単位は画面上部の常時表示(submissionState に渡す未回答の件数)と同じ「練習のコマ数」。
+ * 日数で数えると、同じ日に練習が2本ある月で上部が「2件」・確認が「1日」となり、
+ * 数秒のうちに違う数字を見せることになる(#178 のレビュー指摘)
  */
-export function countUnansweredDays(
-  answers: { heldOn: string; status: AttendanceAnswer }[],
-): number {
-  const days = new Set<string>();
-  for (const a of answers) {
-    if (a.status === null) days.add(a.heldOn);
-  }
-  return days.size;
-}
-
-/**
- * 確認の先頭に出す警告の文言。未回答が 0 日なら警告そのものを出さない(plan.md 設計判断3)。
- * 未回答のままでも提出はできるので、止める文言にはしない(設計判断4)
- */
-export function unansweredNotice(days: number): string | null {
-  return days > 0 ? `${UNANSWERED_LABEL}が${days}日あります` : null;
+export function unansweredNotice(unanswered: number): string | null {
+  return unanswered > 0 ? `${UNANSWERED_LABEL}が${unanswered}件あります` : null;
 }

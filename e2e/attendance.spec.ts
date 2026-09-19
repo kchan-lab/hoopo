@@ -294,7 +294,7 @@ test("提出の前に確認を挟み、未回答が分かる(Issue #176)", async
   await expect(rows.nth(1)).toContainText("未回答");
   await expect(rows.nth(1)).toHaveClass(/\bna\b/);
   await expect(page.locator(".sub-state.partial")).toContainText(
-    "未回答が1日あります",
+    "未回答が1件あります",
   );
 
   // 「修正する」で編集に戻る。回答は消えていない(まだ提出もされていない)
