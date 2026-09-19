@@ -6,9 +6,12 @@ import {
   type AttendanceAnswer,
   type AttendanceStatus,
   COMMENT_MAX,
+  countUnansweredDays,
   nextAnswer,
   submissionState,
   UNANSWERED_LABEL,
+  UNANSWERED_MARK,
+  unansweredNotice,
 } from "@hoopo/api/attendances-shared";
 import { fullName } from "@hoopo/api/shared";
 import {
@@ -31,7 +34,11 @@ import {
 
 // 提出画面の編集(ワイヤー10・11)。リストとカレンダーは同じローカル状態を見るので完全に同期し、
 // CTA を押したときだけ PUT /api/attendance でお子さん単位に一括保存する(plan.md 設計判断2)。
-// 表示形式の切替は遷移せずローカルで行い、編集中の内容を失わない(Cookie には次回のために書く)
+// 表示形式の切替は遷移せずローカルで行い、編集中の内容を失わない(Cookie には次回のために書く)。
+//
+// 提出は「編集 → 確認」の2段(Issue #176)。編集の CTA は確定させず確認へ切り替えるだけで、
+// 実際に PUT するのは確認の CTA。state は持ったまま表示だけ切り替えるので、「修正する」で
+// 戻っても回答は消えない(attendance-confirm/plan.md 設計判断1・6。登録③と同じ作り)
 
 /** SSR から渡す練習(@hoopo/api の Practice のうち、この画面で使う項目) */
 interface PracticeItem {
@@ -109,6 +116,8 @@ export function AttendanceEditor({
   );
   // 回答を触ったら「未提出の変更があります」に変え、提出に成功したら戻す
   const [dirty, setDirty] = useState(false);
+  // 提出の2段(Issue #176)。"confirm" のあいだは回答を変えられない(plan.md 設計判断6)
+  const [mode, setMode] = useState<"edit" | "confirm">("edit");
 
   // 成功表示は数秒で消す(以降は上部の常時表示が現在の状態を伝える)
   useEffect(() => {
@@ -127,6 +136,14 @@ export function AttendanceEditor({
     dirty,
     practices.length - answered,
   );
+  // 確認で出す「未回答が N 日あります」。件数ではなく日数で数える(plan.md 設計判断3)
+  const unansweredDays = countUnansweredDays(
+    practices.map((p) => ({
+      heldOn: p.heldOn,
+      status: draft[p.id]?.status ?? null,
+    })),
+  );
+  const notice = unansweredNotice(unansweredDays);
 
   function edit(practiceId: string, patch: Partial<Draft[string]>) {
     setSaved(false);
@@ -186,6 +203,9 @@ export function AttendanceEditor({
         setDirty(false);
         setSaved(true);
         setSubmitting(false);
+        // 成功したら編集へ戻す(「提出しました」と上部の状態表示は編集の画面に出る)。
+        // 失敗したときは確認に留まり、そのまま出し直せるようにする
+        setMode("edit");
         router.refresh();
         return;
       }
@@ -223,6 +243,100 @@ export function AttendanceEditor({
       }
       return updated;
     });
+  }
+
+  // 提出前の確認(Issue #176)。その月の全練習を日付順に出し、未回答を件数と行の両方で強調する。
+  // 回答はここでは変えられないので、直すときは「修正する」で編集へ戻る(plan.md 設計判断2・3・6)
+  if (mode === "confirm" && practices.length > 0) {
+    return (
+      <>
+        <header className="sc-head">
+          <h1 className="sc-title">
+            <button
+              type="button"
+              className="back addlink"
+              aria-label="戻る"
+              onClick={() => setMode("edit")}
+            >
+              ‹
+            </button>
+            参加予定の確認
+          </h1>
+        </header>
+        <main className="sc-body">
+          {error !== null && (
+            <p className="err" role="alert">
+              {error}
+            </p>
+          )}
+          {/* 未回答の警告。上部の常時表示の「未回答あり」(.sub-state.partial)と
+              同じ見た目・同じ記号を使い、新しい色を作らない(DESIGN_GUIDELINES §1) */}
+          {notice !== null && (
+            <p className="sub-state partial" role="alert">
+              <span className="mk" aria-hidden="true">
+                {UNANSWERED_MARK}
+              </span>
+              {notice}
+            </p>
+          )}
+          <p className="help">
+            {`${formatMonthLabel(month)}分をこの内容で提出します。直すときは「修正する」を押してください`}
+          </p>
+          <div className="sub-list">
+            {practices.map((p) => {
+              const status = draft[p.id]?.status ?? null;
+              const comment = draft[p.id]?.comment ?? "";
+              return (
+                <div
+                  className={`sbr${status === null ? " na" : ""}`}
+                  key={p.id}
+                >
+                  <div className="top">
+                    <div>
+                      <div className="d">{formatDateLabel(p.heldOn)}</div>
+                      <div className="p">
+                        {formatTimeShort(p.startTime)}–
+                        {formatTimeShort(p.endTime)} {p.location ?? "場所未定"}
+                      </div>
+                    </div>
+                    <span className="a">{labelOf(status)}</span>
+                  </div>
+                  {/* コメントは「途中参加・早退」のときだけ送るので、確認もそのときだけ出す */}
+                  {status === "partial" && comment.trim() !== "" && (
+                    <p className="help">{comment}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="cta"
+            onClick={submit}
+            disabled={submitting}
+          >
+            {submitting ? "提出しています…" : "この内容で提出する"}
+            <small>
+              ( 回答 {answered} / {practices.length} 件 )
+            </small>
+          </button>
+          <button
+            type="button"
+            className="cta inline sec2"
+            onClick={() => setMode("edit")}
+            disabled={submitting}
+          >
+            修正する
+          </button>
+          {/* 未回答があっても止めない(plan.md 設計判断4)。あとから出し直せることも伝える */}
+          {notice !== null && (
+            <p className="sync">
+              未回答のままでも提出できます(あとから出し直せます)
+            </p>
+          )}
+        </main>
+      </>
+    );
   }
 
   return (
@@ -430,13 +544,16 @@ export function AttendanceEditor({
                 提出しました
               </p>
             )}
+            {/* ここでは確定せず確認へ進む。実際の提出は確認の CTA(Issue #176) */}
             <button
               type="button"
               className="cta"
-              onClick={submit}
-              disabled={submitting}
+              onClick={() => {
+                setError(null);
+                setMode("confirm");
+              }}
             >
-              {submitting ? "提出しています…" : "この内容で提出する"}
+              内容を確認して提出する
               <small>
                 ( 回答 {answered} / {practices.length} 件 )
               </small>
