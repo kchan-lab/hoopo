@@ -65,19 +65,50 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
 
   // ②参加情報(全員に同一適用)
   await expect(page.locator("h1")).toContainText("参加について");
+  // 曜日を選ぶ前から時間の欄が出ていて、既定は 09:00〜12:00。曜日が0件のあいだは
+  // 「すべての曜日に同じ時間を使う」を出さない
+  // (Issue #179 / availability-common-time/plan.md 設計判断1・2)
+  const sameTimeBox = page.getByRole("checkbox", {
+    name: "すべての曜日に同じ時間を使う",
+  });
+  await expect(page.getByLabel("開始時刻", { exact: true })).toHaveValue(
+    "09:00",
+  );
+  await expect(page.getByLabel("終了時刻", { exact: true })).toHaveValue(
+    "12:00",
+  );
+  await expect(sameTimeBox).toHaveCount(0);
   await page.getByRole("button", { name: "日", exact: true }).click();
+  // 曜日が1つのときは「同じ」と言わない(sameTimeNote)
+  await expect(page.locator("form")).toContainText("日 にこの時間を使います");
   await page.getByRole("button", { name: "土", exact: true }).click();
-  // 曜日を選ぶとその曜日の行が出る。既定は 09:00〜12:00 で、曜日ごとに違う時間も入れられる
-  // (Issue #170 / availability-slots/plan.md 設計判断1・2・3)
+  await expect(sameTimeBox).toBeChecked();
+  await expect(page.locator("form")).toContainText(
+    "日・土 に同じ時間を使います",
+  );
+  // チェックが入っているあいだは曜日ごとの行を出さない(設計判断3)
+  await expect(page.getByLabel("日曜日の開始時刻")).toHaveCount(0);
+  // 外すと曜日ごとの行が出て、各行は直前の共通の時間から始まる(設計判断5)。土だけ午後にする
+  await sameTimeBox.uncheck();
   await expect(page.getByLabel("日曜日の開始時刻")).toHaveValue("09:00");
   await expect(page.getByLabel("土曜日の終了時刻")).toHaveValue("12:00");
-  // 「すべての曜日に同じ時間を使う」を外して、土だけ午後にする
-  await page
-    .getByRole("checkbox", { name: "すべての曜日に同じ時間を使う" })
-    .uncheck();
   await page.getByLabel("土曜日の開始時刻").fill("13:00");
   await page.getByLabel("土曜日の終了時刻").fill("15:00");
   await expect(page.getByLabel("日曜日の開始時刻")).toHaveValue("09:00");
+  // 入れ直すと、曜日ごとで直した時間のうち先頭の曜日のものが共通の時間に残る
+  // (何も言わずに既定値へ戻さない。#180 のレビュー指摘)
+  await page.getByLabel("日曜日の開始時刻").fill("10:30");
+  await sameTimeBox.check();
+  await expect(page.getByLabel("開始時刻", { exact: true })).toHaveValue(
+    "10:30",
+  );
+  await sameTimeBox.uncheck();
+  await expect(page.getByLabel("土曜日の開始時刻")).toHaveValue("10:30");
+  // 土をもう一度午後に戻して、以降の確認画面の期待値にそろえる
+  await page.getByLabel("日曜日の開始時刻").fill("09:00");
+  await page.getByLabel("日曜日の終了時刻").fill("12:00");
+  await page.getByLabel("土曜日の開始時刻").fill("13:00");
+  await page.getByLabel("土曜日の終了時刻").fill("15:00");
   await page.getByRole("button", { name: "父", exact: true }).click();
   await page
     .getByLabel("コーチへの伝達事項(任意)")

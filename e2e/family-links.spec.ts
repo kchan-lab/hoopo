@@ -118,13 +118,23 @@ test("家族の設定から参加できる曜日と時間を直せる(Issue #170
   await expect(block).toContainText("土 09:00 〜 12:00");
 
   await block.getByRole("button", { name: "編集" }).click();
+  // 既存の値が全曜日で同じなので、チェックが入った状態で開く。共通の1組だけが出て、
+  // 曜日ごとの行は出ない(Issue #179 / availability-common-time/plan.md 設計判断3・7)
+  const sameTimeBox = block.getByRole("checkbox", {
+    name: "すべての曜日に同じ時間を使う",
+  });
+  await expect(sameTimeBox).toBeChecked();
+  await expect(block.getByLabel("開始時刻", { exact: true })).toHaveValue(
+    "09:00",
+  );
+  await expect(block.getByLabel("日曜日の開始時刻")).toHaveCount(0);
   // 日を外し、水を足す(枠は差し替えなので日の行は消える)
   await block.getByRole("button", { name: "日", exact: true }).click();
   await block.getByRole("button", { name: "水", exact: true }).click();
-  // 曜日ごとに違う時間にする
-  await block
-    .getByRole("checkbox", { name: "すべての曜日に同じ時間を使う" })
-    .uncheck();
+  await expect(block).toContainText("水・土 に同じ時間を使います");
+  // 曜日ごとに違う時間にする。外した直後の各行は直前の共通の時間(設計判断5)
+  await sameTimeBox.uncheck();
+  await expect(block.getByLabel("水曜日の開始時刻")).toHaveValue("09:00");
   await block.getByLabel("水曜日の開始時刻").fill("18:00");
   await block.getByLabel("水曜日の終了時刻").fill("20:00");
   await expect(block.getByLabel("土曜日の開始時刻")).toHaveValue("09:00");
@@ -143,6 +153,10 @@ test("家族の設定から参加できる曜日と時間を直せる(Issue #170
 
   // 終了が開始より前だと保存できず、サーバーと同じ文言が出る
   await reloaded.getByRole("button", { name: "編集" }).click();
+  // 曜日ごとに時間が違うので、チェックが外れた状態(=曜日ごとの行)で開く(設計判断7)
+  await expect(
+    reloaded.getByRole("checkbox", { name: "すべての曜日に同じ時間を使う" }),
+  ).not.toBeChecked();
   await reloaded.getByLabel("水曜日の終了時刻").fill("17:00");
   await reloaded.getByRole("button", { name: "保存" }).click();
   await expect(reloaded.getByRole("alert")).toContainText(

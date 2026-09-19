@@ -8,7 +8,12 @@ import {
   schoolYearOf,
   todayTokyo,
 } from "../src/grade-shared";
-import { fullName } from "../src/registration-shared";
+import {
+  buildAvailabilities,
+  DEFAULT_END_TIME,
+  DEFAULT_START_TIME,
+  fullName,
+} from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 子ども登録・家族連携 API を RLS 配下で検証する(child-registration/plan.md)。
@@ -303,6 +308,41 @@ describe("子ども登録(POST /children)", () => {
       { weekday: 3, startTime: "18:00", endTime: "20:00" },
       { weekday: 6, startTime: "09:00", endTime: "12:00" },
     ]);
+  });
+
+  it("時間を触らずに曜日だけ選んで進めると、全曜日 09:00〜12:00 で入る(Issue #179)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    // 登録②が送る値を、画面と同じ純関数で組み立てる(共通の時間が既定のまま・チェックは入)
+    const res = await call("/children", "POST", {
+      ...registration,
+      availabilities: buildAvailabilities({
+        weekdays: [0, 6],
+        commonTime: {
+          startTime: DEFAULT_START_TIME,
+          endTime: DEFAULT_END_TIME,
+        },
+        sameTime: true,
+        perWeekdayTimes: {},
+      }),
+    });
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { children: { id: string }[] };
+    const rows = await owner`
+      SELECT weekday, start_time::text AS start_time, end_time::text AS end_time
+      FROM child_availabilities WHERE child_id = ${created.children[0]?.id ?? ""}
+      ORDER BY weekday`;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      weekday: 0,
+      start_time: "09:00:00",
+      end_time: "12:00:00",
+    });
+    expect(rows[1]).toMatchObject({
+      weekday: 6,
+      start_time: "09:00:00",
+      end_time: "12:00:00",
+    });
   });
 
   it("同じ曜日が重複していると 400(Issue #170)", async () => {

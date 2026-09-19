@@ -303,6 +303,9 @@ textarea.inbox {
   letter-spacing: 2px;
   text-transform: uppercase;
 }
+/* 共通の参加できる時間帯(曜日のラベルを持たない開始 〜 終了の1組)。
+   曜日を選ぶ前から出す欄と、「すべての曜日に同じ時間を使う」が入のときに使う
+   (availability-common-time/plan.md 設計判断1・3) */
 .time-range {
   display: flex;
   align-items: center;

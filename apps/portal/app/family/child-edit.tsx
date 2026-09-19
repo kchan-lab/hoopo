@@ -4,6 +4,7 @@ import { HEIGHT_MAX, HEIGHT_MIN, todayTokyo } from "@hoopo/api/grade-shared";
 import {
   AVAILABILITY_HINT,
   type AvailabilitySlot,
+  buildAvailabilities,
   type ChildDetail,
   DEFAULT_END_TIME,
   DEFAULT_START_TIME,
@@ -13,6 +14,8 @@ import {
   NAME_PART_MAX,
   NOT_SET,
   parseAvailabilities,
+  sameTimeNote,
+  type TimeRange,
   WEEKDAY_LABELS,
 } from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
@@ -41,6 +44,37 @@ function allSameTime(slots: AvailabilitySlot[]): boolean {
   );
 }
 
+/**
+ * 既存の枠から、画面が持つ3つの状態(選んだ曜日 / 共通の時間 / 曜日ごとの時間)と
+ * チェックの初期値を作る(availability-common-time/plan.md 設計判断4・7)。
+ * 共通の時間は先頭の曜日の時間。枠が無ければ既定値(登録②で何も触らないときと同じ)
+ */
+function initialAvailability(slots: AvailabilitySlot[]): {
+  weekdays: number[];
+  commonTime: TimeRange;
+  perWeekdayTimes: Record<number, TimeRange>;
+  sameTime: boolean;
+} {
+  const sorted = [...slots].sort((a, b) => a.weekday - b.weekday);
+  const perWeekdayTimes: Record<number, TimeRange> = {};
+  for (const s of sorted) {
+    perWeekdayTimes[s.weekday] = {
+      startTime: s.startTime,
+      endTime: s.endTime,
+    };
+  }
+  const first = sorted[0];
+  return {
+    weekdays: sorted.map((s) => s.weekday),
+    commonTime: first
+      ? { startTime: first.startTime, endTime: first.endTime }
+      : { startTime: DEFAULT_START_TIME, endTime: DEFAULT_END_TIME },
+    perWeekdayTimes,
+    // 全曜日の時間が同じならチェックを入れた状態で始める(判定は従来どおり allSameTime)
+    sameTime: allSameTime(sorted),
+  };
+}
+
 export function ChildEdit({ child }: { child: EditableChild }) {
   const router = useRouter();
   // 学年判定の基準日(Asia/Tokyo の今日)。入力中の表示は目安で、正はサーバー
@@ -63,36 +97,56 @@ export function ChildEdit({ child }: { child: EditableChild }) {
   );
   const [gender, setGender] = useState<Gender>(child.gender);
   // 参加できる曜日と時間(availability-slots/plan.md 設計判断1)。
-  // 登録後に直す手段が無いと、打ち間違いや曜日の変更に保護者が対応できない
-  const [slots, setSlots] = useState<AvailabilitySlot[]>(child.availabilities);
-  const [sameTime, setSameTime] = useState(() =>
-    allSameTime(child.availabilities),
-  );
+  // 登録後に直す手段が無いと、打ち間違いや曜日の変更に保護者が対応できない。
+  // 状態の持ち方と見せ方は登録②とそろえる(availability-common-time/plan.md 設計判断4・7)
+  const initial = initialAvailability(child.availabilities);
+  const [weekdays, setWeekdays] = useState<number[]>(initial.weekdays);
+  const [commonTime, setCommonTime] = useState<TimeRange>(initial.commonTime);
+  const [perWeekdayTimes, setPerWeekdayTimes] = useState<
+    Record<number, TimeRange>
+  >(initial.perWeekdayTimes);
+  const [sameTime, setSameTime] = useState(initial.sameTime);
+  // 保存する値はいつも3つの状態から組み立てる(設計判断4・6。値の形は変えない)
+  const slots = buildAvailabilities({
+    weekdays,
+    commonTime,
+    sameTime,
+    perWeekdayTimes,
+  });
 
+  /** 曜日の選択を入れ替える。時間は曜日と別に持つので、外しても入れた時間は消えない */
   function toggleWeekday(weekday: number) {
-    setSlots((prev) => {
-      if (prev.some((s) => s.weekday === weekday))
-        return prev.filter((s) => s.weekday !== weekday);
-      const base = prev[0] ?? {
-        startTime: DEFAULT_START_TIME,
-        endTime: DEFAULT_END_TIME,
-      };
-      return [
-        ...prev,
-        { weekday, startTime: base.startTime, endTime: base.endTime },
-      ].sort((a, b) => a.weekday - b.weekday);
-    });
+    const next = weekdays.includes(weekday)
+      ? weekdays.filter((d) => d !== weekday)
+      : [...weekdays, weekday].sort((a, b) => a - b);
+    setWeekdays(next);
+    // 曜日が0件になったらチェックを既定(入)へ戻す(登録②と同じ。設計判断2)
+    if (next.length === 0) setSameTime(true);
   }
 
-  function setSlotTime(
-    weekday: number,
-    patch: { startTime?: string; endTime?: string },
-  ) {
-    setSlots((prev) =>
-      prev.map((s) =>
-        sameTime || s.weekday === weekday ? { ...s, ...patch } : s,
-      ),
-    );
+  /** 曜日ごとの時間の変更(チェックを外しているときだけ使う。設計判断3) */
+  function setWeekdayTime(weekday: number, patch: Partial<TimeRange>) {
+    setPerWeekdayTimes((prev) => ({
+      ...prev,
+      [weekday]: { ...(prev[weekday] ?? commonTime), ...patch },
+    }));
+  }
+
+  /** チェックの入れ替え。外した直後の各行は、そのときの共通の時間から始める(設計判断5) */
+  function changeSameTime(on: boolean) {
+    setSameTime(on);
+    if (on) {
+      // 入れ直したときは、直前に曜日ごとで編集していた時間のうち先頭の曜日のものを
+      // 共通の時間に引き継ぐ。ここで引き継がないと、外して直した内容が
+      // チェックを入れた瞬間に何も言わずに消える(#180 のレビュー指摘)
+      const first = weekdays[0];
+      const kept = first === undefined ? undefined : perWeekdayTimes[first];
+      if (kept) setCommonTime(kept);
+      return;
+    }
+    const seeded: Record<number, TimeRange> = {};
+    for (const d of weekdays) seeded[d] = commonTime;
+    setPerWeekdayTimes(seeded);
   }
 
   function startEditing() {
@@ -105,8 +159,11 @@ export function ChildEdit({ child }: { child: EditableChild }) {
     setBirthDate(detail.birthDate ?? "");
     setHeightCm(detail.heightCm === null ? "" : String(detail.heightCm));
     setGender(detail.gender);
-    setSlots(detail.availabilities);
-    setSameTime(allSameTime(detail.availabilities));
+    const availability = initialAvailability(detail.availabilities);
+    setWeekdays(availability.weekdays);
+    setCommonTime(availability.commonTime);
+    setPerWeekdayTimes(availability.perWeekdayTimes);
+    setSameTime(availability.sameTime);
     setError(null);
     setEditing(true);
   }
@@ -356,7 +413,7 @@ export function ChildEdit({ child }: { child: EditableChild }) {
               <button
                 key={label}
                 type="button"
-                aria-pressed={slots.some((s) => s.weekday === d)}
+                aria-pressed={weekdays.includes(d)}
                 onClick={() => toggleWeekday(d)}
               >
                 {label}
@@ -364,26 +421,55 @@ export function ChildEdit({ child }: { child: EditableChild }) {
             ))}
           </div>
         </fieldset>
+        {/* 見せ方は登録②と同じ。時間の欄は常に出し、チェックが入っているあいだは
+            共通の1組だけを出す(availability-common-time/plan.md 設計判断1・3・7) */}
         <fieldset className="fld2">
           <legend className="lbl">参加できる時間帯</legend>
-          {slots.length === 0 ? (
-            <p className="help">
-              上で曜日を選ぶと、曜日ごとに時間を入れられます
-            </p>
+          {sameTime ? (
+            <div className="time-range">
+              <input
+                type="time"
+                className="inbox"
+                aria-label="開始時刻"
+                value={commonTime.startTime}
+                onChange={(e) =>
+                  setCommonTime((prev) => ({
+                    ...prev,
+                    startTime: e.target.value,
+                  }))
+                }
+                required
+              />
+              <span>〜</span>
+              <input
+                type="time"
+                className="inbox"
+                aria-label="終了時刻"
+                value={commonTime.endTime}
+                onChange={(e) =>
+                  setCommonTime((prev) => ({
+                    ...prev,
+                    endTime: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
           ) : (
             <div className="slot-rows">
-              {slots.map((s) => {
-                const label = WEEKDAY_LABELS[s.weekday];
+              {weekdays.map((d) => {
+                const label = WEEKDAY_LABELS[d];
+                const time = perWeekdayTimes[d] ?? commonTime;
                 return (
-                  <div className="slot-row" key={s.weekday}>
+                  <div className="slot-row" key={d}>
                     <span className="day">{label}</span>
                     <input
                       type="time"
                       className="inbox"
                       aria-label={`${label}曜日の開始時刻`}
-                      value={s.startTime}
+                      value={time.startTime}
                       onChange={(e) =>
-                        setSlotTime(s.weekday, { startTime: e.target.value })
+                        setWeekdayTime(d, { startTime: e.target.value })
                       }
                       required
                     />
@@ -392,9 +478,9 @@ export function ChildEdit({ child }: { child: EditableChild }) {
                       type="time"
                       className="inbox"
                       aria-label={`${label}曜日の終了時刻`}
-                      value={s.endTime}
+                      value={time.endTime}
                       onChange={(e) =>
-                        setSlotTime(s.weekday, { endTime: e.target.value })
+                        setWeekdayTime(d, { endTime: e.target.value })
                       }
                       required
                     />
@@ -403,27 +489,20 @@ export function ChildEdit({ child }: { child: EditableChild }) {
               })}
             </div>
           )}
-          <label className="checkline">
-            <input
-              type="checkbox"
-              checked={sameTime}
-              onChange={(e) => {
-                const on = e.target.checked;
-                setSameTime(on);
-                if (on)
-                  setSlots((prev) =>
-                    prev.length === 0
-                      ? prev
-                      : prev.map((x) => ({
-                          ...x,
-                          startTime: prev[0]?.startTime ?? x.startTime,
-                          endTime: prev[0]?.endTime ?? x.endTime,
-                        })),
-                  );
-              }}
-            />
-            すべての曜日に同じ時間を使う
-          </label>
+          {/* 曜日を1つも選んでいないと「すべての曜日」が指すものが無いので出さない(設計判断2) */}
+          {weekdays.length > 0 && (
+            <>
+              <label className="checkline">
+                <input
+                  type="checkbox"
+                  checked={sameTime}
+                  onChange={(e) => changeSameTime(e.target.checked)}
+                />
+                すべての曜日に同じ時間を使う
+              </label>
+              {sameTime && <p className="help">{sameTimeNote(weekdays)}</p>}
+            </>
+          )}
           <p className="help">{AVAILABILITY_HINT}</p>
         </fieldset>
         <div className="form-btns">
