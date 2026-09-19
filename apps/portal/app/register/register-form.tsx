@@ -9,7 +9,7 @@ import {
 } from "@hoopo/api/grade-shared";
 import {
   AVAILABILITY_HINT,
-  type AvailabilitySlot,
+  buildAvailabilities,
   DEFAULT_END_TIME,
   DEFAULT_START_TIME,
   fullName,
@@ -22,6 +22,8 @@ import {
   parseNamePart,
   RELATION_LABELS,
   type Relation,
+  sameTimeNote,
+  type TimeRange,
   WEEKDAY_LABELS,
 } from "@hoopo/api/shared";
 import Link from "next/link";
@@ -75,11 +77,26 @@ export function RegisterForm() {
   // (plan.md 設計判断3。localStorage は使わない)
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [kids, setKids] = useState<ChildDraft[]>([newChild(0)]);
-  // 曜日を選ぶとその曜日の行が増える(availability-slots/plan.md 設計判断1)。
-  // 曜日の昇順で持ち、確認画面・送信もこの順で使う
-  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  // 参加できる時間帯の状態は「選んだ曜日」「共通の時間」「曜日ごとの時間」の3つに分ける
+  // (availability-common-time/plan.md 設計判断4)。曜日ごとの配列だけを持つと、
+  // 曜日を1つも選んでいないときに時間の置き場が無く、欄を出せなかった
+  const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [commonTime, setCommonTime] = useState<TimeRange>({
+    startTime: DEFAULT_START_TIME,
+    endTime: DEFAULT_END_TIME,
+  });
+  const [perWeekdayTimes, setPerWeekdayTimes] = useState<
+    Record<number, TimeRange>
+  >({});
   // 既定は「全曜日を同じ時間にする」= これまでの挙動(設計判断3)
   const [sameTime, setSameTime] = useState(true);
+  // 送る値・確認画面の表示はいつも3つの状態から組み立てる(設計判断4・6。値の形は変えない)
+  const slots = buildAvailabilities({
+    weekdays,
+    commonTime,
+    sameTime,
+    perWeekdayTimes,
+  });
   const [coachNote, setCoachNote] = useState("");
   const [relation, setRelation] = useState<Relation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,33 +107,32 @@ export function RegisterForm() {
       prev.map((k) => (k.key === key ? { ...k, ...patch } : k)),
     );
 
-  /** 曜日の選択を入れ替える。外したらその行は消し、選び直したら既定値に戻す(設計判断2) */
+  /** 曜日の選択を入れ替える。時間は曜日と別に持つので、外しても入れた時間は消えない */
   function toggleWeekday(weekday: number) {
-    setSlots((prev) => {
-      if (prev.some((s) => s.weekday === weekday))
-        return prev.filter((s) => s.weekday !== weekday);
-      // 既に行があればその時間から始める(「同じ時間を使う」が入のときは全行そろっている)
-      const base = prev[0] ?? {
-        startTime: DEFAULT_START_TIME,
-        endTime: DEFAULT_END_TIME,
-      };
-      return [
-        ...prev,
-        { weekday, startTime: base.startTime, endTime: base.endTime },
-      ].sort((a, b) => a.weekday - b.weekday);
-    });
+    const next = weekdays.includes(weekday)
+      ? weekdays.filter((d) => d !== weekday)
+      : [...weekdays, weekday].sort((a, b) => a - b);
+    setWeekdays(next);
+    // 曜日が0件になったらチェックを既定(入)へ戻す。チェックボックスを出していないあいだに
+    // 外れたままだと、曜日を選び直した瞬間に曜日ごとの行が出てしまう(設計判断2)
+    if (next.length === 0) setSameTime(true);
   }
 
-  /** 時刻の変更。「同じ時間を使う」が入のあいだは全曜日へ反映する(設計判断3) */
-  function setSlotTime(
-    weekday: number,
-    patch: { startTime?: string; endTime?: string },
-  ) {
-    setSlots((prev) =>
-      prev.map((s) =>
-        sameTime || s.weekday === weekday ? { ...s, ...patch } : s,
-      ),
-    );
+  /** 曜日ごとの時間の変更(チェックを外しているときだけ使う。設計判断3) */
+  function setWeekdayTime(weekday: number, patch: Partial<TimeRange>) {
+    setPerWeekdayTimes((prev) => ({
+      ...prev,
+      [weekday]: { ...(prev[weekday] ?? commonTime), ...patch },
+    }));
+  }
+
+  /** チェックの入れ替え。外した直後の各行は、そのときの共通の時間から始める(設計判断5) */
+  function changeSameTime(on: boolean) {
+    setSameTime(on);
+    if (on) return;
+    const seeded: Record<number, TimeRange> = {};
+    for (const d of weekdays) seeded[d] = commonTime;
+    setPerWeekdayTimes(seeded);
   }
 
   function goStep2(event: FormEvent<HTMLFormElement>) {
@@ -418,7 +434,7 @@ export function RegisterForm() {
                 <button
                   key={label}
                   type="button"
-                  aria-pressed={slots.some((s) => s.weekday === d)}
+                  aria-pressed={weekdays.includes(d)}
                   onClick={() => toggleWeekday(d)}
                 >
                   {label}
@@ -426,26 +442,55 @@ export function RegisterForm() {
               ))}
             </div>
           </fieldset>
+          {/* 時間の欄は曜日を選ぶ前から出す(設計判断1)。チェックが入っているあいだは
+              共通の1組だけを出し、曜日ごとの行は出さない(設計判断3) */}
           <fieldset className="fld2">
             <legend className="lbl">参加できる時間帯</legend>
-            {slots.length === 0 ? (
-              <p className="help">
-                上で曜日を選ぶと、曜日ごとに時間を入れられます
-              </p>
+            {sameTime ? (
+              <div className="time-range">
+                <input
+                  type="time"
+                  className="inbox"
+                  aria-label="開始時刻"
+                  value={commonTime.startTime}
+                  onChange={(e) =>
+                    setCommonTime((prev) => ({
+                      ...prev,
+                      startTime: e.target.value,
+                    }))
+                  }
+                  required
+                />
+                <span>〜</span>
+                <input
+                  type="time"
+                  className="inbox"
+                  aria-label="終了時刻"
+                  value={commonTime.endTime}
+                  onChange={(e) =>
+                    setCommonTime((prev) => ({
+                      ...prev,
+                      endTime: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
             ) : (
               <div className="slot-rows">
-                {slots.map((s) => {
-                  const label = WEEKDAY_LABELS[s.weekday];
+                {weekdays.map((d) => {
+                  const label = WEEKDAY_LABELS[d];
+                  const time = perWeekdayTimes[d] ?? commonTime;
                   return (
-                    <div className="slot-row" key={s.weekday}>
+                    <div className="slot-row" key={d}>
                       <span className="day">{label}</span>
                       <input
                         type="time"
                         className="inbox"
                         aria-label={`${label}曜日の開始時刻`}
-                        value={s.startTime}
+                        value={time.startTime}
                         onChange={(e) =>
-                          setSlotTime(s.weekday, { startTime: e.target.value })
+                          setWeekdayTime(d, { startTime: e.target.value })
                         }
                         required
                       />
@@ -454,9 +499,9 @@ export function RegisterForm() {
                         type="time"
                         className="inbox"
                         aria-label={`${label}曜日の終了時刻`}
-                        value={s.endTime}
+                        value={time.endTime}
                         onChange={(e) =>
-                          setSlotTime(s.weekday, { endTime: e.target.value })
+                          setWeekdayTime(d, { endTime: e.target.value })
                         }
                         required
                       />
@@ -465,28 +510,20 @@ export function RegisterForm() {
                 })}
               </div>
             )}
-            <label className="checkline">
-              <input
-                type="checkbox"
-                checked={sameTime}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  setSameTime(on);
-                  // 入れ直したときは先頭の行の時間に揃える(設計判断3)
-                  if (on)
-                    setSlots((prev) =>
-                      prev.length === 0
-                        ? prev
-                        : prev.map((s) => ({
-                            ...s,
-                            startTime: prev[0]?.startTime ?? s.startTime,
-                            endTime: prev[0]?.endTime ?? s.endTime,
-                          })),
-                    );
-                }}
-              />
-              すべての曜日に同じ時間を使う
-            </label>
+            {/* 曜日を1つも選んでいないと「すべての曜日」が指すものが無いので出さない(設計判断2) */}
+            {weekdays.length > 0 && (
+              <>
+                <label className="checkline">
+                  <input
+                    type="checkbox"
+                    checked={sameTime}
+                    onChange={(e) => changeSameTime(e.target.checked)}
+                  />
+                  すべての曜日に同じ時間を使う
+                </label>
+                {sameTime && <p className="help">{sameTimeNote(weekdays)}</p>}
+              </>
+            )}
             <p className="help">{AVAILABILITY_HINT}</p>
           </fieldset>
           <RelationSelect value={relation} onChange={setRelation} />

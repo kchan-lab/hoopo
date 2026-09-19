@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { birthDateForGrade } from "./grade-shared";
 import {
+  buildAvailabilities,
+  DEFAULT_END_TIME,
+  DEFAULT_START_TIME,
   fullName,
   nameInitial,
   parseChildPatch,
   parseLink,
   parseRegistration,
+  sameTimeNote,
 } from "./registration-shared";
 
 // 入力境界の検証(REQUIREMENTS §3 の項目だけを受け付け、それ以外は 400 に落とす)。
@@ -273,6 +277,101 @@ describe("parseChildPatch", () => {
     const r = parseChildPatch(body);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain(expected);
+  });
+});
+
+// 画面(登録② / 家族の設定)が持つ3つの状態から送る値を組み立てる部分
+// (availability-common-time/plan.md 設計判断4・5)。画面の中に閉じていると検証できないので純関数にした
+describe("buildAvailabilities", () => {
+  const commonTime = {
+    startTime: DEFAULT_START_TIME,
+    endTime: DEFAULT_END_TIME,
+  };
+
+  it("何も触らないと、選んだ全曜日が既定の時間になる(曜日の昇順)", () => {
+    expect(
+      buildAvailabilities({
+        weekdays: [6, 0],
+        commonTime,
+        sameTime: true,
+        perWeekdayTimes: {},
+      }),
+    ).toEqual([
+      { weekday: 0, startTime: "09:00", endTime: "12:00" },
+      { weekday: 6, startTime: "09:00", endTime: "12:00" },
+    ]);
+  });
+
+  it("チェックが入っているあいだは、曜日ごとの時間を無視して共通の時間を使う", () => {
+    expect(
+      buildAvailabilities({
+        weekdays: [0, 6],
+        commonTime: { startTime: "10:00", endTime: "11:30" },
+        sameTime: true,
+        perWeekdayTimes: { 6: { startTime: "13:00", endTime: "15:00" } },
+      }),
+    ).toEqual([
+      { weekday: 0, startTime: "10:00", endTime: "11:30" },
+      { weekday: 6, startTime: "10:00", endTime: "11:30" },
+    ]);
+  });
+
+  it("チェックを外していれば曜日ごとの時間を使う", () => {
+    expect(
+      buildAvailabilities({
+        weekdays: [0, 6],
+        commonTime,
+        sameTime: false,
+        perWeekdayTimes: {
+          0: { startTime: "09:00", endTime: "12:00" },
+          6: { startTime: "13:00", endTime: "15:00" },
+        },
+      }),
+    ).toEqual([
+      { weekday: 0, startTime: "09:00", endTime: "12:00" },
+      { weekday: 6, startTime: "13:00", endTime: "15:00" },
+    ]);
+  });
+
+  it("チェックを外したあとに選び足した曜日は共通の時間で埋める(設計判断5)", () => {
+    expect(
+      buildAvailabilities({
+        weekdays: [0, 3],
+        commonTime: { startTime: "18:00", endTime: "20:00" },
+        sameTime: false,
+        perWeekdayTimes: { 0: { startTime: "09:00", endTime: "12:00" } },
+      }),
+    ).toEqual([
+      { weekday: 0, startTime: "09:00", endTime: "12:00" },
+      { weekday: 3, startTime: "18:00", endTime: "20:00" },
+    ]);
+  });
+
+  it("曜日が0件なら空になる(サーバーが「曜日を1つ以上」で弾く)", () => {
+    const slots = buildAvailabilities({
+      weekdays: [],
+      commonTime,
+      sameTime: true,
+      perWeekdayTimes: {},
+    });
+    expect(slots).toEqual([]);
+    const r = parseRegistration({ ...valid, availabilities: slots });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("参加できる曜日を1つ以上");
+  });
+});
+
+describe("sameTimeNote", () => {
+  it("選んだ曜日を並べる", () => {
+    expect(sameTimeNote([6, 0])).toBe("日・土 に同じ時間を使います");
+  });
+
+  it("曜日が1つなら「同じ」を落とす(比べる相手が無いため)", () => {
+    expect(sameTimeNote([3])).toBe("水 にこの時間を使います");
+  });
+
+  it("曜日が0件なら何も言わない(チェックボックス自体を出さない)", () => {
+    expect(sameTimeNote([])).toBe("");
   });
 });
 

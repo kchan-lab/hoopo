@@ -43,7 +43,10 @@ export const NAME_PART_MAX = 25;
 const NOTE_MAX = 500;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** 参加できる時間帯の既定値(曜日を選んだ時点で入る。plan.md 設計判断2) */
+/**
+ * 参加できる時間帯の既定値。曜日を選ぶ前から欄に入っていて、触らなければこの時間で登録される
+ * (availability-common-time/plan.md 設計判断1。もとは曜日を選んだ時点で入る値だった)
+ */
 export const DEFAULT_START_TIME = "09:00";
 export const DEFAULT_END_TIME = "12:00";
 
@@ -61,6 +64,57 @@ export interface AvailabilitySlot {
   weekday: number;
   startTime: string;
   endTime: string;
+}
+
+/** 開始〜終了の1組(曜日を持たない。画面が持つ「共通の時間」「曜日ごとの時間」の型) */
+export interface TimeRange {
+  startTime: string;
+  endTime: string;
+}
+
+/**
+ * 画面の3つの状態(選んだ曜日 / 共通の時間 / 曜日ごとの時間)から、送信する
+ * `availabilities` を組み立てる(availability-common-time/plan.md 設計判断4)。
+ * 画面は曜日が0件のときも時間を持てるようになったので、送る値はここで1か所にまとめる。
+ * チェックが入っていれば全曜日に共通の時間、外していれば曜日ごとの時間を使い、
+ * 曜日ごとの時間を持たない曜日(チェックを外したあとに選び足した曜日)は共通の時間で埋める(設計判断5)。
+ * 曜日の昇順で返す(parseAvailabilities と同じ並び)
+ */
+export function buildAvailabilities(input: {
+  weekdays: number[];
+  commonTime: TimeRange;
+  sameTime: boolean;
+  /** 曜日 → その曜日の時間。キーが無い曜日は共通の時間を使う */
+  perWeekdayTimes: Record<number, TimeRange>;
+}): AvailabilitySlot[] {
+  const { weekdays, commonTime, sameTime, perWeekdayTimes } = input;
+  return [...weekdays]
+    .sort((a, b) => a - b)
+    .map((weekday) => {
+      const time = sameTime
+        ? commonTime
+        : (perWeekdayTimes[weekday] ?? commonTime);
+      return { weekday, startTime: time.startTime, endTime: time.endTime };
+    });
+}
+
+/**
+ * 「すべての曜日に同じ時間を使う」が入のときに、その時間がどの曜日に効くのかを示す補助文
+ * (availability-common-time/plan.md の見せ方)。選んだ曜日をそのまま並べる。
+ * 曜日が1つのときは「同じ」を落として「日 にこの時間を使います」とする。
+ * 比べる相手が無いのに「同じ時間」と言われると、何と同じなのかを探してしまうため
+ * (チェックボックスの文言は登録と家族の設定で共通のまま、補助文で不自然さを解く)。
+ * 曜日が0件のときは空文字(チェックボックス自体を出さないので使わない)
+ */
+export function sameTimeNote(weekdays: number[]): string {
+  if (weekdays.length === 0) return "";
+  const labels = [...weekdays]
+    .sort((a, b) => a - b)
+    .map((d) => WEEKDAY_LABELS[d])
+    .join("・");
+  return weekdays.length === 1
+    ? `${labels} にこの時間を使います`
+    : `${labels} に同じ時間を使います`;
 }
 
 /**
