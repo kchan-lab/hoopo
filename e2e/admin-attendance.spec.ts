@@ -1,4 +1,4 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import {
   type APIRequestContext,
   expect,
@@ -11,6 +11,7 @@ import {
   heightForGrade,
 } from "./child-input";
 import { gotoReady } from "./hydration";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // 出欠管理・欠席者管理の導線(Issue #77 受入条件)。
@@ -20,12 +21,6 @@ import { urls } from "./urls";
 // (同じ DB で desktop / mobile が並行し、同月に練習が蓄積すると列がずれるため)
 
 const WEEKDAY = ["日", "月", "火", "水", "木", "金", "土"];
-
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 /** "2031-04-05" → "4/5"、withWeekday なら "4/5(土)" */
 function label(date: string, withWeekday = false): string {

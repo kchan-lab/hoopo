@@ -1,6 +1,7 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { gotoReady } from "./hydration";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // LINE グループ送信の導線(Issue #107 受入条件。line-send/plan.md 6c-1)。
@@ -10,13 +11,6 @@ import { urls } from "./urls";
 
 /** フェイククライアントが返すグループ参加人数(packages/line の FAKE_GROUP_MEMBER_COUNT) */
 const MEMBER_COUNT = 12;
-
-/** 2031〜2090 年のランダムな月(admin-schedule-publish と同じ流儀) */
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 async function loginAsCoach(page: Page) {
   await gotoReady(page, `${urls.admin}/login`);

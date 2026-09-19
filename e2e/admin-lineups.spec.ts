@@ -1,4 +1,4 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import {
   type APIRequestContext,
   expect,
@@ -11,6 +11,7 @@ import {
   heightForGrade,
 } from "./child-input";
 import { gotoReady } from "./hydration";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // チーム編成の導線(Issue #101 受入条件)。
@@ -24,12 +25,6 @@ const POSITIONS = [
   ["PF", "パワーフォワード"],
   ["C", "センター"],
 ] as const;
-
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 async function loginAsCoach(page: Page) {
   await gotoReady(page, `${urls.admin}/login`);

@@ -95,6 +95,12 @@ docs/REQUIREMENTS.md §4.2-6 / docs/DESIGN_GUIDELINES.md §1.3(提出行・カ�
 - 実行: `pnpm test`(unit)/ `pnpm test:int`(integration)/ `pnpm test:e2e`(E2E)
 - CI: **PRごとに Unit + Integration のみ**を実行(E2EはPRのCIに含めない)。**ただしIntegrationは検証対象のRLS・スキーマがIssue #6で実装されるまで暫定的にCIジョブ自体を作らない**(空のIntegrationジョブは作らない方針)。Issue #6でスキーマ・RLSが揃い次第 `ci.yml` にIntegrationジョブを追加する
 - E2E: フロント系の実装をしたら、**コミット前にローカルでE2Eを回して確認する専用Skill(`e2e-check`)**で担保する(docker compose起動→対象導線のPlaywright実行→結果要約までをSkill化)。フルE2Eは **development→mainのリリースPR** と nightly のCIで実行
+  - **ローカルで全体E2Eを回す前に `docker compose restart portal admin` する。** Next の dev サーバーは
+    動かし続けると目に見えて遅くなり、待ち時間切れで無関係なテストが落ちる(実測で 2分6秒→47秒、
+    失敗 10件→0件。Issue #175)。CI は毎回新しいコンテナなので影響を受けない
+  - **テストで使う月は `e2e/unique-month.ts` の `uniqueMonth()` から取る。** 同じ DB を
+    desktop / mobile の複数ワーカーが共有するので、月が重なると他のテストの練習を数えてしまう。
+    テストごとに別の「年」が割り当たり、前後の月も空く(隣の月が空である前提のテストがある)
 - カバレッジ方針: `packages/api` `packages/db` のロジックは80%を目安に計測。UIは数値を追わず、主要導線がE2Eで通ることを基準にする
 - 新機能の縦切り1本 = Unit(ロジック)+ Integration(API+RLS)+ E2E(導線1本)をセットでIssueの受入条件に含める
 

@@ -11,6 +11,7 @@ import {
   heightForGrade,
 } from "./child-input";
 import { gotoReady } from "./hydration";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // 出欠リマインドの手動送信(Issue #20 受入条件。attendance-reminder/plan.md)。
@@ -21,13 +22,6 @@ import { urls } from "./urls";
 
 /** フェイククライアントが返すグループ参加人数(packages/line の FAKE_GROUP_MEMBER_COUNT) */
 const MEMBER_COUNT = 12;
-
-/** 2031〜2090 年のランダムな月(admin-line-send と同じ流儀) */
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 async function loginAsCoach(page: Page) {
   await gotoReady(page, `${urls.admin}/login`);

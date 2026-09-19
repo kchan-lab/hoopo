@@ -1,10 +1,11 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, test } from "@playwright/test";
 import {
   birthDateForGrade,
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // 保護者の参加予定の提出(Issue #76 受入条件)。
@@ -65,11 +66,6 @@ async function registerChildAsNewGuardian(
  * テストごとに別の月を使う(同じ DB で desktop / mobile が並行し、練習が月に蓄積すると
  * 行数や「回答 n / m 件」の分母がずれるため)。2031〜2090 年のランダムな月
  */
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 /** Asia/Tokyo の今日("YYYY-MM-DD")。テスト側でも日付は東京固定で決める */
 function todayInTokyo(): string {
