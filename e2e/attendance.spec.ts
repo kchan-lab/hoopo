@@ -52,9 +52,10 @@ async function registerChildAsNewGuardian(
         },
       ],
       relation: "father",
-      weekdays: [0, 6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [
+        { weekday: 0, startTime: "09:00", endTime: "12:00" },
+        { weekday: 6, startTime: "09:00", endTime: "12:00" },
+      ],
     },
   });
   expect(res.status()).toBe(201);
@@ -111,6 +112,16 @@ test("リストで提出 → 再表示で保持され、カレンダーと同期
   await rows.nth(1).locator("input").fill("11:00ごろ早退します");
   await expect(page.locator(".cta")).toContainText("( 回答 2 / 2 件 )");
 
+  // CTA は確定させず確認へ進む(Issue #176)。実際に提出するのは確認の CTA
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
+  await expect(page.locator("h1")).toContainText("参加予定の確認");
+  const confirmRows = page.locator(".sub-list .sbr");
+  await expect(confirmRows).toHaveCount(2);
+  await expect(confirmRows.first()).toContainText("参加(全時間)");
+  await expect(confirmRows.nth(1)).toContainText("11:00ごろ早退します");
+  // 全部答えているので未回答の警告も強調も出ない
+  await expect(page.locator(".sub-state.partial")).toHaveCount(0);
+  await expect(page.locator(".sbr.na")).toHaveCount(0);
   await page.getByRole("button", { name: "この内容で提出する" }).click();
   await expect(page.locator("main")).toContainText("提出しました");
 
@@ -166,7 +177,8 @@ test("提出の状態が画面上部に常時出て、変更・提出で切り�
   await expect(state).toHaveClass(/changed/);
   await expect(state).toContainText(`${monthNo}月分 未提出の変更があります`);
 
-  // 提出すると成功表示(role="status")が出て、上部は「提出済み(日時)」になる
+  // 確認を経て提出すると成功表示(role="status")が出て、上部は「提出済み(日時)」になる
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
   await page.getByRole("button", { name: "この内容で提出する" }).click();
   const flash = page.getByRole("status");
   await expect(flash).toContainText("提出しました");
@@ -223,6 +235,7 @@ test("提出後にコーチが練習日を足すと、未回答があると分�
     .first()
     .locator("select")
     .selectOption({ label: "参加(全時間)" });
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
   await page.getByRole("button", { name: "この内容で提出する" }).click();
   await expect(page.locator(".sub-state")).toHaveClass(/submitted/);
 
@@ -244,9 +257,70 @@ test("提出後にコーチが練習日を足すと、未回答があると分�
     .locator("select")
     .selectOption({ label: "不参加" });
   await expect(state).toHaveClass(/changed/);
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
   await page.getByRole("button", { name: "この内容で提出する" }).click();
   await expect(state).toHaveClass(/submitted/);
   await expect(state).toContainText(`${monthNo}月分 提出済み(`);
+});
+
+test("提出の前に確認を挟み、未回答が分かる(Issue #176)", async ({
+  browser,
+  page,
+}) => {
+  const tag = randomBytes(2).toString("hex");
+  const month = uniqueMonth();
+  const coach = await browser.newContext();
+  await createPracticeAsCoach(coach, `${month}-06`, `体育館F ${tag}`);
+  await createPracticeAsCoach(coach, `${month}-07`, `体育館G ${tag}`);
+  await coach.close();
+
+  await registerChildAsNewGuardian(page.context(), `確認 太郎 ${tag}`);
+  await page.goto(`${urls.portal}/attendance?month=${month}`);
+
+  // 1件だけ答えて確認へ。CTA を押しただけでは提出されない(上部は「未提出の変更」のまま)
+  await page
+    .locator(".sbr")
+    .first()
+    .locator("select")
+    .selectOption({ label: "参加(全時間)" });
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
+  await expect(page.locator("h1")).toContainText("参加予定の確認");
+
+  // その月の全練習が日付順に出る。未回答は件数(先頭)と行の強調の両方で分かる
+  const rows = page.locator(".sub-list .sbr");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText(`体育館F ${tag}`);
+  await expect(rows.first()).toContainText("参加(全時間)");
+  await expect(rows.nth(1)).toContainText("未回答");
+  await expect(rows.nth(1)).toHaveClass(/\bna\b/);
+  await expect(page.locator(".sub-state.partial")).toContainText(
+    "未回答が1件あります",
+  );
+
+  // 「修正する」で編集に戻る。回答は消えていない(まだ提出もされていない)
+  await page.getByRole("button", { name: "修正する" }).click();
+  await expect(page.locator("h1")).toContainText("参加予定の提出");
+  await expect(page.locator(".sbr").first().locator("select")).toHaveValue(
+    "full",
+  );
+  await expect(page.locator(".sub-state")).toHaveClass(/changed/);
+
+  // 未回答のままでも提出できる(止めない)
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
+  await page.getByRole("button", { name: "この内容で提出する" }).click();
+  await expect(page.getByRole("status")).toContainText("提出しました");
+  await expect(page.locator(".sub-state")).toHaveClass(/partial/);
+
+  // 全部答えると、確認の先頭の警告も行の強調も出ない
+  await page
+    .locator(".sbr")
+    .nth(1)
+    .locator("select")
+    .selectOption({ label: "不参加" });
+  await page.getByRole("button", { name: "内容を確認して提出する" }).click();
+  await expect(page.locator(".sub-list .sbr")).toHaveCount(2);
+  await expect(page.locator(".sub-state.partial")).toHaveCount(0);
+  await expect(page.locator(".sbr.na")).toHaveCount(0);
 });
 
 test("ホームに今月の未提出アラートが出て、提出画面へ移動できる", async ({

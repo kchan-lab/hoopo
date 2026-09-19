@@ -303,6 +303,9 @@ textarea.inbox {
   letter-spacing: 2px;
   text-transform: uppercase;
 }
+/* 共通の参加できる時間帯(曜日のラベルを持たない開始 〜 終了の1組)。
+   曜日を選ぶ前から出す欄と、「すべての曜日に同じ時間を使う」が入のときに使う
+   (availability-common-time/plan.md 設計判断1・3) */
 .time-range {
   display: flex;
   align-items: center;
@@ -310,6 +313,40 @@ textarea.inbox {
 }
 .time-range .inbox {
   flex: 1;
+}
+/* 曜日ごとの参加できる時間帯。曜日のラベル + 開始 〜 終了 を1行にする */
+.slot-rows {
+  display: grid;
+  gap: 6px;
+}
+.slot-row {
+  display: grid;
+  grid-template-columns: 1.6em 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.slot-row .day {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+  text-align: center;
+}
+.slot-row .inbox {
+  min-width: 0;
+}
+/* チェックボックスと文言を1行に置く(「すべての曜日に同じ時間を使う」) */
+.checkline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink);
+}
+/* 確認画面で曜日ごとの時間を縦に積む */
+.val.slots {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
 }
 /* 姓と名を横並びにする(漢字の行・よみの行)。狭い画面でも2列を保つ */
 .name-row {
@@ -1024,6 +1061,29 @@ textarea.inbox {
 }
 .sbr input::placeholder {
   color: var(--faint);
+}
+
+/* ---- 参加予定の提出: 提出前の確認(Issue #176) ----
+ * 行は編集の .sbr をそのまま使い、右端の <select> の位置に回答を文字で出す */
+.sbr .a {
+  margin-left: auto;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--sub);
+}
+/* 未回答の行は左の色帯 +「未回答」の字で強調する(色だけに頼らない。plan 設計判断3)。
+ * 帯は inset shadow で引いて、回答済みの行と高さがずれないようにする */
+.sbr.na {
+  background: var(--tint);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.sbr.na .a {
+  color: var(--deep);
+}
+/* 確認に出す「途中参加・早退」のコメント */
+.sbr .help {
+  margin-top: 6px;
 }
 .cta small {
   font-weight: 500;

@@ -3,6 +3,7 @@ import {
   nextAnswer,
   parseSubmitAttendance,
   submissionState,
+  unansweredNotice,
 } from "./attendances-shared";
 
 const CHILD = "11111111-1111-4111-8111-111111111111";
@@ -146,5 +147,26 @@ describe("submissionState(提出タブ上部の常時表示)", () => {
     expect(submissionState("2026-12", null, true).text).toBe(
       "12月分 未提出の変更があります",
     );
+  });
+});
+
+describe("unansweredNotice(提出前の確認。Issue #176)", () => {
+  it("未回答があるときだけ警告の文言を出す(0 件なら出さない)", () => {
+    expect(unansweredNotice(0)).toBeNull();
+    expect(unansweredNotice(1)).toBe("未回答が1件あります");
+    expect(unansweredNotice(3)).toBe("未回答が3件あります");
+  });
+
+  it("数え方と単位が画面上部の常時表示とそろう(#178 のレビュー指摘)", () => {
+    // 同じ月・同じ未回答数なら、上部のバナーと確認の警告が同じ数字・同じ単位になる
+    const unanswered = 2;
+    const state = submissionState(
+      "2026-09",
+      "2026-09-01T00:00:00Z",
+      false,
+      unanswered,
+    );
+    expect(state.text).toContain(`${unanswered}件`);
+    expect(unansweredNotice(unanswered)).toContain(`${unanswered}件`);
   });
 });

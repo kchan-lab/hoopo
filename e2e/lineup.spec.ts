@@ -60,9 +60,7 @@ async function registerChildren(context: BrowserContext, names: string[]) {
         gender: "male",
       })),
       relation: "mother",
-      weekdays: [0],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 0, startTime: "09:00", endTime: "12:00" }],
     },
   });
   expect(res.status()).toBe(201);

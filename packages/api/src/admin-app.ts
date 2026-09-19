@@ -518,7 +518,11 @@ export function createAdminApi(deps: AdminApiDeps) {
   app.patch("/members/:childId", coach, async (c) => {
     const childId = c.req.param("childId");
     if (!isUuid(childId)) return c.json({ error: "対象が見つかりません" }, 404);
-    const parsed = parseChildPatch(await c.req.json().catch(() => null));
+    // 参加できる時間帯は保護者だけが直せる(§5.2 の編集項目に無い)。
+    // 検証を保護者側と共有しているので、ここで受け付ける範囲を絞る
+    const parsed = parseChildPatch(await c.req.json().catch(() => null), {
+      allowAvailabilities: false,
+    });
     if (!parsed.ok) return c.json({ error: parsed.error }, 400);
     const session = c.get("session");
     const result = await updateMemberByCoach(

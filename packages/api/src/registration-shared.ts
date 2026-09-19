@@ -43,6 +43,126 @@ export const NAME_PART_MAX = 25;
 const NOTE_MAX = 500;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/**
+ * 参加できる時間帯の既定値。曜日を選ぶ前から欄に入っていて、触らなければこの時間で登録される
+ * (availability-common-time/plan.md 設計判断1。もとは曜日を選んだ時点で入る値だった)
+ */
+export const DEFAULT_START_TIME = "09:00";
+export const DEFAULT_END_TIME = "12:00";
+
+/**
+ * 参加できる時間帯の欄に添える説明(plan.md 設計判断4)。
+ * 厳密な約束だと受け取られると書くのをためらうため、「目安」であることと、
+ * 日ごとの都合は参加予定で伝えるという次の導線を示す。登録②と家族の設定で同じ文言を使う
+ */
+export const AVAILABILITY_HINT =
+  "普段参加できる時間の目安です。日によって違っても大丈夫です(その月の参加予定はあとで提出します)";
+
+/** 曜日1つぶんの参加できる時間帯。同じ曜日は1つまで */
+export interface AvailabilitySlot {
+  /** 0=日 … 6=土(practices.weekday と同一規約) */
+  weekday: number;
+  startTime: string;
+  endTime: string;
+}
+
+/** 開始〜終了の1組(曜日を持たない。画面が持つ「共通の時間」「曜日ごとの時間」の型) */
+export interface TimeRange {
+  startTime: string;
+  endTime: string;
+}
+
+/**
+ * 画面の3つの状態(選んだ曜日 / 共通の時間 / 曜日ごとの時間)から、送信する
+ * `availabilities` を組み立てる(availability-common-time/plan.md 設計判断4)。
+ * 画面は曜日が0件のときも時間を持てるようになったので、送る値はここで1か所にまとめる。
+ * チェックが入っていれば全曜日に共通の時間、外していれば曜日ごとの時間を使い、
+ * 曜日ごとの時間を持たない曜日(チェックを外したあとに選び足した曜日)は共通の時間で埋める(設計判断5)。
+ * 曜日の昇順で返す(parseAvailabilities と同じ並び)
+ */
+export function buildAvailabilities(input: {
+  weekdays: number[];
+  commonTime: TimeRange;
+  sameTime: boolean;
+  /** 曜日 → その曜日の時間。キーが無い曜日は共通の時間を使う */
+  perWeekdayTimes: Record<number, TimeRange>;
+}): AvailabilitySlot[] {
+  const { weekdays, commonTime, sameTime, perWeekdayTimes } = input;
+  return [...weekdays]
+    .sort((a, b) => a - b)
+    .map((weekday) => {
+      const time = sameTime
+        ? commonTime
+        : (perWeekdayTimes[weekday] ?? commonTime);
+      return { weekday, startTime: time.startTime, endTime: time.endTime };
+    });
+}
+
+/**
+ * 「すべての曜日に同じ時間を使う」が入のときに、その時間がどの曜日に効くのかを示す補助文
+ * (availability-common-time/plan.md の見せ方)。選んだ曜日をそのまま並べる。
+ * 曜日が1つのときは「同じ」を落として「日 にこの時間を使います」とする。
+ * 比べる相手が無いのに「同じ時間」と言われると、何と同じなのかを探してしまうため
+ * (チェックボックスの文言は登録と家族の設定で共通のまま、補助文で不自然さを解く)。
+ * 曜日が0件のときは空文字(チェックボックス自体を出さないので使わない)
+ */
+export function sameTimeNote(weekdays: number[]): string {
+  if (weekdays.length === 0) return "";
+  const labels = [...weekdays]
+    .sort((a, b) => a - b)
+    .map((d) => WEEKDAY_LABELS[d])
+    .join("・");
+  return weekdays.length === 1
+    ? `${labels} にこの時間を使います`
+    : `${labels} に同じ時間を使います`;
+}
+
+/**
+ * 参加できる時間帯の検証。曜日ごとに1行で、曜日の昇順に並べて返す。
+ * 曜日の重複は弾く(child_availabilities の一意制約と同じ規則を先に画面へ返すため)
+ */
+export function parseAvailabilities(
+  value: unknown,
+): ParseResult<AvailabilitySlot[]> {
+  if (!Array.isArray(value) || value.length === 0) {
+    return { ok: false, error: "参加できる曜日を1つ以上選んでください" };
+  }
+  if (value.length > WEEKDAY_LABELS.length) {
+    return { ok: false, error: "曜日の指定が不正です" };
+  }
+  const slots: AvailabilitySlot[] = [];
+  for (const raw of value) {
+    const r = asRecord(raw);
+    if (!r) return { ok: false, error: "曜日の指定が不正です" };
+    const weekday = r.weekday;
+    if (
+      !Number.isInteger(weekday) ||
+      (weekday as number) < 0 ||
+      (weekday as number) > 6
+    ) {
+      return { ok: false, error: "曜日の指定が不正です" };
+    }
+    if (slots.some((s) => s.weekday === weekday)) {
+      return { ok: false, error: "同じ曜日が重複しています" };
+    }
+    const startTime = typeof r.startTime === "string" ? r.startTime : "";
+    const endTime = typeof r.endTime === "string" ? r.endTime : "";
+    if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) {
+      return { ok: false, error: "時間帯を HH:MM 形式で入力してください" };
+    }
+    if (startTime >= endTime) {
+      const label = WEEKDAY_LABELS[weekday as number];
+      return {
+        ok: false,
+        error: `${label}曜日の終了時刻は開始時刻より後にしてください`,
+      };
+    }
+    slots.push({ weekday: weekday as number, startTime, endTime });
+  }
+  slots.sort((a, b) => a.weekday - b.weekday);
+  return { ok: true, value: slots };
+}
+
 export interface ChildInput {
   familyName: string;
   givenName: string;
@@ -60,10 +180,8 @@ export interface ChildInput {
 export interface RegistrationInput {
   children: ChildInput[];
   relation: Relation;
-  /** 0=日 … 6=土。重複なし・昇順 */
-  weekdays: number[];
-  startTime: string;
-  endTime: string;
+  /** 曜日ごとの参加できる時間帯。重複なし・曜日の昇順(plan.md 設計判断1) */
+  availabilities: AvailabilitySlot[];
   coachNote: string | null;
 }
 
@@ -222,24 +340,8 @@ export function parseRegistration(
   if (!RELATIONS.includes(r.relation as Relation)) {
     return { ok: false, error: "続柄を選んでください" };
   }
-  if (!Array.isArray(r.weekdays) || r.weekdays.length === 0) {
-    return { ok: false, error: "参加できる曜日を1つ以上選んでください" };
-  }
-  const weekdays = [...new Set(r.weekdays)].filter(
-    (d): d is number => Number.isInteger(d) && d >= 0 && d <= 6,
-  );
-  if (weekdays.length !== new Set(r.weekdays).size) {
-    return { ok: false, error: "曜日の指定が不正です" };
-  }
-  weekdays.sort((a, b) => a - b);
-  const startTime = typeof r.startTime === "string" ? r.startTime : "";
-  const endTime = typeof r.endTime === "string" ? r.endTime : "";
-  if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) {
-    return { ok: false, error: "時間帯を HH:MM 形式で入力してください" };
-  }
-  if (startTime >= endTime) {
-    return { ok: false, error: "終了時刻は開始時刻より後にしてください" };
-  }
+  const availabilities = parseAvailabilities(r.availabilities);
+  if (!availabilities.ok) return availabilities;
   const coachNote = optionalText(r.coachNote, NOTE_MAX);
   if (coachNote === undefined) {
     return {
@@ -252,9 +354,7 @@ export function parseRegistration(
     value: {
       children: parsedChildren,
       relation: r.relation as Relation,
-      weekdays,
-      startTime,
-      endTime,
+      availabilities: availabilities.value,
       coachNote,
     },
   };
@@ -304,13 +404,24 @@ export interface ChildPatch {
   birthDate?: string;
   heightCm?: number;
   gender?: Gender;
+  /** 渡されたらその子の枠をまるごと差し替える(plan.md 設計判断6) */
+  availabilities?: AvailabilitySlot[];
 }
 
 /**
  * PATCH の入力。渡された項目だけを更新するので全項目が任意だが、
  * 「何も無い」更新は受け付けない。学年は birthDate から保存時に再計算する
  */
-export function parseChildPatch(body: unknown): ParseResult<ChildPatch> {
+export function parseChildPatch(
+  body: unknown,
+  /**
+   * 参加できる時間帯を受け付けるか。保護者(家族の設定)だけが直せる項目で、
+   * コーチの部員管理では編集できない(REQUIREMENTS §5.2 の編集項目に無い)。
+   * 検証をコーチと共有しているため、受け付ける範囲は呼び出し側で絞る
+   */
+  options: { allowAvailabilities?: boolean } = {},
+): ParseResult<ChildPatch> {
+  const { allowAvailabilities = true } = options;
   const r = asRecord(body);
   if (!r) return { ok: false, error: "入力内容が不正です" };
   const patch: ChildPatch = {};
@@ -356,6 +467,17 @@ export function parseChildPatch(body: unknown): ParseResult<ChildPatch> {
       return { ok: false, error: "性別を選んでください" };
     }
     patch.gender = r.gender as Gender;
+  }
+  if (r.availabilities !== undefined) {
+    if (!allowAvailabilities) {
+      return {
+        ok: false,
+        error: "参加できる時間帯はご家族の画面から変更してください",
+      };
+    }
+    const availabilities = parseAvailabilities(r.availabilities);
+    if (!availabilities.ok) return availabilities;
+    patch.availabilities = availabilities.value;
   }
   if (Object.keys(patch).length === 0) {
     return { ok: false, error: "変更する項目がありません" };

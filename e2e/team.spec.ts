@@ -37,9 +37,7 @@ test("タブバーの「チーム」から名簿を開くと、登録した部�
         },
       ],
       relation: "mother",
-      weekdays: [0],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 0, startTime: "09:00", endTime: "12:00" }],
     },
   });
   expect(reg.status()).toBe(201);

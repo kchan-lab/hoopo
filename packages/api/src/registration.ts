@@ -11,6 +11,7 @@ import {
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { gradeFromBirthDate, todayTokyo } from "./grade-shared";
 import type {
+  AvailabilitySlot,
   ChildDetail,
   ChildPatch,
   Gender,
@@ -140,13 +141,15 @@ export async function registerChildren(
         childId: row.id,
         relation: input.relation,
       });
+      // 兄弟全員に同じ枠を入れる(②の入力は全員に適用。plan.md 設計判断5)。
+      // 子ごとに違う場合は家族の設定で直す
       await tx.insert(childAvailabilities).values(
-        input.weekdays.map((weekday) => ({
+        input.availabilities.map((slot) => ({
           teamId,
           childId: row.id,
-          weekday,
-          startTime: input.startTime,
-          endTime: input.endTime,
+          weekday: slot.weekday,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
         })),
       );
       created.push({
@@ -290,6 +293,8 @@ export async function unlinkChild(
 export interface FamilyChild extends ChildDetail {
   /** 表示用(5-5 ハイフン区切り) */
   inviteCode: string;
+  /** 曜日ごとの参加できる時間帯(曜日の昇順) */
+  availabilities: AvailabilitySlot[];
   guardians: {
     /** React key 等の識別用(表示名は保持しない) */
     guardianId: string;
@@ -312,6 +317,19 @@ export async function getFamily(
       .select({ id: children.id, inviteCode: children.inviteCode })
       .from(children)
       .where(inArray(children.id, ids));
+    const slots = await tx
+      .select({
+        childId: childAvailabilities.childId,
+        weekday: childAvailabilities.weekday,
+        startTime: childAvailabilities.startTime,
+        endTime: childAvailabilities.endTime,
+      })
+      .from(childAvailabilities)
+      .where(inArray(childAvailabilities.childId, ids))
+      .orderBy(
+        asc(childAvailabilities.weekday),
+        asc(childAvailabilities.startTime),
+      );
     const links = await tx
       .select({
         childId: guardianChildren.childId,
@@ -332,6 +350,14 @@ export async function getFamily(
       inviteCode: formatInviteCode(
         codes.find((x) => x.id === c.id)?.inviteCode ?? "",
       ),
+      availabilities: slots
+        .filter((s) => s.childId === c.id)
+        .map(({ weekday, startTime, endTime }) => ({
+          weekday,
+          // time 型は "HH:MM:SS" で返るので、画面で使う "HH:MM" に丸める
+          startTime: startTime.slice(0, 5),
+          endTime: endTime.slice(0, 5),
+        })),
       guardians: links
         .filter((l) => l.childId === c.id)
         .map((l) => ({
@@ -349,15 +375,22 @@ export async function getFamily(
  * ここに集約する。「見えるか」の判定は呼び出し側の責務。
  * 見つからなければ null(RLS 配下なので他チームの行はそもそも更新できない)
  */
+/** 更新後の子ども情報。参加できる時間帯も返すので、画面は保存の応答だけで描き直せる */
+export interface ChildDetailWithSlots extends ChildDetail {
+  availabilities: AvailabilitySlot[];
+}
+
 export async function applyChildPatch(
   tx: TeamTx,
   childId: string,
   patch: ChildPatch,
-): Promise<ChildDetail | null> {
+): Promise<ChildDetailWithSlots | null> {
+  // 参加できる時間帯は別テーブルなので children の UPDATE には渡さない
+  const { availabilities, ...childFields } = patch;
   const [row] = await tx
     .update(children)
     .set({
-      ...patch,
+      ...childFields,
       // 生年月日を直したら学年も追従させる(設計判断2)
       ...(patch.birthDate ? { grade: gradeForBirthDate(patch.birthDate) } : {}),
       updatedAt: new Date(),
@@ -374,12 +407,48 @@ export async function applyChildPatch(
       gender: children.gender,
       birthDate: children.birthDate,
       heightCm: children.heightCm,
+      teamId: children.teamId,
     });
-  return row ? { ...row, gender: row.gender as Gender } : null;
+  if (!row) return null;
+  if (availabilities) {
+    // まるごと差し替える(plan.md 設計判断6)。枠は最大7行・順序に意味が無いので作り直して困らない
+    await tx
+      .delete(childAvailabilities)
+      .where(eq(childAvailabilities.childId, childId));
+    await tx.insert(childAvailabilities).values(
+      availabilities.map((slot) => ({
+        teamId: row.teamId,
+        childId,
+        weekday: slot.weekday,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      })),
+    );
+  }
+  const slots = await tx
+    .select({
+      weekday: childAvailabilities.weekday,
+      startTime: childAvailabilities.startTime,
+      endTime: childAvailabilities.endTime,
+    })
+    .from(childAvailabilities)
+    .where(eq(childAvailabilities.childId, childId))
+    .orderBy(asc(childAvailabilities.weekday));
+  const { teamId: _teamId, ...detail } = row;
+  return {
+    ...detail,
+    gender: row.gender as Gender,
+    // time 型は "HH:MM:SS" で返るので、画面で使う "HH:MM" に丸める
+    availabilities: slots.map((s) => ({
+      weekday: s.weekday,
+      startTime: s.startTime.slice(0, 5),
+      endTime: s.endTime.slice(0, 5),
+    })),
+  };
 }
 
 export type UpdateChildResult =
-  | { ok: true; value: ChildDetail }
+  | { ok: true; value: ChildDetailWithSlots }
   | { ok: false; reason: "not_found" };
 
 /**

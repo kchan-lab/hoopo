@@ -78,9 +78,7 @@ test("公開したお知らせがホーム → 詳細 → 一覧で読め、下�
         },
       ],
       relation: "mother",
-      weekdays: [0],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 0, startTime: "09:00", endTime: "12:00" }],
     },
   });
   expect(reg.status()).toBe(201);

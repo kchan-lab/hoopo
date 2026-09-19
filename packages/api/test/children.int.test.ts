@@ -8,7 +8,12 @@ import {
   schoolYearOf,
   todayTokyo,
 } from "../src/grade-shared";
-import { fullName } from "../src/registration-shared";
+import {
+  buildAvailabilities,
+  DEFAULT_END_TIME,
+  DEFAULT_START_TIME,
+  fullName,
+} from "../src/registration-shared";
 import { SESSION_COOKIE_NAME } from "../src/session";
 
 // 子ども登録・家族連携 API を RLS 配下で検証する(child-registration/plan.md)。
@@ -85,9 +90,10 @@ const registration = {
     },
   ],
   relation: "father",
-  weekdays: [0, 6],
-  startTime: "09:00",
-  endTime: "12:00",
+  availabilities: [
+    { weekday: 0, startTime: "09:00", endTime: "12:00" },
+    { weekday: 6, startTime: "09:00", endTime: "12:00" },
+  ],
   coachNote: "ぜん息あり",
 };
 
@@ -255,12 +261,110 @@ describe("子ども登録(POST /children)", () => {
     expect(((await res.json()) as { error: string }).error).toContain("小学生");
   });
 
+  it("曜日ごとに違う時間で登録でき、家族の設定にそのまま出る(Issue #170)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const res = await call("/children", "POST", {
+      ...registration,
+      availabilities: [
+        { weekday: 3, startTime: "18:00", endTime: "20:00" },
+        { weekday: 6, startTime: "09:00", endTime: "12:00" },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    // 兄弟2人ぶん × 曜日2つで4行。曜日ごとに違う時間が入る(plan.md 設計判断5)
+    const rows = await owner`
+      SELECT weekday, start_time::text AS start_time, end_time::text AS end_time
+      FROM child_availabilities WHERE child_id = ${childId}
+      ORDER BY weekday`;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      weekday: 3,
+      start_time: "18:00:00",
+      end_time: "20:00:00",
+    });
+    expect(rows[1]).toMatchObject({
+      weekday: 6,
+      start_time: "09:00:00",
+      end_time: "12:00:00",
+    });
+
+    const family = (await (await call("/family", "GET")).json()) as {
+      children: {
+        id: string;
+        availabilities: {
+          weekday: number;
+          startTime: string;
+          endTime: string;
+        }[];
+      }[];
+    };
+    expect(
+      family.children.find((c) => c.id === childId)?.availabilities,
+    ).toEqual([
+      { weekday: 3, startTime: "18:00", endTime: "20:00" },
+      { weekday: 6, startTime: "09:00", endTime: "12:00" },
+    ]);
+  });
+
+  it("時間を触らずに曜日だけ選んで進めると、全曜日 09:00〜12:00 で入る(Issue #179)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    // 登録②が送る値を、画面と同じ純関数で組み立てる(共通の時間が既定のまま・チェックは入)
+    const res = await call("/children", "POST", {
+      ...registration,
+      availabilities: buildAvailabilities({
+        weekdays: [0, 6],
+        commonTime: {
+          startTime: DEFAULT_START_TIME,
+          endTime: DEFAULT_END_TIME,
+        },
+        sameTime: true,
+        perWeekdayTimes: {},
+      }),
+    });
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { children: { id: string }[] };
+    const rows = await owner`
+      SELECT weekday, start_time::text AS start_time, end_time::text AS end_time
+      FROM child_availabilities WHERE child_id = ${created.children[0]?.id ?? ""}
+      ORDER BY weekday`;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      weekday: 0,
+      start_time: "09:00:00",
+      end_time: "12:00:00",
+    });
+    expect(rows[1]).toMatchObject({
+      weekday: 6,
+      start_time: "09:00:00",
+      end_time: "12:00:00",
+    });
+  });
+
+  it("同じ曜日が重複していると 400(Issue #170)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const res = await call("/children", "POST", {
+      ...registration,
+      availabilities: [
+        { weekday: 6, startTime: "09:00", endTime: "12:00" },
+        { weekday: 6, startTime: "13:00", endTime: "15:00" },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain("重複");
+  });
+
   it("入力不正は 400 で理由を返す", async () => {
     const app = api();
     const call = json(app, await loginAs(app, USER_A));
     const res = await call("/children", "POST", {
       ...registration,
-      weekdays: [],
+      availabilities: [],
     });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toContain("曜日");
@@ -268,6 +372,48 @@ describe("子ども登録(POST /children)", () => {
 });
 
 describe("子ども情報の編集(PATCH /children/:id)", () => {
+  it("参加できる曜日と時間を差し替えられる(Issue #170)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const created = (await (
+      await call("/children", "POST", registration)
+    ).json()) as { children: { id: string }[] };
+    const childId = created.children[0]?.id ?? "";
+
+    // 日・土 09:00〜12:00 で登録した子を、水だけ 18:00〜20:00 に差し替える
+    const res = await call(`/children/${childId}`, "PATCH", {
+      availabilities: [{ weekday: 3, startTime: "18:00", endTime: "20:00" }],
+    });
+    expect(res.status).toBe(200);
+    expect(
+      (
+        (await res.json()) as {
+          child: {
+            availabilities: {
+              weekday: number;
+              startTime: string;
+              endTime: string;
+            }[];
+          };
+        }
+      ).child.availabilities,
+    ).toEqual([{ weekday: 3, startTime: "18:00", endTime: "20:00" }]);
+
+    // 古い行は残らない(まるごと差し替える。plan.md 設計判断6)
+    const rows = await owner`
+      SELECT weekday, start_time::text AS start_time
+      FROM child_availabilities WHERE child_id = ${childId}`;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ weekday: 3, start_time: "18:00:00" });
+
+    // 兄弟の枠は変わらない(子ごとに直せる)
+    const siblingId = created.children[1]?.id ?? "";
+    const sibling = await owner`
+      SELECT weekday FROM child_availabilities
+      WHERE child_id = ${siblingId} ORDER BY weekday`;
+    expect(sibling.map((r) => r.weekday)).toEqual([0, 6]);
+  });
+
   it("身長を直せて、生年月日を直すと学年が再計算される", async () => {
     const app = api();
     const call = json(app, await loginAs(app, USER_A));

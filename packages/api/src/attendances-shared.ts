@@ -174,3 +174,18 @@ export function submissionState(
   }
   return { kind: "unsubmitted", mark: "−", text: `${prefix} 未提出` };
 }
+
+/** 提出前の確認で使う記号(未回答)。submissionState の partial と同じにして見た目をそろえる */
+export const UNANSWERED_MARK = "?";
+
+/**
+ * 確認の先頭に出す警告の文言(Issue #176)。未回答が 0 件なら警告そのものを出さない。
+ * 未回答のままでも提出はできるので、止める文言にはしない。
+ *
+ * 数え方と単位は画面上部の常時表示(submissionState に渡す未回答の件数)と同じ「練習のコマ数」。
+ * 日数で数えると、同じ日に練習が2本ある月で上部が「2件」・確認が「1日」となり、
+ * 数秒のうちに違う数字を見せることになる(#178 のレビュー指摘)
+ */
+export function unansweredNotice(unanswered: number): string | null {
+  return unanswered > 0 ? `${UNANSWERED_LABEL}が${unanswered}件あります` : null;
+}
