@@ -6,7 +6,6 @@ import {
   type AttendanceAnswer,
   type AttendanceStatus,
   COMMENT_MAX,
-  countUnansweredDays,
   nextAnswer,
   submissionState,
   UNANSWERED_LABEL,
@@ -136,14 +135,9 @@ export function AttendanceEditor({
     dirty,
     practices.length - answered,
   );
-  // 確認で出す「未回答が N 日あります」。件数ではなく日数で数える(plan.md 設計判断3)
-  const unansweredDays = countUnansweredDays(
-    practices.map((p) => ({
-      heldOn: p.heldOn,
-      status: draft[p.id]?.status ?? null,
-    })),
-  );
-  const notice = unansweredNotice(unansweredDays);
+  // 確認で出す「未回答が N 件あります」。数え方も単位も画面上部の常時表示と同じにする
+  // (日数で数えると、同じ日に練習が2本ある月で上部と確認で違う数字が出る。#178 のレビュー指摘)
+  const notice = unansweredNotice(practices.length - answered);
 
   function edit(practiceId: string, patch: Partial<Draft[string]>) {
     setSaved(false);
@@ -222,29 +216,6 @@ export function AttendanceEditor({
   const hrefFor = (target: string, child = childId) =>
     `/attendance?month=${target}&view=${view}&child=${child}`;
 
-  // カレンダーは日付単位。同じ日に複数の練習があるときは1件目の状態を表示し、
-  // タップはその日の全件に同じ回答を適用する(細かい指定はリストで行う)
-  const byDay = new Map<string, PracticeItem[]>();
-  for (const p of practices) {
-    byDay.set(p.heldOn, [...(byDay.get(p.heldOn) ?? []), p]);
-  }
-
-  function cycleDay(date: string) {
-    const list = byDay.get(date);
-    const head = list?.[0];
-    if (!head) return;
-    const next = nextAnswer(draft[head.id]?.status ?? null);
-    setSaved(false);
-    setDirty(true);
-    setDraft((prev) => {
-      const updated = { ...prev };
-      for (const p of list) {
-        updated[p.id] = { status: next, comment: prev[p.id]?.comment ?? "" };
-      }
-      return updated;
-    });
-  }
-
   // 提出前の確認(Issue #176)。その月の全練習を日付順に出し、未回答を件数と行の両方で強調する。
   // 回答はここでは変えられないので、直すときは「修正する」で編集へ戻る(plan.md 設計判断2・3・6)
   if (mode === "confirm" && practices.length > 0) {
@@ -252,11 +223,15 @@ export function AttendanceEditor({
       <>
         <header className="sc-head">
           <h1 className="sc-title">
+            {/* 送信中に編集へ戻れると、戻った先で回答を変えたあとに古い内容の保存が
+                完了して、変えた内容が黙って消える(#178 のレビュー指摘)。
+                下の「修正する」と同じく、送信が終わるまで押せないようにする */}
             <button
               type="button"
               className="back addlink"
               aria-label="戻る"
               onClick={() => setMode("edit")}
+              disabled={submitting}
             >
               ‹
             </button>
@@ -270,7 +245,8 @@ export function AttendanceEditor({
             </p>
           )}
           {/* 未回答の警告。上部の常時表示の「未回答あり」(.sub-state.partial)と
-              同じ見た目・同じ記号を使い、新しい色を作らない(DESIGN_GUIDELINES §1) */}
+              同じ見た目・同じ記号を使い回す。同じ意味のものを2通りの見た目で出すと
+              別物に見えるため、新しい色やクラスは作らない */}
           {notice !== null && (
             <p className="sub-state partial" role="alert">
               <span className="mk" aria-hidden="true">
@@ -337,6 +313,31 @@ export function AttendanceEditor({
         </main>
       </>
     );
+  }
+
+  // ここから下は編集の表示だけが使う。確認は上で return 済みなので、
+  // カレンダー用のまとめ直しを確認のたびに作らずに済む(#178 のレビュー指摘)。
+  // カレンダーは日付単位。同じ日に複数の練習があるときは1件目の状態を表示し、
+  // タップはその日の全件に同じ回答を適用する(細かい指定はリストで行う)
+  const byDay = new Map<string, PracticeItem[]>();
+  for (const p of practices) {
+    byDay.set(p.heldOn, [...(byDay.get(p.heldOn) ?? []), p]);
+  }
+
+  function cycleDay(date: string) {
+    const list = byDay.get(date);
+    const head = list?.[0];
+    if (!head) return;
+    const next = nextAnswer(draft[head.id]?.status ?? null);
+    setSaved(false);
+    setDirty(true);
+    setDraft((prev) => {
+      const updated = { ...prev };
+      for (const p of list) {
+        updated[p.id] = { status: next, comment: prev[p.id]?.comment ?? "" };
+      }
+      return updated;
+    });
   }
 
   return (
