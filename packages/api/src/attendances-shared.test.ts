@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  countUnansweredDays,
   nextAnswer,
   parseSubmitAttendance,
   submissionState,
+  unansweredNotice,
 } from "./attendances-shared";
 
 const CHILD = "11111111-1111-4111-8111-111111111111";
@@ -146,5 +148,53 @@ describe("submissionState(提出タブ上部の常時表示)", () => {
     expect(submissionState("2026-12", null, true).text).toBe(
       "12月分 未提出の変更があります",
     );
+  });
+});
+
+describe("countUnansweredDays / unansweredNotice(提出前の確認。Issue #176)", () => {
+  it("未回答(null)の練習がある日を数える", () => {
+    expect(
+      countUnansweredDays([
+        { heldOn: "2026-09-06", status: "full" },
+        { heldOn: "2026-09-07", status: null },
+        { heldOn: "2026-09-13", status: null },
+      ]),
+    ).toBe(2);
+  });
+
+  it("全部答えていれば 0 日、練習が無ければ 0 日", () => {
+    expect(
+      countUnansweredDays([
+        { heldOn: "2026-09-06", status: "full" },
+        { heldOn: "2026-09-07", status: "absent" },
+        { heldOn: "2026-09-13", status: "partial" },
+      ]),
+    ).toBe(0);
+    expect(countUnansweredDays([])).toBe(0);
+  });
+
+  it("同じ日に練習が複数あっても 1 日として数える", () => {
+    expect(
+      countUnansweredDays([
+        { heldOn: "2026-09-06", status: null },
+        { heldOn: "2026-09-06", status: null },
+        { heldOn: "2026-09-07", status: "full" },
+      ]),
+    ).toBe(1);
+  });
+
+  it("一部だけ答えている日も、未回答が残っていればその日を数える", () => {
+    expect(
+      countUnansweredDays([
+        { heldOn: "2026-09-06", status: "full" },
+        { heldOn: "2026-09-06", status: null },
+      ]),
+    ).toBe(1);
+  });
+
+  it("未回答があるときだけ警告の文言を出す(0 日なら出さない)", () => {
+    expect(unansweredNotice(0)).toBeNull();
+    expect(unansweredNotice(1)).toBe("未回答が1日あります");
+    expect(unansweredNotice(2)).toBe("未回答が2日あります");
   });
 });

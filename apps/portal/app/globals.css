@@ -1059,6 +1059,29 @@ textarea.inbox {
 .sbr input::placeholder {
   color: var(--faint);
 }
+
+/* ---- 参加予定の提出: 提出前の確認(Issue #176) ----
+ * 行は編集の .sbr をそのまま使い、右端の <select> の位置に回答を文字で出す */
+.sbr .a {
+  margin-left: auto;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--sub);
+}
+/* 未回答の行は左の色帯 +「未回答」の字で強調する(色だけに頼らない。plan 設計判断3)。
+ * 帯は inset shadow で引いて、回答済みの行と高さがずれないようにする */
+.sbr.na {
+  background: var(--tint);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.sbr.na .a {
+  color: var(--deep);
+}
+/* 確認に出す「途中参加・早退」のコメント */
+.sbr .help {
+  margin-top: 6px;
+}
 .cta small {
   font-weight: 500;
   opacity: 0.7;

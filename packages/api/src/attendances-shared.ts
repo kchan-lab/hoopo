@@ -174,3 +174,30 @@ export function submissionState(
   }
   return { kind: "unsubmitted", mark: "−", text: `${prefix} 未提出` };
 }
+
+/** 提出前の確認で使う記号(未回答)。submissionState の partial と同じにして見た目をそろえる */
+export const UNANSWERED_MARK = "?";
+
+/**
+ * 提出前の確認に出す「未回答の日数」(Issue #176)。未回答の判定は画面上部の状態表示
+ * (submissionState に渡す件数)と同じ「status が null」。
+ * 同じ日に練習が複数あっても 1 日として数えるのは、確認の文言が「未回答が N 日あります」で、
+ * 保護者はカレンダーと同じく日で数えるため(plan.md 設計判断3)
+ */
+export function countUnansweredDays(
+  answers: { heldOn: string; status: AttendanceAnswer }[],
+): number {
+  const days = new Set<string>();
+  for (const a of answers) {
+    if (a.status === null) days.add(a.heldOn);
+  }
+  return days.size;
+}
+
+/**
+ * 確認の先頭に出す警告の文言。未回答が 0 日なら警告そのものを出さない(plan.md 設計判断3)。
+ * 未回答のままでも提出はできるので、止める文言にはしない(設計判断4)
+ */
+export function unansweredNotice(days: number): string | null {
+  return days > 0 ? `${UNANSWERED_LABEL}が${days}日あります` : null;
+}
