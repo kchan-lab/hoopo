@@ -62,11 +62,6 @@ async function registerChildAsNewGuardian(
   expect(res.status()).toBe(201);
 }
 
-/**
- * テストごとに別の月を使う(同じ DB で desktop / mobile が並行し、練習が月に蓄積すると
- * 行数や「回答 n / m 件」の分母がずれるため)。2031〜2090 年のランダムな月
- */
-
 /** Asia/Tokyo の今日("YYYY-MM-DD")。テスト側でも日付は東京固定で決める */
 function todayInTokyo(): string {
   return new Intl.DateTimeFormat("en-CA", {

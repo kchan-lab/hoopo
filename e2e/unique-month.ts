@@ -9,8 +9,15 @@ import { test } from "@playwright/test";
 // ワーカーごとに使う年の帯を分け、同じワーカー内では呼ぶたびに次の年へ進めて、
 // 1回の実行のなかで必ず別の年になるようにする。
 
-/** ワーカー1つに割り当てる年数。1ワーカーが使う回数より十分多くとる */
-const YEARS_PER_WORKER = 12;
+/**
+ * ワーカー1つに割り当てる年数。
+ *
+ * 1つのプロジェクトで `uniqueMonth()` を呼ぶのは 12 か所なので同数でも足りそうに見えるが、
+ * CI は `retries: 1` なので**リトライのたびに追加で払い出される**。帯を使い切ると
+ * 隣のワーカーの先頭とぶつかり、まさに直したい衝突が戻ってくる(#185 のレビュー指摘)。
+ * 十分な余裕をとり、それでも足りなくなったら黙って重ねずに落とす
+ */
+const YEARS_PER_WORKER = 100;
 
 let used = 0;
 
@@ -22,6 +29,13 @@ let used = 0;
  * (年をまたいで連番にすると、隣の月を別のテストが使ってしまう)
  */
 export function uniqueMonth(): string {
+  if (used >= YEARS_PER_WORKER) {
+    // 黙って隣のワーカーの帯に入ると、原因の分かりにくい失敗に戻ってしまう
+    throw new Error(
+      `1ワーカーで ${YEARS_PER_WORKER} 回を超えて uniqueMonth() を呼びました。` +
+        "YEARS_PER_WORKER を増やしてください(e2e/unique-month.ts)",
+    );
+  }
   const year = 2031 + test.info().workerIndex * YEARS_PER_WORKER + used;
   used += 1;
   return `${year}-06`;

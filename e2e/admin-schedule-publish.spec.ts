@@ -6,9 +6,7 @@ import { urls } from "./urls";
 
 // 予定表の発行(Issue #90 受入条件)。
 // 前提: AUTH_FAKE=1 + pnpm db:seed 済み(coach@example.com / hoopo-dev-login)。
-// 練習は月に蓄積すると「n/total 件」がずれるため、テストごとに別の月を使う
-
-/** 2031〜2090 年のランダムな月(admin-attendance / attendance と同じ流儀) */
+// 練習は月に蓄積すると「n/total 件」がずれるため、月は uniqueMonth()(e2e/unique-month.ts)から取る
 
 async function loginAsCoach(page: Page) {
   await gotoReady(page, `${urls.admin}/login`);

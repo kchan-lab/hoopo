@@ -17,7 +17,7 @@ import { urls } from "./urls";
 // 出欠管理・欠席者管理の導線(Issue #77 受入条件)。
 // 前提: AUTH_FAKE=1 + pnpm db:seed 済み(coach@example.com / hoopo-dev-login)。
 // 提出は保護者 API(4a の PUT /api/attendance)で行い、管理側をブラウザで確認する。
-// シードや他テストの練習と衝突しないよう、テストごとにランダムな月(2031〜2090年)で行う
+// シードや他テストの練習と衝突しないよう、月は uniqueMonth()(e2e/unique-month.ts)から取る
 // (同じ DB で desktop / mobile が並行し、同月に練習が蓄積すると列がずれるため)
 
 const WEEKDAY = ["日", "月", "火", "水", "木", "金", "土"];
