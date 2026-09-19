@@ -8,11 +8,16 @@ import {
   todayTokyo,
 } from "@hoopo/api/grade-shared";
 import {
+  AVAILABILITY_HINT,
+  type AvailabilitySlot,
+  DEFAULT_END_TIME,
+  DEFAULT_START_TIME,
   fullName,
   GENDER_LABELS,
   type Gender,
   NAME_PART_MAX,
   NOT_SET,
+  parseAvailabilities,
   parseNameKana,
   parseNamePart,
   RELATION_LABELS,
@@ -70,9 +75,11 @@ export function RegisterForm() {
   // (plan.md 設計判断3。localStorage は使わない)
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [kids, setKids] = useState<ChildDraft[]>([newChild(0)]);
-  const [weekdays, setWeekdays] = useState<number[]>([]);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("12:00");
+  // 曜日を選ぶとその曜日の行が増える(availability-slots/plan.md 設計判断1)。
+  // 曜日の昇順で持ち、確認画面・送信もこの順で使う
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  // 既定は「全曜日を同じ時間にする」= これまでの挙動(設計判断3)
+  const [sameTime, setSameTime] = useState(true);
   const [coachNote, setCoachNote] = useState("");
   const [relation, setRelation] = useState<Relation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +89,35 @@ export function RegisterForm() {
     setKids((prev) =>
       prev.map((k) => (k.key === key ? { ...k, ...patch } : k)),
     );
+
+  /** 曜日の選択を入れ替える。外したらその行は消し、選び直したら既定値に戻す(設計判断2) */
+  function toggleWeekday(weekday: number) {
+    setSlots((prev) => {
+      if (prev.some((s) => s.weekday === weekday))
+        return prev.filter((s) => s.weekday !== weekday);
+      // 既に行があればその時間から始める(「同じ時間を使う」が入のときは全行そろっている)
+      const base = prev[0] ?? {
+        startTime: DEFAULT_START_TIME,
+        endTime: DEFAULT_END_TIME,
+      };
+      return [
+        ...prev,
+        { weekday, startTime: base.startTime, endTime: base.endTime },
+      ].sort((a, b) => a.weekday - b.weekday);
+    });
+  }
+
+  /** 時刻の変更。「同じ時間を使う」が入のあいだは全曜日へ反映する(設計判断3) */
+  function setSlotTime(
+    weekday: number,
+    patch: { startTime?: string; endTime?: string },
+  ) {
+    setSlots((prev) =>
+      prev.map((s) =>
+        sameTime || s.weekday === weekday ? { ...s, ...patch } : s,
+      ),
+    );
+  }
 
   function goStep2(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,8 +144,9 @@ export function RegisterForm() {
   // ②→③。参加情報の検証はここで行い、③は表示と送信だけを担う(plan.md 設計判断4)
   function goStep3(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (weekdays.length === 0)
-      return setError("参加できる曜日を1つ以上選んでください");
+    // サーバーと同じ純関数で先に弾く(文言もそろう)
+    const checked = parseAvailabilities(slots);
+    if (!checked.ok) return setError(checked.error);
     if (!relation) return setError("続柄を選んでください");
     setError(null);
     setStep(3);
@@ -118,13 +155,10 @@ export function RegisterForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     // ②で検証済みだが、relation の型を絞るためと保険で見る。欠けていたら直せる②へ戻す
-    if (weekdays.length === 0 || !relation) {
+    const checked = parseAvailabilities(slots);
+    if (!checked.ok || !relation) {
       setStep(2);
-      return setError(
-        weekdays.length === 0
-          ? "参加できる曜日を1つ以上選んでください"
-          : "続柄を選んでください",
-      );
+      return setError(checked.ok ? "続柄を選んでください" : checked.error);
     }
     setSubmitting(true);
     setError(null);
@@ -144,9 +178,7 @@ export function RegisterForm() {
             gender: k.gender,
           })),
           relation,
-          weekdays,
-          startTime,
-          endTime,
+          availabilities: checked.value,
           coachNote,
         }),
       });
@@ -380,49 +412,83 @@ export function RegisterForm() {
             </p>
           )}
           <fieldset className="fld2">
-            <legend className="lbl">参加可能な曜日(複数選択)</legend>
+            <legend className="lbl">参加できる曜日(複数選択)</legend>
             <div className="days7">
               {WEEKDAY_LABELS.map((label, d) => (
                 <button
                   key={label}
                   type="button"
-                  aria-pressed={weekdays.includes(d)}
-                  onClick={() =>
-                    setWeekdays((prev) =>
-                      prev.includes(d)
-                        ? prev.filter((x) => x !== d)
-                        : [...prev, d].sort(),
-                    )
-                  }
+                  aria-pressed={slots.some((s) => s.weekday === d)}
+                  onClick={() => toggleWeekday(d)}
                 >
                   {label}
                 </button>
               ))}
             </div>
           </fieldset>
-          <div className="fld2">
-            <label htmlFor="start-time">参加可能な時間帯</label>
-            <div className="time-range">
+          <fieldset className="fld2">
+            <legend className="lbl">参加できる時間帯</legend>
+            {slots.length === 0 ? (
+              <p className="help">
+                上で曜日を選ぶと、曜日ごとに時間を入れられます
+              </p>
+            ) : (
+              <div className="slot-rows">
+                {slots.map((s) => {
+                  const label = WEEKDAY_LABELS[s.weekday];
+                  return (
+                    <div className="slot-row" key={s.weekday}>
+                      <span className="day">{label}</span>
+                      <input
+                        type="time"
+                        className="inbox"
+                        aria-label={`${label}曜日の開始時刻`}
+                        value={s.startTime}
+                        onChange={(e) =>
+                          setSlotTime(s.weekday, { startTime: e.target.value })
+                        }
+                        required
+                      />
+                      <span>〜</span>
+                      <input
+                        type="time"
+                        className="inbox"
+                        aria-label={`${label}曜日の終了時刻`}
+                        value={s.endTime}
+                        onChange={(e) =>
+                          setSlotTime(s.weekday, { endTime: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <label className="checkline">
               <input
-                id="start-time"
-                type="time"
-                className="inbox"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
+                type="checkbox"
+                checked={sameTime}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setSameTime(on);
+                  // 入れ直したときは先頭の行の時間に揃える(設計判断3)
+                  if (on)
+                    setSlots((prev) =>
+                      prev.length === 0
+                        ? prev
+                        : prev.map((s) => ({
+                            ...s,
+                            startTime: prev[0]?.startTime ?? s.startTime,
+                            endTime: prev[0]?.endTime ?? s.endTime,
+                          })),
+                    );
+                }}
               />
-              <span>〜</span>
-              <input
-                id="end-time"
-                type="time"
-                className="inbox"
-                aria-label="終了時刻"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
-              />
-            </div>
-          </div>
+              すべての曜日に同じ時間を使う
+            </label>
+            <p className="help">{AVAILABILITY_HINT}</p>
+          </fieldset>
           <RelationSelect value={relation} onChange={setRelation} />
           <div className="fld2">
             <label htmlFor="coach-note">コーチへの伝達事項(任意)</label>
@@ -536,14 +602,15 @@ export function RegisterForm() {
         <div className="label">参加について</div>
         <ul className="news">
           <li className="row">
-            <span>参加できる曜日</span>
-            <span className="val">
-              {weekdays.map((d) => WEEKDAY_LABELS[d]).join("・")}
-            </span>
-          </li>
-          <li className="row">
             <span>参加できる時間帯</span>
-            <span className="val">{`${startTime} 〜 ${endTime}`}</span>
+            {/* 曜日ごとに1行。曜日も時間もここで読めるので「曜日」の行は持たない */}
+            <span className="val slots">
+              {slots.map((s) => (
+                <span key={s.weekday}>
+                  {`${WEEKDAY_LABELS[s.weekday]} ${s.startTime} 〜 ${s.endTime}`}
+                </span>
+              ))}
+            </span>
           </li>
           <li className="row">
             <span>お子さんとの続柄</span>

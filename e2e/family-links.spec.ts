@@ -41,9 +41,7 @@ test("家族の設定からお子さんの生年月日・身長を直せる", as
         },
       ],
       relation: "mother",
-      weekdays: [6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
     },
   });
   expect(created.status()).toBe(201);
@@ -78,9 +76,78 @@ test("家族の設定からお子さんの生年月日・身長を直せる", as
   const reloaded = page.locator("section.child-block").first();
   await expect(reloaded).toContainText("152 cm");
   await expect(reloaded).toContainText("小学5年生");
+
   // ホームの学年ピルも再計算後の学年になる
   await page.goto(urls.portal);
   await expect(page.locator("main")).toContainText("5年");
+});
+
+test("家族の設定から参加できる曜日と時間を直せる(Issue #170)", async ({
+  context,
+  page,
+}) => {
+  // availability-slots/plan.md 設計判断1・6: 曜日ごとに時間を持てるようにしたぶん、
+  // 間違えたときに直せる必要がある。保存はその子の枠をまるごと差し替える
+  await loginAsNewGuardian(context);
+  const childName = `粉浜 時間${randomBytes(3).toString("hex")}`;
+  const created = await context.request.post(`${urls.portal}/api/children`, {
+    data: {
+      children: [
+        {
+          ...childNameInput(childName),
+          nicknameKana: "じかん",
+          birthDate: birthDateForGrade(4),
+          heightCm: heightForGrade(4),
+          gender: "female",
+        },
+      ],
+      relation: "mother",
+      availabilities: [
+        { weekday: 0, startTime: "09:00", endTime: "12:00" },
+        { weekday: 6, startTime: "09:00", endTime: "12:00" },
+      ],
+      coachNote: null,
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  // /family は編集を開くまで form が無いので、お子さんのブロックを目印にする
+  await gotoReady(page, `${urls.portal}/family`, "section.child-block");
+  const block = page.locator("section.child-block").first();
+  await expect(block).toContainText("日 09:00 〜 12:00");
+  await expect(block).toContainText("土 09:00 〜 12:00");
+
+  await block.getByRole("button", { name: "編集" }).click();
+  // 日を外し、水を足す(枠は差し替えなので日の行は消える)
+  await block.getByRole("button", { name: "日", exact: true }).click();
+  await block.getByRole("button", { name: "水", exact: true }).click();
+  // 曜日ごとに違う時間にする
+  await block
+    .getByRole("checkbox", { name: "すべての曜日に同じ時間を使う" })
+    .uncheck();
+  await block.getByLabel("水曜日の開始時刻").fill("18:00");
+  await block.getByLabel("水曜日の終了時刻").fill("20:00");
+  await expect(block.getByLabel("土曜日の開始時刻")).toHaveValue("09:00");
+  await block.getByRole("button", { name: "保存" }).click();
+
+  await expect(block).toContainText("水 18:00 〜 20:00", { timeout: 15000 });
+  await expect(block).toContainText("土 09:00 〜 12:00");
+  await expect(block).not.toContainText("日 09:00 〜 12:00");
+
+  // 再読み込みしても残っている
+  await page.reload();
+  const reloaded = page.locator("section.child-block").first();
+  await expect(reloaded).toContainText("水 18:00 〜 20:00");
+  await expect(reloaded).toContainText("土 09:00 〜 12:00");
+  await expect(reloaded).not.toContainText("日 09:00 〜 12:00");
+
+  // 終了が開始より前だと保存できず、サーバーと同じ文言が出る
+  await reloaded.getByRole("button", { name: "編集" }).click();
+  await reloaded.getByLabel("水曜日の終了時刻").fill("17:00");
+  await reloaded.getByRole("button", { name: "保存" }).click();
+  await expect(reloaded.getByRole("alert")).toContainText(
+    "水曜日の終了時刻は開始時刻より後にしてください",
+  );
 });
 
 test("第二保護者は自分の連携を解除でき、最後の保護者は解除できない", async ({
@@ -101,9 +168,7 @@ test("第二保護者は自分の連携を解除でき、最後の保護者は�
         },
       ],
       relation: "father",
-      weekdays: [6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
     },
   });
   expect(created.status()).toBe(201);

@@ -32,9 +32,11 @@ async function registerChildViaPortal(page: Page, name: string) {
         },
       ],
       relation: "mother",
-      weekdays: [0, 6],
-      startTime: "09:00",
-      endTime: "12:00",
+      // 曜日ごとに違う時間(Issue #170)。部員詳細に両方が並ぶことを見る
+      availabilities: [
+        { weekday: 0, startTime: "09:00", endTime: "12:00" },
+        { weekday: 6, startTime: "13:00", endTime: "15:00" },
+      ],
       coachNote: "E2E の伝達事項",
     },
   });
@@ -70,6 +72,7 @@ test("登録が認定管理に新着で表示され、無効化すると部員�
   await row.click();
   await expect(page.locator("tr.detail")).toContainText("E2E の伝達事項");
   await expect(page.locator("tr.detail")).toContainText("日 09:00〜12:00");
+  await expect(page.locator("tr.detail")).toContainText("土 13:00〜15:00");
   await expect(page.locator("tr.detail")).toContainText(
     `${child.inviteCode.slice(0, 5)}-${child.inviteCode.slice(5)}`,
   );

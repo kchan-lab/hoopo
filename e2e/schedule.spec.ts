@@ -106,9 +106,7 @@ test("ホームに次回の練習が出て、タブバーから日程へ移動�
         },
       ],
       relation: "father",
-      weekdays: [6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
     },
   });
   expect(reg.status()).toBe(201);
