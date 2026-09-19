@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  countUnansweredDays,
   nextAnswer,
   parseSubmitAttendance,
   submissionState,
@@ -151,50 +150,23 @@ describe("submissionState(提出タブ上部の常時表示)", () => {
   });
 });
 
-describe("countUnansweredDays / unansweredNotice(提出前の確認。Issue #176)", () => {
-  it("未回答(null)の練習がある日を数える", () => {
-    expect(
-      countUnansweredDays([
-        { heldOn: "2026-09-06", status: "full" },
-        { heldOn: "2026-09-07", status: null },
-        { heldOn: "2026-09-13", status: null },
-      ]),
-    ).toBe(2);
-  });
-
-  it("全部答えていれば 0 日、練習が無ければ 0 日", () => {
-    expect(
-      countUnansweredDays([
-        { heldOn: "2026-09-06", status: "full" },
-        { heldOn: "2026-09-07", status: "absent" },
-        { heldOn: "2026-09-13", status: "partial" },
-      ]),
-    ).toBe(0);
-    expect(countUnansweredDays([])).toBe(0);
-  });
-
-  it("同じ日に練習が複数あっても 1 日として数える", () => {
-    expect(
-      countUnansweredDays([
-        { heldOn: "2026-09-06", status: null },
-        { heldOn: "2026-09-06", status: null },
-        { heldOn: "2026-09-07", status: "full" },
-      ]),
-    ).toBe(1);
-  });
-
-  it("一部だけ答えている日も、未回答が残っていればその日を数える", () => {
-    expect(
-      countUnansweredDays([
-        { heldOn: "2026-09-06", status: "full" },
-        { heldOn: "2026-09-06", status: null },
-      ]),
-    ).toBe(1);
-  });
-
-  it("未回答があるときだけ警告の文言を出す(0 日なら出さない)", () => {
+describe("unansweredNotice(提出前の確認。Issue #176)", () => {
+  it("未回答があるときだけ警告の文言を出す(0 件なら出さない)", () => {
     expect(unansweredNotice(0)).toBeNull();
-    expect(unansweredNotice(1)).toBe("未回答が1日あります");
-    expect(unansweredNotice(2)).toBe("未回答が2日あります");
+    expect(unansweredNotice(1)).toBe("未回答が1件あります");
+    expect(unansweredNotice(3)).toBe("未回答が3件あります");
+  });
+
+  it("数え方と単位が画面上部の常時表示とそろう(#178 のレビュー指摘)", () => {
+    // 同じ月・同じ未回答数なら、上部のバナーと確認の警告が同じ数字・同じ単位になる
+    const unanswered = 2;
+    const state = submissionState(
+      "2026-09",
+      "2026-09-01T00:00:00Z",
+      false,
+      unanswered,
+    );
+    expect(state.text).toContain(`${unanswered}件`);
+    expect(unansweredNotice(unanswered)).toContain(`${unanswered}件`);
   });
 });
