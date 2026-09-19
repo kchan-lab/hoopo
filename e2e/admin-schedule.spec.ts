@@ -1,6 +1,7 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { gotoReady } from "./hydration";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // 日程管理の導線(Issue #71 受入条件)。
@@ -73,13 +74,6 @@ test("月の切替と入力エラー表示", async ({ page }) => {
 // ---- カレンダーからのまとめ登録(Issue #142 / schedule-bulk-entry/plan.md 設計判断1・4・6) ----
 // 月に練習が溜まると件数の検証がずれるので、テストごとに別の月を使う
 // (admin-schedule-publish と同じ流儀)
-
-/** 2031〜2090 年のランダムな月 */
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 /** その月の土曜("YYYY-MM-DD")。UTC の Date で数えるので実行環境の TZ に左右されない */
 function saturdaysOf(month: string): string[] {
