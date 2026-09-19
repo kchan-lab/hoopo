@@ -22,7 +22,7 @@ Issue: [#170](https://github.com/kchan-lab/hoopo/issues/170)
         日   [09:00] 〜 [12:00]      ← 選んだ曜日だけ行が出る
         土   [09:00] 〜 [12:00]
         ☑ すべての曜日に同じ時間を使う
-       ふだん参加できる時間の目安です。日によって違っても大丈夫です
+       普段参加できる時間の目安です。日によって違っても大丈夫です
        (その月の参加予定はあとで提出します)
 
 [保存] child_availabilities に (child_id, weekday, start_time, end_time) を曜日ごとに1行。
