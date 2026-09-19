@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/kchan-lab/hoopo/compare/v0.4.0...v0.5.0) (2026-09-19)
+
+
+### Features
+
+* 参加できる時間帯を曜日ごとに設定できるようにする ([#177](https://github.com/kchan-lab/hoopo/issues/177)) ([b543578](https://github.com/kchan-lab/hoopo/commit/b543578dc9c2855c720b3b55bf60f5d443c2ef05))
+* 参加予定の提出に確認画面を挟む ([#178](https://github.com/kchan-lab/hoopo/issues/178)) ([8a55abe](https://github.com/kchan-lab/hoopo/commit/8a55abe0c998b773bd6502ed5d3fea2902d7a904))
+
+
+### Bug Fixes
+
+* 参加できる時間帯を曜日未選択でも入力できる形に直す ([#180](https://github.com/kchan-lab/hoopo/issues/180)) ([c3cb6d8](https://github.com/kchan-lab/hoopo/commit/c3cb6d85f3934fdf61fed996183fa9697049f0d7))
+* 提出中に確認画面から戻れてしまう問題と、未回答の数え方の食い違いを直す ([#181](https://github.com/kchan-lab/hoopo/issues/181)) ([54fd760](https://github.com/kchan-lab/hoopo/commit/54fd760968b7387bc8d60152f14da8089190e242))
+
 ## [0.4.0](https://github.com/kchan-lab/hoopo/compare/v0.3.0...v0.4.0) (2026-09-16)
 
 
