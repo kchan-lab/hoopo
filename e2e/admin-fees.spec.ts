@@ -46,9 +46,7 @@ async function registerChildViaPortal(page: Page, name: string) {
         },
       ],
       relation: "mother",
-      weekdays: [6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
       coachNote: null,
     },
   });

@@ -91,9 +91,7 @@ async function registerChildren(page: Page, names: string[]) {
         gender: "male",
       })),
       relation: "father",
-      weekdays: [6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
       coachNote: null,
     },
   });

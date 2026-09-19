@@ -35,14 +35,15 @@ const valid = {
     },
   ],
   relation: "father",
-  weekdays: [6, 0, 3, 3],
-  startTime: "09:00",
-  endTime: "17:00",
+  availabilities: [
+    { weekday: 6, startTime: "09:00", endTime: "12:00" },
+    { weekday: 0, startTime: "13:00", endTime: "17:00" },
+  ],
   coachNote: "  ",
 };
 
 describe("parseRegistration", () => {
-  it("正常入力を正規化する(trim・空文字→null・曜日の重複除去と昇順)", () => {
+  it("正常入力を正規化する(trim・空文字→null・曜日の昇順)", () => {
     const r = parseRegistration(valid);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -53,7 +54,10 @@ describe("parseRegistration", () => {
     expect(r.value.children[0]?.birthDate).toBe(birthDateForGrade(4));
     expect(r.value.children[0]?.heightCm).toBe(135);
     expect(r.value.children[1]?.nicknameKana).toBeNull();
-    expect(r.value.weekdays).toEqual([0, 3, 6]);
+    expect(r.value.availabilities).toEqual([
+      { weekday: 0, startTime: "13:00", endTime: "17:00" },
+      { weekday: 6, startTime: "09:00", endTime: "12:00" },
+    ]);
     expect(r.value.coachNote).toBeNull();
   });
 
@@ -164,10 +168,42 @@ describe("parseRegistration", () => {
       "性別",
     ],
     ["続柄不正", { ...valid, relation: "uncle" }, "続柄"],
-    ["曜日なし", { ...valid, weekdays: [] }, "曜日"],
-    ["曜日範囲外", { ...valid, weekdays: [7] }, "曜日"],
-    ["時刻形式", { ...valid, startTime: "9:00" }, "HH:MM"],
-    ["開始≧終了", { ...valid, startTime: "17:00", endTime: "09:00" }, "後に"],
+    ["曜日なし", { ...valid, availabilities: [] }, "曜日"],
+    [
+      "曜日範囲外",
+      {
+        ...valid,
+        availabilities: [{ weekday: 7, startTime: "09:00", endTime: "12:00" }],
+      },
+      "曜日",
+    ],
+    [
+      "曜日の重複",
+      {
+        ...valid,
+        availabilities: [
+          { weekday: 6, startTime: "09:00", endTime: "12:00" },
+          { weekday: 6, startTime: "13:00", endTime: "15:00" },
+        ],
+      },
+      "重複",
+    ],
+    [
+      "時刻形式",
+      {
+        ...valid,
+        availabilities: [{ weekday: 6, startTime: "9:00", endTime: "12:00" }],
+      },
+      "HH:MM",
+    ],
+    [
+      "開始≧終了",
+      {
+        ...valid,
+        availabilities: [{ weekday: 6, startTime: "17:00", endTime: "09:00" }],
+      },
+      "後に",
+    ],
     ["伝達事項が長い", { ...valid, coachNote: "あ".repeat(501) }, "500文字"],
     ["余計な項目は無視される", { ...valid, phone: "090" }, null],
   ])("%s", (_label, body, expectedError) => {

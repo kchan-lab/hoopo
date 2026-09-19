@@ -110,9 +110,7 @@ async function registerChild(
         },
       ],
       relation: "father",
-      weekdays: [6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
       coachNote: null,
     },
   });

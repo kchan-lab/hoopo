@@ -34,9 +34,10 @@ async function registerChildAsNewGuardian(
         },
       ],
       relation: "father",
-      weekdays: [0, 6],
-      startTime: "09:00",
-      endTime: "12:00",
+      availabilities: [
+        { weekday: 0, startTime: "09:00", endTime: "12:00" },
+        { weekday: 6, startTime: "09:00", endTime: "12:00" },
+      ],
     },
   });
   expect(res.status()).toBe(201);
