@@ -129,7 +129,15 @@ export function RegisterForm() {
   /** チェックの入れ替え。外した直後の各行は、そのときの共通の時間から始める(設計判断5) */
   function changeSameTime(on: boolean) {
     setSameTime(on);
-    if (on) return;
+    if (on) {
+      // 入れ直したときは、直前に曜日ごとで編集していた時間のうち先頭の曜日のものを
+      // 共通の時間に引き継ぐ。ここで引き継がないと、外して直した内容が
+      // チェックを入れた瞬間に何も言わずに消える(#180 のレビュー指摘)
+      const first = weekdays[0];
+      const kept = first === undefined ? undefined : perWeekdayTimes[first];
+      if (kept) setCommonTime(kept);
+      return;
+    }
     const seeded: Record<number, TimeRange> = {};
     for (const d of weekdays) seeded[d] = commonTime;
     setPerWeekdayTimes(seeded);

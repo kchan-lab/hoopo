@@ -95,6 +95,20 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await page.getByLabel("土曜日の開始時刻").fill("13:00");
   await page.getByLabel("土曜日の終了時刻").fill("15:00");
   await expect(page.getByLabel("日曜日の開始時刻")).toHaveValue("09:00");
+  // 入れ直すと、曜日ごとで直した時間のうち先頭の曜日のものが共通の時間に残る
+  // (何も言わずに既定値へ戻さない。#180 のレビュー指摘)
+  await page.getByLabel("日曜日の開始時刻").fill("10:30");
+  await sameTimeBox.check();
+  await expect(page.getByLabel("開始時刻", { exact: true })).toHaveValue(
+    "10:30",
+  );
+  await sameTimeBox.uncheck();
+  await expect(page.getByLabel("土曜日の開始時刻")).toHaveValue("10:30");
+  // 土をもう一度午後に戻して、以降の確認画面の期待値にそろえる
+  await page.getByLabel("日曜日の開始時刻").fill("09:00");
+  await page.getByLabel("日曜日の終了時刻").fill("12:00");
+  await page.getByLabel("土曜日の開始時刻").fill("13:00");
+  await page.getByLabel("土曜日の終了時刻").fill("15:00");
   await page.getByRole("button", { name: "父", exact: true }).click();
   await page
     .getByLabel("コーチへの伝達事項(任意)")
