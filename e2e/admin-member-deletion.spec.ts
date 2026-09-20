@@ -8,14 +8,13 @@ import {
 import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
-// 卒団後のデータ削除(Issue #21 受入条件。member-deletion/plan.md):
-// 年度更新で卒団 → 「卒団した部員」に出る → 二段階確認で削除 → 一覧から消えて実行ログが残る。
+// 手動の卒団(grade-junior-high/plan.md 設計判断3)と、卒団後のデータ削除(Issue #21 受入条件。
+// member-deletion/plan.md):
+// 部員の行詳細から「卒団させる」→「卒団した部員」に出る → 二段階確認で削除 → 一覧から消えて実行ログが残る。
 // 前提: AUTH_FAKE=1 + pnpm db:seed 済み(coach@example.com / hoopo-dev-login)。
 //
-// 注意: 卒団させる手段が年度更新しかなく、これはチーム全体(= ローカル共有 DB の全部員)に効く。
-// そのため admin-year-rollover と同じ rollover プロジェクト(workers: 1・他プロジェクトの後)で回し、
-// 検証が終わったら afterEach で必ず取り消して seed の状態に戻す
-test.describe.configure({ mode: "serial" });
+// 卒団は1人ずつの操作になったので(#187 で年度更新から自動アーカイブを外した)、
+// このスペックは自分で登録した部員しか触らない = 他のスペックと並行して走れる
 
 async function registerChildViaPortal(
   page: Page,
@@ -58,47 +57,38 @@ async function loginAsCoach(page: Page) {
   });
 }
 
-// 年度更新の取り消し(猶予中でなければ 409 が返るだけなので、そのまま無視してよい)
-async function undoRollover(page: Page) {
-  await page.request
-    .post(`${urls.admin}/api/members/year-rollover/undo`)
-    .catch(() => undefined);
-}
-
-test.afterEach(async ({ page }) => {
-  // 共有 DB の全部員の学年を戻す。削除した部員は snapshot にいても復活しない(物理削除)
-  await undoRollover(page);
-});
-
-test("年度更新で卒団した部員のデータを削除でき、実行ログに残る", async ({
+test("部員を1人ずつ卒団させ、そのデータを削除でき、実行ログに残る", async ({
   page,
-  isMobile,
 }) => {
-  test.skip(isMobile, "共有 DB 全体に影響するため desktop のみで実行する");
-
   const name = `E2E 卒団 ${randomBytes(2).toString("hex")}`;
   await registerChildViaPortal(page, name, 6);
 
   await loginAsCoach(page);
-  // 前回の実行が猶予中のまま残っていると年度更新を実行できない
-  await undoRollover(page);
-
-  // 卒団させる手段は年度更新だけ(設計判断1)。UI の二段階確認は admin-year-rollover が見ているので、
-  // ここは管理 API を直接叩いて前提だけ作る
-  const rollover = await page.request.post(
-    `${urls.admin}/api/members/year-rollover`,
-  );
-  expect(rollover.status()).toBe(201);
-
   await page.goto(`${urls.admin}/members`);
+
+  // 行詳細を開いて「卒団させる」(二段階確認)
+  const memberRow = page.getByRole("row", { name: new RegExp(name) });
+  await expect(memberRow).toBeVisible();
+  await expect(memberRow).toContainText("6年");
+  await memberRow.click();
+  const detail = page.locator("tr.detail");
+  await detail.getByRole("button", { name: "卒団させる" }).click();
+  await expect(detail).toContainText("在籍に戻せません");
+  await detail.getByRole("button", { name: "卒団にする" }).click();
 
   // 在籍の一覧からは消え、「卒団した部員」に出る
   await expect(page.getByRole("row", { name: new RegExp(name) })).toHaveCount(
     0,
+    { timeout: 15000 },
   );
   const row = page.locator(".arow", { hasText: name });
   await expect(row).toContainText("6年");
   await expect(row).toContainText("卒団");
+
+  // 卒団も実行ログに残る(名前は出さず学年だけ)
+  const logs = page.locator("section.acard", { hasText: "実行ログ" });
+  await expect(logs).toContainText("部員を卒団(6年)");
+  await expect(logs).not.toContainText(name);
 
   // 二段階確認で削除
   await row.getByRole("button", { name: "データを削除" }).click();
@@ -110,6 +100,5 @@ test("年度更新で卒団した部員のデータを削除でき、実行ロ�
     timeout: 15000,
   });
   await expect(page.locator(".anotice")).toContainText("削除しました");
-  const logs = page.locator("section.acard", { hasText: "実行ログ" });
   await expect(logs).toContainText(/部員データを削除\(保護者 \d+ 人分も削除\)/);
 });

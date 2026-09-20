@@ -239,7 +239,32 @@ describe("子ども登録(POST /children)", () => {
     ]);
   });
 
-  it("小学生にならない生年月日は 400", async () => {
+  it("中学1年生の生年月日で登録でき、学年 7 が保存される(#187)", async () => {
+    const app = api();
+    const call = json(app, await loginAs(app, USER_A));
+    const birthDate = birthDateForGrade(7);
+    const res = await call("/children", "POST", {
+      ...registration,
+      children: [
+        {
+          familyName: "中学",
+          givenName: "一年",
+          familyNameKana: "ちゅうがく",
+          givenNameKana: "いちねん",
+          nicknameKana: null,
+          birthDate,
+          heightCm: 160,
+          gender: "male",
+        },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const rows = await owner`
+      SELECT grade, birth_date::text AS birth_date FROM children`;
+    expect(rows.map((r) => [r.grade, r.birth_date])).toEqual([[7, birthDate]]);
+  });
+
+  it("受け付ける学年にならない生年月日は 400", async () => {
     const app = api();
     const call = json(app, await loginAs(app, USER_A));
     const res = await call("/children", "POST", {
@@ -258,7 +283,9 @@ describe("子ども登録(POST /children)", () => {
       ],
     });
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain("小学生");
+    expect(((await res.json()) as { error: string }).error).toContain(
+      "小学1年生〜中学1年生",
+    );
   });
 
   it("曜日ごとに違う時間で登録でき、家族の設定にそのまま出る(Issue #170)", async () => {

@@ -7,7 +7,8 @@ import { ADMIN_SESSION_COOKIE_NAME } from "../src/session";
 import { adminDeps } from "./admin-deps";
 import { childNameParts } from "./child-name";
 
-// 卒団後のデータ削除 API(member-deletion/plan.md。REQUIREMENTS §5.2・§7)を RLS 配下で検証する。
+// 手動の卒団(grade-junior-high/plan.md 設計判断3)と、卒団後のデータ削除 API
+// (member-deletion/plan.md。REQUIREMENTS §5.2・§7)を RLS 配下で検証する。
 // 削除できるのは卒団(アーカイブ済み)だけ(設計判断1)、関連行は FK CASCADE で消え、
 // 紐づきが無くなった保護者も一緒に消える(判断2)。実行ログ(audit_logs)に名前は残さない(判断3)
 
@@ -70,17 +71,18 @@ async function insertChild(
   name: string,
   grade: number,
   code: string,
-  options: { archived?: boolean } = {},
+  options: { archived?: boolean; status?: string } = {},
 ): Promise<string> {
   const parts = childNameParts(name);
   const [row] = await owner`
     INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
-                          grade, gender, invite_code, archived, archived_at)
+                          grade, gender, invite_code, archived, archived_at, status)
     VALUES (${team}, ${parts.familyName}, ${parts.givenName},
             ${parts.familyNameKana}, ${parts.givenNameKana},
             ${grade}, 'male', ${code},
             ${options.archived ?? false},
-            ${options.archived ? ARCHIVED_AT : null})
+            ${options.archived ? ARCHIVED_AT : null},
+            ${options.status ?? "active"})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);
   return row.id as string;
@@ -109,6 +111,20 @@ async function countOf(table: string, childId: string): Promise<number> {
   const rows = await owner<{ n: number }[]>`
     SELECT count(*)::int AS n FROM ${owner(table)} WHERE child_id = ${childId}`;
   return rows[0]?.n ?? 0;
+}
+
+interface ArchiveState {
+  grade: number;
+  archived: boolean;
+  archived_at: Date | null;
+}
+
+async function archiveState(id: string): Promise<ArchiveState> {
+  const rows = await owner<ArchiveState[]>`
+    SELECT grade, archived, archived_at FROM children WHERE id = ${id}`;
+  const row = rows[0];
+  if (!row) throw new Error("部員が見つかりません");
+  return row;
 }
 
 async function childExists(id: string): Promise<boolean> {
@@ -253,6 +269,114 @@ describe("卒団した部員の一覧(GET /members/archived)", () => {
   });
 });
 
+describe("手動の卒団(POST /members/:childId/archive)", () => {
+  it("無効化済みの部員は卒団させられない(#191 のレビュー指摘)", async () => {
+    // 無効化(status=revoked)と卒団は別のこと。一覧に出ないので UI からは押せないが、
+    // API を直接叩かれても「卒団した部員」に混ざらないようにする
+    const revoked = await insertChild(teamId, "無効 郎", 5, "ZZZZZ0009", {
+      status: "revoked",
+    });
+    const coach = await coachClient(adminApi());
+    const res = await coach.post(`/members/${revoked}/archive`);
+    expect(res.status).toBe(404);
+
+    const rows = await owner`
+      SELECT archived FROM children WHERE id = ${revoked}`;
+    expect(rows[0]?.archived).toBe(false);
+  });
+
+  it("未ログインでは卒団させられない", async () => {
+    const app = adminApi();
+    const res = await app.request(`/members/${active}/archive`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(401);
+    expect((await archiveState(active)).archived).toBe(false);
+    expect(await auditRows()).toEqual([]);
+  });
+
+  it("在籍中の部員を卒団にすると学年は据え置きで、実行ログが1件残る", async () => {
+    const coach = await coachClient(adminApi());
+    const res = await coach.post(`/members/${active}/archive`);
+    expect(res.status).toBe(204);
+
+    // archived=true・卒団日が入り、学年は据え置き(§7)
+    const state = await archiveState(active);
+    expect(state.archived).toBe(true);
+    expect(state.archived_at).not.toBeNull();
+    expect(state.grade).toBe(4);
+    // 関連行(出欠・月謝など)は消さない
+    expect(await childExists(active)).toBe(true);
+
+    // 「卒団した部員」(削除の対象)に並ぶ
+    const body = (await (
+      await coach.get("/members/archived")
+    ).json()) as ArchivedBody;
+    expect(body.members.map((m) => m.id)).toContain(active);
+
+    const logs = await auditRows();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      team_id: teamId,
+      action: "child_archived",
+      target_id: active,
+      performed_by: coachId,
+    });
+    expect(logs[0]?.detail).toMatchObject({ grade: 4 });
+    // 名前は残さない(member-deletion 設計判断3。CLAUDE.md 絶対原則4)
+    expect(JSON.stringify(logs[0]?.detail)).not.toContain("在籍 花子");
+  });
+
+  it("中学1年生も卒団させられる(学年は 7 のまま)", async () => {
+    const chuichi = await insertChild(teamId, "中一 太郎", 7, "ZZZZZ0007");
+    const coach = await coachClient(adminApi());
+    expect((await coach.post(`/members/${chuichi}/archive`)).status).toBe(204);
+    const state = await archiveState(chuichi);
+    expect(state.archived).toBe(true);
+    expect(state.grade).toBe(7);
+    expect(await auditRows()).toHaveLength(1);
+  });
+
+  it("すでに卒団している部員は 409 で、実行ログも増えない", async () => {
+    const coach = await coachClient(adminApi());
+    const res = await coach.post(`/members/${graduated}/archive`);
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe(
+      "この部員はすでに卒団しています",
+    );
+    // 卒団日は最初のまま(上書きしない)
+    expect((await archiveState(graduated)).archived_at).toEqual(ARCHIVED_AT);
+    expect(await auditRows()).toEqual([]);
+  });
+
+  it("存在しない id・uuid でない id は 404", async () => {
+    const coach = await coachClient(adminApi());
+    const unknown = "00000000-0000-4000-8000-000000000000";
+    const missing = await coach.post(`/members/${unknown}/archive`);
+    expect(missing.status).toBe(404);
+    expect(((await missing.json()) as { error: string }).error).toBe(
+      "対象が見つかりません",
+    );
+    expect((await coach.post("/members/not-a-uuid/archive")).status).toBe(404);
+    expect(await auditRows()).toEqual([]);
+  });
+
+  it("他チームの部員は 404 で、対象は無傷のまま(RLS)", async () => {
+    const otherActive = await insertChild(
+      otherTeamId,
+      "他団 四郎",
+      5,
+      "ZZZZZ0005",
+    );
+    const coach = await coachClient(adminApi());
+    expect((await coach.post(`/members/${otherActive}/archive`)).status).toBe(
+      404,
+    );
+    expect((await archiveState(otherActive)).archived).toBe(false);
+    expect(await auditRows()).toEqual([]);
+  });
+});
+
 describe("卒団した部員のデータ削除(DELETE /members/:childId)", () => {
   it("本人と関連行が消え、専属の保護者だけ消えて実行ログが1件残る", async () => {
     const coach = await coachClient(adminApi());
@@ -300,7 +424,7 @@ describe("卒団した部員のデータ削除(DELETE /members/:childId)", () =>
     const res = await coach.del(`/members/${active}`);
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe(
-      "在籍中の部員は削除できません(先に年度更新で卒団させてください)",
+      "在籍中の部員は削除できません(先に卒団させてください)",
     );
     expect(await childExists(active)).toBe(true);
     expect(await auditRows()).toEqual([]);
@@ -366,11 +490,13 @@ describe("実行ログ(GET /audit-logs)", () => {
 
 describe("年度更新の取り消しとの相互作用", () => {
   it("猶予中に削除した部員は取り消しで戻らず、件数差(missing)で返る", async () => {
-    // 在籍中の 6 年生を年度更新で卒団させ(snapshot に入る)、猶予中にそのデータを削除する
+    // 年度更新の対象(snapshot に入る)を、猶予中に手で卒団させてからデータを削除する。
+    // 年度更新自体はもう誰も卒団させない(grade-junior-high/plan.md 設計判断2)
     const sixth = await insertChild(teamId, "卒団 予定", 6, "UNDO000001");
     const c = await coachClient(adminApi());
     const run = await c.post("/members/year-rollover");
     expect(run.status).toBe(201);
+    expect((await c.post(`/members/${sixth}/archive`)).status).toBe(204);
     const del = await c.del(`/members/${sixth}`);
     expect(del.status).toBe(204);
 

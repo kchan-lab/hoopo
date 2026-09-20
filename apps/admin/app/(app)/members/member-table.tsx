@@ -2,7 +2,9 @@
 
 import type { MemberRow } from "@hoopo/api";
 import {
+  BIRTH_DATE_RANGE_ERROR,
   gradeFromBirthDate,
+  gradeShortLabel,
   HEIGHT_MAX,
   HEIGHT_MIN,
   todayTokyo,
@@ -97,7 +99,8 @@ function MemberRows({
         <td className="c-name">{fullName(m)}</td>
         <td className="c-kana sub">{m.nicknameKana ?? DASH}</td>
         <td>
-          {m.grade}年<span className="sp">・{GENDER[m.gender]}</span>
+          {gradeShortLabel(m.grade)}
+          <span className="sp">・{GENDER[m.gender]}</span>
         </td>
         <td className={`pc c-birth${m.birthDate ? "" : " sub"}`}>
           {formatBirthDate(m.birthDate)}
@@ -132,10 +135,101 @@ function MemberRows({
               <dd className="code">{m.inviteCode}</dd>
             </dl>
             <MemberEditForm member={m} />
+            <ArchiveMember member={m} />
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+// ---- 行詳細からの卒団(grade-junior-high/plan.md 設計判断3) ----
+// 年度更新から自動の卒団アーカイブを外した(判断2)ので、卒団はここから1人ずつ行う。
+// 破壊的操作なので行内の二段階確認にする(CLAUDE.md 開発ルール。ネイティブ confirm() は使わない)。
+// 復帰 UI は無いので、確認文で「元に戻せない」ことと記録が残ることを伝える。
+// 実行ログは audit_logs(サーバー側)に残る
+
+function ArchiveMember({ member }: { member: MemberRow }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const name = fullName(member);
+
+  async function archive() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/members/${member.id}/archive`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(body?.error ?? "卒団にできませんでした");
+        setBusy(false);
+        return;
+      }
+      setConfirming(false);
+      setBusy(false);
+      // 一覧・「卒団した部員」・実行ログはサーバーコンポーネントが持つので、再取得で反映する
+      router.refresh();
+    } catch {
+      setError("卒団にできませんでした");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="pform medit">
+      <div className="k">卒団</div>
+      <p className="anote">
+        卒団にすると部員一覧から外れ、下の「卒団した部員」に移ります。出欠・月謝の記録は残りますが、在籍に戻す操作はありません
+      </p>
+      {confirming ? (
+        <fieldset className="confirm">
+          <legend className="sr-only">{`${name}を卒団にする確認`}</legend>
+          <span className="q">
+            {`${name}を卒団にします。部員一覧から外れ、在籍に戻せません。卒団にしますか?`}
+          </span>
+          <button
+            type="button"
+            className="abtn"
+            onClick={() => setConfirming(false)}
+            disabled={busy}
+          >
+            キャンセル
+          </button>
+          <button
+            type="button"
+            className="abtn fill"
+            onClick={archive}
+            disabled={busy}
+          >
+            {busy ? "卒団にしています…" : "卒団にする"}
+          </button>
+        </fieldset>
+      ) : (
+        <div className="pfoot">
+          <button
+            type="button"
+            className="abtn"
+            onClick={() => {
+              setConfirming(true);
+              setError(null);
+            }}
+          >
+            卒団させる
+          </button>
+        </div>
+      )}
+      {error !== null && (
+        <p className="lgerr" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -215,8 +309,8 @@ function MemberEditForm({ member }: { member: MemberRow }) {
   const gradeHint = !draft.birthDate
     ? "生年月日を入れると学年が決まります"
     : preview === null
-      ? "この生年月日は小学生の学年になりません"
-      : `この生年月日なら ${preview}年 になります`;
+      ? BIRTH_DATE_RANGE_ERROR
+      : `この生年月日なら ${gradeShortLabel(preview)} になります`;
 
   async function save() {
     setBusy(true);

@@ -146,12 +146,20 @@ describe("parseRegistration", () => {
       null,
     ],
     [
-      "小学生にならない生年月日",
+      "中学1年生は受け付ける(#187)",
       {
         ...valid,
         children: [{ ...valid.children[0], birthDate: birthDateForGrade(7) }],
       },
-      "小学生",
+      null,
+    ],
+    [
+      "受け付ける学年にならない生年月日",
+      {
+        ...valid,
+        children: [{ ...valid.children[0], birthDate: birthDateForGrade(8) }],
+      },
+      "小学1年生〜中学1年生",
     ],
     [
       "生年月日なし",
@@ -270,7 +278,11 @@ describe("parseChildPatch", () => {
       "名のよみをひらがなで入力してください",
     ],
     ["生年月日が不正", { birthDate: "2019/06/01" }, "生年月日"],
-    ["小学生にならない", { birthDate: birthDateForGrade(0) }, "小学生"],
+    [
+      "受け付ける学年にならない",
+      { birthDate: birthDateForGrade(0) },
+      "小学1年生〜中学1年生",
+    ],
     ["身長が範囲外", { heightCm: 221 }, "身長"],
     ["性別が不正", { gender: "x" }, "性別"],
   ])("%s は拒否する", (_label, body, expected) => {

@@ -8,7 +8,8 @@ import {
 import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
-// 年度更新(Issue #83 受入条件): 実行 → 一覧の学年が +1・6年生が卒団で消える → 取り消しで戻る。
+// 年度更新(Issue #83 受入条件 / #187): 実行 → 一覧の学年が +1(6年生は中1に上がり、
+// 中学1年生は据え置き。誰も卒団しない)→ 取り消しで戻る。
 // 前提: AUTH_FAKE=1 + pnpm db:seed 済み(coach@example.com / hoopo-dev-login)。
 //
 // 注意: 年度更新はチーム全体(= ローカル共有 DB の全部員)に効くため、他の spec が
@@ -67,7 +68,7 @@ async function undoIfPending(page: Page) {
   await expect(undo).toHaveCount(0);
 }
 
-test("年度更新を実行すると学年が +1 され6年生が卒団し、取り消すと元に戻る", async ({
+test("年度更新を実行すると学年が +1 され誰も卒団せず、取り消すと元に戻る", async ({
   page,
   isMobile,
 }) => {
@@ -77,8 +78,10 @@ test("年度更新を実行すると学年が +1 され6年生が卒団し、取
   const suffix = randomBytes(2).toString("hex");
   const name5 = `E2E 五年 ${suffix}`;
   const name6 = `E2E 六年 ${suffix}`;
+  const name7 = `E2E 中一 ${suffix}`;
   await registerChildViaPortal(page, name5, 5);
   await registerChildViaPortal(page, name6, 6);
+  await registerChildViaPortal(page, name7, 7);
 
   await loginAsCoach(page);
   await page.goto(`${urls.admin}/members`);
@@ -86,12 +89,15 @@ test("年度更新を実行すると学年が +1 され6年生が卒団し、取
 
   const row5 = page.getByRole("row", { name: new RegExp(name5) });
   const row6 = page.getByRole("row", { name: new RegExp(name6) });
+  const row7 = page.getByRole("row", { name: new RegExp(name7) });
   await expect(row5).toContainText("5年");
   await expect(row6).toContainText("6年");
+  await expect(row7).toContainText("中1");
 
-  // 二段階確認で実行
+  // 二段階確認で実行。確認文は「卒団する部員はいません」と言う(#187)
   await page.getByRole("button", { name: "年度更新を実行" }).click();
   await expect(page.locator(".ah")).toContainText("実行しますか?");
+  await expect(page.locator(".ah")).toContainText("卒団する部員はいません");
   await page.getByRole("button", { name: "実行する" }).click();
   await expect(page.locator(".yrcard")).toContainText(
     "年度更新を実行しました",
@@ -100,9 +106,10 @@ test("年度更新を実行すると学年が +1 され6年生が卒団し、取
     },
   );
 
-  // 5年 → 6年、6年 → 卒団アーカイブで一覧から消える
+  // 5年 → 6年、6年 → 中1。中1 は据え置きで、誰も一覧から消えない(#187)
   await expect(row5).toContainText("6年");
-  await expect(row6).toHaveCount(0);
+  await expect(row6).toContainText("中1");
+  await expect(row7).toContainText("中1");
 
   // 二段階確認で取り消し(猶予 24 時間・1回)
   await page.getByRole("button", { name: "取り消す", exact: true }).click();
@@ -112,4 +119,5 @@ test("年度更新を実行すると学年が +1 され6年生が卒団し、取
 
   await expect(row5).toContainText("5年");
   await expect(row6).toContainText("6年");
+  await expect(row7).toContainText("中1");
 });

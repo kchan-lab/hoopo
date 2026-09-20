@@ -1,6 +1,7 @@
 "use client";
 
 import type { LineupBenchEntry, LineupChild, LineupStarter } from "@hoopo/api";
+import { gradeShortLabel } from "@hoopo/api/grade-shared";
 import {
   POSITION_LABELS,
   POSITIONS,
@@ -17,7 +18,7 @@ import { useState } from "react";
 
 /** セレクト・チェックの表示名(名簿と同じ「姓 名(n年)」) */
 function memberLabel(m: LineupChild): string {
-  return `${fullName(m)}(${m.grade}年)`;
+  return `${fullName(m)}(${gradeShortLabel(m.grade)})`;
 }
 
 type StarterMap = Record<Position, string>;

@@ -5,6 +5,7 @@ import {
   fullName,
   getNextPractice,
   getUnansweredSummary,
+  gradeShortLabel,
   HOME_ANNOUNCEMENT_LIMIT,
   listChildrenForGuardian,
   listPublishedAnnouncements,
@@ -150,7 +151,7 @@ export default async function Home() {
                   </span>
                 )}
               </span>
-              <span className="pill">{c.grade}年</span>
+              <span className="pill">{gradeShortLabel(c.grade)}</span>
             </li>
           ))}
         </ul>
