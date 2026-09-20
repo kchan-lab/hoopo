@@ -152,9 +152,67 @@ hotfix/xxx ───────────────────────
 - **DB のロールバックはしない(forward-fix)**。障害時はアプリを Vercel の過去デプロイ再昇格で
   戻し、DB は前方修正のマイグレーションで対処する(Free プランは PITR なし・down migration 非管理)
 
+## 環境ごとの URL と LINE 側の設定
+
+ドメインは `hoopo.jp`(ムームードメインで取得・DNS もムームー DNS。REQUIREMENTS.md §2)。
+prod は `main`、stg は `development` が Vercel から自動デプロイされる。
+**LINE Developers 側の登録内容はコードにも env にも現れない**ので、この節を唯一の記録とする
+(2026-09-20 に admin-stg の LINE ログインが 400 になったとき、登録済みかどうかが分からず
+切り分けに時間がかかった)。
+
+### 環境ごとの URL
+
+| 環境 | アプリ | URL | デプロイ元ブランチ | 未ログインでの応答 |
+|---|---|---|---|---|
+| prod | portal(保護者) | `https://hoopo.jp` | `main` | 200(ログイン画面) |
+| prod | admin(管理) | `https://admin.hoopo.jp` | `main` | 307 → `/login` |
+| stg | portal(保護者) | `https://stg.hoopo.jp` | `development` | 200(ログイン画面) |
+| stg | admin(管理) | `https://admin-stg.hoopo.jp` | `development` | 307 → `/login` |
+
+応答は 2026-09-21 に `curl -s -o /dev/null -w "%{http_code}"` で確認(200 / 307 / 200 / 307)。
+DB は prod と stg で Supabase プロジェクトが別(§ ブランチ戦略・リリースフロー)。
+
+### LINE 側に登録するもの
+
+LINE ログインチャネルは `2011276934` で、**portal(LIFF)と admin(Web の LINE ログイン)が同じ
+チャネルを共用**する(LIFF ID の先頭がチャネル ID。portal の `LINE_CHANNEL_ID` と admin の
+`LINE_LOGIN_CHANNEL_ID` は同じ値)。Messaging API チャネルは別チャネル。
+
+| 登録先 | 項目 | 値 |
+|---|---|---|
+| LINE ログインチャネル `2011276934` → LINE ログイン設定 | コールバック URL(**prod / stg を複数行で両方**) | `https://admin.hoopo.jp/api/auth/line/callback`<br>`https://admin-stg.hoopo.jp/api/auth/line/callback` |
+| 同チャネル → LIFF(本番 `2011276934-AZA4UHnd`) | エンドポイント URL | `https://hoopo.jp` |
+| 同チャネル → LIFF(stg `2011276934-PA8cygEO`) | エンドポイント URL | `https://stg.hoopo.jp` |
+| Messaging API チャネル → Webhook 設定 | Webhook URL(#9) | `https://hoopo.jp/api/line/webhook`(stg は `https://stg.hoopo.jp/api/line/webhook`) |
+
+- コールバック URL は**アプリ側に設定する場所が無い**。`/auth/line/start` はリクエスト URL から
+  callback の絶対 URL を組み立て、`/auth/line/callback` は自分の URL から `redirect_uri` を作る
+  (`packages/api/src/line-login.ts` の `callbackUrlFromStart` / `redirectUriFromCallback`)。
+  つまり **URL を変えたときに直すのは LINE Developers 側の登録だけ**で、逆に登録していない
+  オリジン(Vercel のプレビュー URL など)からは LINE ログインを通せない
+- 登録が無い環境から開始すると、LINE の認可画面が `redirect_uri` 不一致で 400 になる。
+  prod だけ登録して stg を忘れる事故が起きやすいので、**必ず2行そろえる**
+- LIFF のエンドポイント URL を間違えると、LINE のトークから開いたときに旧ドメインが開く
+- 登録が正しくても、admin の `LINE_LOGIN_CHANNEL_SECRET` が無いと token 交換で落ちる。
+  切り分けは**どこまで進むか**で付く: LINE へ飛ばず「準備中」= `LINE_LOGIN_CHANNEL_ID` 未設定 /
+  認可画面が 400 = コールバック URL 未登録 / 認可後に「LINEログインに失敗しました」=
+  `LINE_LOGIN_CHANNEL_SECRET` 未設定か誤り(2026-09-20 の admin-stg はこれ)
+- Webhook URL は portal 側の origin + `/api/line/webhook`(`packages/api/src/app.ts`)。
+  署名検証に `LINE_CHANNEL_SECRET` を使い、未設定なら 503 を返す(fail-closed)
+
+### ドメインを変えるときに更新するもの
+
+1. ムームードメインの DNS と Vercel のドメイン割り当て(4つ分)
+2. LINE ログインチャネルのコールバック URL(admin prod / admin stg の2行)
+3. LIFF アプリのエンドポイント URL(本番・stg の2つ)
+4. Messaging API の Webhook URL(保存後に「検証」で確認する)
+5. Vercel 環境変数 `NEXT_PUBLIC_PORTAL_URL`(admin。予定表画像とメッセージのリンク先)
+6. docs: この節の表と REQUIREMENTS.md §2 のドメイン記載
+
 ## ステージング環境(stg)の準備
 
 stg は `development` ブランチが自動デプロイされる(Vercel の Production Branch = development)。
+URL と LINE Developers 側の登録は前節「環境ごとの URL と LINE 側の設定」を見る。
 新しい縦切りを stg で確かめる前に、次の 3 つが揃っているかを確認する。**環境変数が 1 つでも
 欠けると管理画面の API が全滅する**ので、まず必須 5 つを入れてから任意を足す(2026-09-10 の事故から)。
 
@@ -175,7 +233,8 @@ Vercel の `TEAM_ID` と同じ値(実値はドキュメントに書かず Vercel
 | `LINE_CHANNEL_ID` / `NEXT_PUBLIC_LIFF_ID` | 必須 | − | LIFF・ID トークン検証(#9) |
 | `LINE_CHANNEL_SECRET` | 任意 | − | Messaging API の Webhook 署名検証。無いと Webhook は 503 |
 | `NEXT_PUBLIC_PORTAL_URL` / `LIFF_ID` | − | 必須 / 任意 | 予定表画像の URL・LINE メッセージのリンク |
-| `LINE_LOGIN_CHANNEL_ID` / `LINE_LOGIN_CHANNEL_SECRET` | − | 任意 | 管理者の LINE ログイン。無いと「準備中」表示 |
+| `LINE_LOGIN_CHANNEL_ID` | − | 任意 | 管理者の LINE ログイン。**両方とも無い**なら LINE へ飛ばさず「準備中」でログイン画面へ戻す |
+| `LINE_LOGIN_CHANNEL_SECRET` | − | ID を入れるなら必須 | 「準備中」の判定は ID だけを見るので、**ID があって Secret が無いと LINE の認可画面までは進み、戻りの token 交換が 400 で「LINEログインに失敗しました」になる**(2026-09-20 の admin-stg)。ID と必ず対で入れる |
 | `LINE_CHANNEL_ACCESS_TOKEN` | − | 任意 | Messaging API の push。無いと送信ボタンが押せない |
 | `CRON_SECRET` | − | 任意 | 出欠リマインドの定期ジョブ(GitHub Secrets と同じ値) |
 
