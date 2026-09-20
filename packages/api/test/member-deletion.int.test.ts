@@ -71,17 +71,18 @@ async function insertChild(
   name: string,
   grade: number,
   code: string,
-  options: { archived?: boolean } = {},
+  options: { archived?: boolean; status?: string } = {},
 ): Promise<string> {
   const parts = childNameParts(name);
   const [row] = await owner`
     INSERT INTO children (team_id, family_name, given_name, family_name_kana, given_name_kana,
-                          grade, gender, invite_code, archived, archived_at)
+                          grade, gender, invite_code, archived, archived_at, status)
     VALUES (${team}, ${parts.familyName}, ${parts.givenName},
             ${parts.familyNameKana}, ${parts.givenNameKana},
             ${grade}, 'male', ${code},
             ${options.archived ?? false},
-            ${options.archived ? ARCHIVED_AT : null})
+            ${options.archived ? ARCHIVED_AT : null},
+            ${options.status ?? "active"})
     RETURNING id`;
   if (!row) throw new Error(`部員の作成に失敗しました: ${name}`);
   return row.id as string;
@@ -269,6 +270,21 @@ describe("卒団した部員の一覧(GET /members/archived)", () => {
 });
 
 describe("手動の卒団(POST /members/:childId/archive)", () => {
+  it("無効化済みの部員は卒団させられない(#191 のレビュー指摘)", async () => {
+    // 無効化(status=revoked)と卒団は別のこと。一覧に出ないので UI からは押せないが、
+    // API を直接叩かれても「卒団した部員」に混ざらないようにする
+    const revoked = await insertChild(teamId, "無効 郎", 5, "ZZZZZ0009", {
+      status: "revoked",
+    });
+    const coach = await coachClient(adminApi());
+    const res = await coach.post(`/members/${revoked}/archive`);
+    expect(res.status).toBe(404);
+
+    const rows = await owner`
+      SELECT archived FROM children WHERE id = ${revoked}`;
+    expect(rows[0]?.archived).toBe(false);
+  });
+
   it("未ログインでは卒団させられない", async () => {
     const app = adminApi();
     const res = await app.request(`/members/${active}/archive`, {

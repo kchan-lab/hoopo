@@ -38,6 +38,7 @@ const GIVEN_KANA: Record<string, string> = {
   予定: "よてい",
   卒郎: "そつろう",
   無郎: "むろう",
+  郎: "ろう",
 };
 
 export interface ChildNameParts {

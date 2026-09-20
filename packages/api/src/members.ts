@@ -301,14 +301,30 @@ export async function archiveMember(
     const [updated] = await tx
       .update(children)
       .set({ archived: true, archivedAt: now, updatedAt: now })
-      .where(and(eq(children.id, childId), eq(children.archived, false)))
+      // 一覧(listMembers)や年度更新の対象と同じ条件にそろえる。無効化(status=revoked)と
+      // 卒団は別のことなので、無効化済みの部員を卒団にはしない(#191 のレビュー指摘)
+      .where(
+        and(
+          eq(children.id, childId),
+          eq(children.archived, false),
+          eq(children.status, "active"),
+        ),
+      )
       .returning({ id: children.id, grade: children.grade });
     if (!updated) {
-      // RLS 配下なので、他チームの部員はそもそも見えない(= not_found)
+      // RLS 配下なので、他チームの部員はそもそも見えない(= not_found)。
+      // 在籍中(active)で未アーカイブの行だけが対象なので、
+      // 無効化済みの部員は「見つからない」として扱う
       const [existing] = await tx
         .select({ id: children.id })
         .from(children)
-        .where(eq(children.id, childId))
+        .where(
+          and(
+            eq(children.id, childId),
+            eq(children.archived, true),
+            eq(children.status, "active"),
+          ),
+        )
         .limit(1);
       return {
         ok: false,
