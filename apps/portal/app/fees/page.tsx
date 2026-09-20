@@ -11,6 +11,7 @@ import {
   YEAR_MIN,
 } from "@hoopo/api";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getGuardianSession } from "../../lib/session";
 import { AccountMenuSlot } from "../account-menu-slot";
 import { AutoLogin } from "../auto-login";
@@ -74,27 +75,9 @@ export default async function FeesPage({
     monthOf(today),
   );
 
+  // お子さんが未登録のときは提出画面と同じくホームの分岐画面へ送る(Issue #188)
   const first = sheet.children[0];
-  if (!first) {
-    // 子ども未連携のときは提出画面と同じくホームの分岐画面へ誘導する
-    return (
-      <>
-        <header className="sc-head">
-          <h1 className="sc-title">月謝確認</h1>
-        </header>
-        <main className="sc-body">
-          <p className="help">
-            お子さんの登録が済むと、月謝の状況を確認できます
-          </p>
-          <Link href="/" className="card choice">
-            はじめての方
-            <small>お子さんの登録・招待コードの入力へ</small>
-          </Link>
-        </main>
-        <TabBar active="yen" />
-      </>
-    );
-  }
+  if (!first) redirect("/");
   const row = sheet.children.find((r) => r.child.id === sp.child) ?? first;
   const hrefFor = (target: number, child = row.child.id) =>
     `/fees?year=${target}&child=${child}`;

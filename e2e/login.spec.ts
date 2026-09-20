@@ -26,3 +26,22 @@ test("LIFF リンクを開くと自動ログインしてホームが表示され
   await page.reload();
   await expect(page.locator("h1")).toContainText("はじめての方");
 });
+
+test("お子さん未登録のとき、提出と月謝はホームへ送られる(Issue #188)", async ({
+  page,
+}) => {
+  // 中身の無い画面を見せてから1タップさせるより、開いた時点で分岐画面へ送る方が短い。
+  // 日程とチームはチームの公開情報なので、これまでどおり見られる
+  for (const path of ["/attendance", "/fees"]) {
+    await page.goto(`${urls.portal}${path}`);
+    await expect(page.locator("h1")).toContainText("はじめての方", {
+      timeout: 15000,
+    });
+    expect(new URL(page.url()).pathname).toBe("/");
+  }
+
+  await page.goto(`${urls.portal}/schedule`);
+  await expect(page.locator("h1")).toContainText("練習日程");
+  await page.goto(`${urls.portal}/team`);
+  await expect(page.locator("h1")).toContainText("チーム");
+});

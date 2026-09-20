@@ -6,7 +6,7 @@ import {
   todayInTokyo,
 } from "@hoopo/api";
 import { cookies } from "next/headers";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getGuardianSession } from "../../lib/session";
 import { AccountMenuSlot } from "../account-menu-slot";
 import { AutoLogin } from "../auto-login";
@@ -45,25 +45,10 @@ export default async function AttendancePage({
   const view: ScheduleView = raw === "calendar" ? "calendar" : "list";
   const sheet = await getAttendanceSheet(session.teamId, session.sub, month);
 
-  // 子ども未連携のときは日程と同じくホームの分岐画面へ誘導する
+  // お子さんが未登録のときは、中身の無い画面を見せずにホームの分岐画面へ送る(Issue #188)。
+  // 案内を出して1タップさせるより短い。日程とチームはチームの公開情報なので、これまでどおり見られる
   const first = sheet.children[0];
-  if (!first) {
-    return (
-      <>
-        <header className="sc-head">
-          <h1 className="sc-title">参加予定の提出</h1>
-        </header>
-        <main className="sc-body">
-          <p className="help">お子さんの登録が済むと、参加予定を提出できます</p>
-          <Link href="/" className="card choice">
-            はじめての方
-            <small>お子さんの登録・招待コードの入力へ</small>
-          </Link>
-        </main>
-        <TabBar active="send" />
-      </>
-    );
-  }
+  if (!first) redirect("/");
   const child = sheet.children.find((c) => c.id === sp.child) ?? first;
 
   return (
