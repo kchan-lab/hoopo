@@ -9,9 +9,37 @@ import { isDateString, todayInTokyo } from "./tokyo-date";
 export const HEIGHT_MIN = 80;
 export const HEIGHT_MAX = 220;
 
-/** 小学校の学年 */
+/**
+ * 受け付ける学年の範囲(grade-junior-high/plan.md 設計判断1)。
+ * 1〜6 は小学1〜6年、7 は中学1年生。このチームには例外として中学1年生が在籍しているため、
+ * 小学校の6年で打ち切らず 7 まで連番で持つ(DB の children_grade_check も 1..7)
+ */
 export const GRADE_MIN = 1;
-export const GRADE_MAX = 6;
+export const GRADE_MAX = 7;
+
+/** 小学校の最終学年。これを超える学年は中学校として表示する */
+const ELEMENTARY_MAX = 6;
+
+/**
+ * 学年の表示(「小学4年生」「中学1年生」)。
+ * 「小学N年生」の決め打ちを画面に散らさないため、表示はすべてここを通す(設計判断4)
+ */
+export function gradeLabel(grade: number): string {
+  return grade > ELEMENTARY_MAX
+    ? `中学${grade - ELEMENTARY_MAX}年生`
+    : `小学${grade}年生`;
+}
+
+/** 一覧のピル・括弧内で使う短い表示(「4年」「中1」)。設計判断4 */
+export function gradeShortLabel(grade: number): string {
+  return grade > ELEMENTARY_MAX ? `中${grade - ELEMENTARY_MAX}` : `${grade}年`;
+}
+
+/**
+ * 受け付ける生年月日の範囲を伝えるエラー文言(設計判断5)。
+ * サーバーの検証(parseBirthDate)・portal の入力中ヒント・admin の行編集で同じ文言を使う
+ */
+export const BIRTH_DATE_RANGE_ERROR = `生年月日は${gradeLabel(GRADE_MIN)}〜${gradeLabel(GRADE_MAX)}の範囲で入力してください`;
 
 /** Asia/Tokyo の「今日」(学年判定の基準日)。実体は tokyo-date.ts と同じ */
 export { todayInTokyo as todayTokyo } from "./tokyo-date";
@@ -48,8 +76,8 @@ function birthSchoolYearOf(birthDate: string): number | null {
 }
 
 /**
- * 生年月日から学年(1..6)を求める。基準日 today(Asia/Tokyo の "YYYY-MM-DD")の年度で判定し、
- * 入学前・卒業後(1..6 の外)と不正な日付は null を返す。
+ * 生年月日から学年(1..7)を求める。基準日 today(Asia/Tokyo の "YYYY-MM-DD")の年度で判定し、
+ * 入学前・中学2年以上(1..7 の外)と不正な日付は null を返す。
  * 例: today=2026-09-13 のとき 2019-04-02 生まれ → 1年、2019-04-01 生まれ → 2年
  */
 export function gradeFromBirthDate(
@@ -79,8 +107,8 @@ export function birthDateForGrade(
 // ---- 入力の検証(エラー文言は sentence case 相当の平易な日本語。CLAUDE.md 開発ルール) ----
 
 /**
- * 生年月日。形式だけでなく「小学生かどうか」も基準日 today で判定する
- * (学年は保存時に算出するので、ここで弾けないと 1..6 に入らない学年を保存しうる)
+ * 生年月日。形式だけでなく「受け付ける学年(1..7)に入るか」も基準日 today で判定する
+ * (学年は保存時に算出するので、ここで弾けないと 1..7 に入らない学年を保存しうる)
  */
 export function parseBirthDate(
   value: unknown,
@@ -91,7 +119,7 @@ export function parseBirthDate(
     return { ok: false, error: "生年月日を入力してください" };
   }
   if (gradeFromBirthDate(text, today) === null) {
-    return { ok: false, error: "小学生の生年月日を入力してください" };
+    return { ok: false, error: BIRTH_DATE_RANGE_ERROR };
   }
   return { ok: true, value: text };
 }

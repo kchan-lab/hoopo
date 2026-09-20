@@ -85,6 +85,13 @@
       "when": 1789400489587,
       "tag": "0011_children_name_split",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789871624788,
+      "tag": "0012_children_grade_junior_high",
+      "breakpoints": true
     }
   ]
 }

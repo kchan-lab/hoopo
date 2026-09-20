@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildRestoreGroups,
   buildSnapshot,
+  countStaying,
   isUndoable,
   partitionMembers,
   UNDO_GRACE_MS,
@@ -12,27 +13,41 @@ import {
 // DB を通した実行・取り消しは packages/api/test/year-rollover.int.test.ts
 
 describe("partitionMembers", () => {
-  it("6年生は卒団、それ以外は学年+1に振り分ける", () => {
+  it("中学1年生(7)は据え置き、6年生までは学年+1に振り分ける(誰も卒団しない)", () => {
     expect(
       partitionMembers([
         { id: "a", grade: 1 },
         { id: "b", grade: 5 },
         { id: "c", grade: 6 },
+        { id: "d", grade: 7 },
       ]),
-    ).toEqual({ promoting: ["a", "b"], graduating: ["c"] });
+    ).toEqual({ promoting: ["a", "b", "c"], staying: ["d"] });
   });
 
-  it("全員6年生なら promoting は空", () => {
+  it("全員が中学1年生なら promoting は空", () => {
     expect(
       partitionMembers([
-        { id: "a", grade: 6 },
-        { id: "b", grade: 6 },
+        { id: "a", grade: 7 },
+        { id: "b", grade: 7 },
       ]),
-    ).toEqual({ promoting: [], graduating: ["a", "b"] });
+    ).toEqual({ promoting: [], staying: ["a", "b"] });
   });
 
   it("対象が0人なら両方空", () => {
-    expect(partitionMembers([])).toEqual({ promoting: [], graduating: [] });
+    expect(partitionMembers([])).toEqual({ promoting: [], staying: [] });
+  });
+});
+
+describe("countStaying", () => {
+  it("snapshot(実行前の状態)で上限の学年だった人数を数える", () => {
+    expect(
+      countStaying({
+        a: { grade: 6, archived: false },
+        b: { grade: 7, archived: false },
+        c: { grade: 7, archived: false },
+      }),
+    ).toBe(2);
+    expect(countStaying({})).toBe(0);
   });
 });
 

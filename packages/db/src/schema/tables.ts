@@ -128,6 +128,7 @@ export const children = pgTable(
     givenNameKana: text("given_name_kana").notNull(),
     // 呼び名。練習で呼ばれる通称で、名の読み(given_name_kana)とは別物なので残す
     nicknameKana: text("nickname_kana"),
+    // 学年。1..7(7 = 中学1年生。grade-junior-high/plan.md 設計判断1)
     grade: smallint("grade").notNull(),
     // 生年月日・身長(child-birthdate-height/plan.md 設計判断1・3)。学年は birth_date から
     // 登録・編集時に算出して grade に保存する(設計判断2)。既存部員のために NULL 許容
@@ -146,7 +147,9 @@ export const children = pgTable(
   },
   (t) => [
     unique("children_id_team_id_unique").on(t.id, t.teamId),
-    check("children_grade_check", sql`${t.grade} BETWEEN 1 AND 6`),
+    // 1〜6 は小学1〜6年、7 は中学1年生(grade-junior-high/plan.md 設計判断1)。
+    // 範囲の正は packages/api の GRADE_MIN / GRADE_MAX で、ここはその写し
+    check("children_grade_check", sql`${t.grade} BETWEEN 1 AND 7`),
     check(
       "children_height_cm_check",
       sql`${t.heightCm} IS NULL OR ${t.heightCm} BETWEEN 80 AND 220`,

@@ -1,11 +1,14 @@
 "use client";
 
 import type { YearRolloverStatus } from "@hoopo/api";
+import { GRADE_MAX, gradeLabel } from "@hoopo/api/grade-shared";
 import { TOKYO_TZ } from "@hoopo/api/tokyo-date";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 // 年度更新(year-rollover/plan.md。REQUIREMENTS §5.2)。
+// 実行内容は「全部員の学年+1」だけ。上限の学年(中学1年生)は据え置きで、誰も卒団しない
+// (grade-junior-high/plan.md 設計判断2。卒団は部員管理の行詳細から1人ずつ)。
 // 破壊的操作なので行内の二段階確認にする(CLAUDE.md 開発ルール。ネイティブ confirm() は使わない)。
 // 実行後は猶予(24時間)内だけ「取り消す」を出し、猶予中は再実行させない(設計判断2・3)。
 // 猶予の期限は API の latest.undoDeadline をそのまま表示する(猶予をクライアントで再計算しない)
@@ -76,7 +79,11 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
         <fieldset className="confirm">
           <legend className="sr-only">年度更新の確認</legend>
           <span className="q">
-            {`全部員の学年を +1 し、6年生 ${preview.willArchive} 人を卒団アーカイブします(対象 ${preview.total} 人)。24 時間以内なら1回だけ取り消せます。実行しますか?`}
+            {`全部員の学年を +1 します(対象 ${preview.total} 人)。${
+              preview.willStay > 0
+                ? `${gradeLabel(GRADE_MAX)} ${preview.willStay} 人は学年が変わりません。`
+                : ""
+            }卒団する部員はいません(卒団は部員の行から1人ずつ行います)。24 時間以内なら1回だけ取り消せます。実行しますか?`}
           </span>
           <button
             type="button"
@@ -121,7 +128,11 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
       {latest !== null && undoable && (
         <div className="acard yrcard">
           <span className="yrmsg">
-            {`年度更新を実行しました(${formatAt(latest.executedAt)})。${
+            {`年度更新を実行しました(${formatAt(latest.executedAt)}・${latest.affected} 人)。${
+              latest.staying > 0
+                ? `${gradeLabel(GRADE_MAX)} ${latest.staying} 人は学年が変わっていません。`
+                : ""
+            }${
               deadline === null
                 ? "取り消せます"
                 : `取り消せるのは ${formatAt(deadline)} まで`
@@ -131,7 +142,7 @@ export function YearRollover({ status }: { status: YearRolloverStatus }) {
             <fieldset className="confirm">
               <legend className="sr-only">年度更新の取り消しの確認</legend>
               <span className="q">
-                {`${latest.affected} 人を年度更新の前(卒団 ${latest.archived} 人を含む)に戻します。取り消せるのは1回だけです。取り消しますか?`}
+                {`${latest.affected} 人を年度更新の前の学年に戻します。取り消せるのは1回だけです。取り消しますか?`}
               </span>
               <button
                 type="button"

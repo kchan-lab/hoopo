@@ -53,13 +53,15 @@ test("家族の設定からお子さんの生年月日・身長を直せる", as
   await expect(block).toContainText("小学3年生");
   await expect(block).toContainText(`${heightForGrade(3)} cm`);
 
-  // 小学生にならない生年月日はサーバーが断る(400 の文言をそのまま出す)
+  // 受け付ける学年(小学1年生〜中学1年生)の外はサーバーが断る(400 の文言をそのまま出す)
   await block.getByRole("button", { name: "編集" }).click();
   await block.getByLabel("生年月日").fill(birthDateForGrade(0));
-  await expect(block).toContainText("小学生の生年月日を入力してください");
+  await expect(block).toContainText(
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
+  );
   await block.getByRole("button", { name: "保存" }).click();
   await expect(block.getByRole("alert")).toContainText(
-    "小学生の生年月日を入力してください",
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
   );
 
   // 生年月日と身長を直すと、学年が再計算されて表示が変わる

@@ -278,6 +278,73 @@ export async function updateMemberByCoach(
   });
 }
 
+// ---- 手動の卒団(grade-junior-high/plan.md 設計判断3。REQUIREMENTS §5.2・§7) ----
+// 年度更新から自動の卒団アーカイブを外した(判断2)ので、卒団はコーチが部員管理から1人ずつ行う。
+// 破壊的操作なので確認は UI 側の二段階確認、実行ログは audit_logs に残す(名前は入れない)。
+// 復帰 UI は作らない(下の revokeRegistration と同じ方針)ので、確認文で「元に戻せない」ことを伝える
+
+export type ArchiveMemberResult =
+  | { ok: true; grade: number }
+  | { ok: false; reason: "not_found" | "already_archived" };
+
+/**
+ * 部員を卒団にする(archived=true。学年は据え置き。§7)。
+ * archived=false の行だけを更新するので、二度押し・同時押しは already_archived になる
+ */
+export async function archiveMember(
+  teamId: string,
+  childId: string,
+  performedBy: string,
+  now: Date = new Date(),
+): Promise<ArchiveMemberResult> {
+  return withTeam(teamId, async (tx): Promise<ArchiveMemberResult> => {
+    const [updated] = await tx
+      .update(children)
+      .set({ archived: true, archivedAt: now, updatedAt: now })
+      // 一覧(listMembers)や年度更新の対象と同じ条件にそろえる。無効化(status=revoked)と
+      // 卒団は別のことなので、無効化済みの部員を卒団にはしない(#191 のレビュー指摘)
+      .where(
+        and(
+          eq(children.id, childId),
+          eq(children.archived, false),
+          eq(children.status, "active"),
+        ),
+      )
+      .returning({ id: children.id, grade: children.grade });
+    if (!updated) {
+      // RLS 配下なので、他チームの部員はそもそも見えない(= not_found)。
+      // 在籍中(active)で未アーカイブの行だけが対象なので、
+      // 無効化済みの部員は「見つからない」として扱う
+      const [existing] = await tx
+        .select({ id: children.id })
+        .from(children)
+        .where(
+          and(
+            eq(children.id, childId),
+            eq(children.archived, true),
+            eq(children.status, "active"),
+          ),
+        )
+        .limit(1);
+      return {
+        ok: false,
+        reason: existing ? "already_archived" : "not_found",
+      };
+    }
+
+    // 名前は入れない(卒団の記録が個人情報の保持にならないように。member-deletion 設計判断3)
+    await tx.insert(auditLogs).values({
+      teamId,
+      action: "child_archived",
+      targetId: childId,
+      detail: { grade: updated.grade, archivedAt: now.toISOString() },
+      performedBy,
+    });
+
+    return { ok: true, grade: updated.grade };
+  });
+}
+
 // ---- 卒団後のデータ削除(member-deletion/plan.md。REQUIREMENTS §5.2・§7、PRIVACY_POLICY「保持期間と削除」) ----
 // 削除できるのは卒団(アーカイブ済み)だけ(設計判断1)。論理削除ではなく物理削除(設計判断4)で、
 // attendances / lineups / fee_records / child_availabilities / guardian_children は FK CASCADE で消える。

@@ -8,6 +8,8 @@ import { adminDeps } from "./admin-deps";
 import { childNameParts } from "./child-name";
 
 // 年度更新 API(year-rollover/plan.md)を RLS 配下で検証する。
+// 実行内容は「学年+1」だけ。上限の学年(7 = 中学1年生)は据え置きで、誰もアーカイブしない
+// (grade-junior-high/plan.md 設計判断2)。
 // 対象は「有効な部員(active・非アーカイブ)」だけ。卒団済み・無効化済み・他チームは触らない。
 // 取り消しは snapshot からの復元で、猶予は 24 時間・1回(設計判断1・2・3)
 
@@ -22,7 +24,8 @@ let otherTeamId: string;
 let coachHash: string;
 let ichinen: string; // 粉浜 一年(1年 → 2年)
 let gonen: string; // 粉浜 五年(5年 → 6年)
-let rokunen: string; // 粉浜 六年(6年 → 卒団アーカイブ・学年据え置き)
+let rokunen: string; // 粉浜 六年(6年 → 中1)
+let chuichi: string; // 粉浜 中一(7年 = 中学1年生。上限なので据え置き)
 let archived: string; // 卒団済み(対象外)
 let revoked: string; // 無効化済み(対象外)
 
@@ -112,9 +115,9 @@ interface StatusBody {
     undoable: boolean;
     undoDeadline: string | null;
     affected: number;
-    archived: number;
+    staying: number;
   } | null;
-  preview: { total: number; willArchive: number };
+  preview: { total: number; willStay: number };
 }
 
 beforeAll(async () => {
@@ -141,6 +144,7 @@ beforeEach(async () => {
   ichinen = await insertChild(teamId, "粉浜 一年", 1, "YYYYY0001");
   gonen = await insertChild(teamId, "粉浜 五年", 5, "YYYYY0002");
   rokunen = await insertChild(teamId, "粉浜 六年", 6, "YYYYY0003");
+  chuichi = await insertChild(teamId, "粉浜 中一", 7, "YYYYY0006");
   archived = await insertChild(teamId, "卒団 花子", 6, "YYYYY0004", {
     archived: true,
   });
@@ -174,17 +178,17 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
     ).toBe(401);
   });
 
-  it("実行前は latest が null で、対象人数と卒団予定人数を返す", async () => {
+  it("実行前は latest が null で、対象人数と据え置き人数を返す", async () => {
     const coach = await coachClient(adminApi());
     const body = (await (
       await coach.get("/members/year-rollover")
     ).json()) as StatusBody;
     expect(body.latest).toBeNull();
-    // 卒団済み・無効化済みは対象外
-    expect(body.preview).toEqual({ total: 3, willArchive: 1 });
+    // 卒団済み・無効化済みは対象外。据え置きは中学1年生の1人
+    expect(body.preview).toEqual({ total: 4, willStay: 1 });
   });
 
-  it("実行すると学年+1・6年生は卒団し、対象外の部員は変わらず、snapshot が残る", async () => {
+  it("実行すると学年+1・中学1年生は据え置き、誰もアーカイブされず、snapshot が残る", async () => {
     const coach = await coachClient(adminApi());
     const res = await coach.post("/members/year-rollover");
     expect(res.status).toBe(201);
@@ -193,11 +197,11 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
         id: string;
         executedAt: string;
         affected: number;
-        archived: number;
+        staying: number;
       };
     };
-    expect(body.rollover.affected).toBe(3);
-    expect(body.rollover.archived).toBe(1);
+    expect(body.rollover.affected).toBe(4);
+    expect(body.rollover.staying).toBe(1);
 
     expect(await childRow(ichinen)).toMatchObject({
       grade: 2,
@@ -209,11 +213,18 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
       archived: false,
       archived_at: null,
     });
-    // 6年生は学年据え置きで卒団アーカイブ(§7)
-    const graduated = await childRow(rokunen);
-    expect(graduated.grade).toBe(6);
-    expect(graduated.archived).toBe(true);
-    expect(graduated.archived_at).not.toBeNull();
+    // 6年生は中学1年生に上がる。卒団させない(grade-junior-high/plan.md 設計判断2)
+    expect(await childRow(rokunen)).toMatchObject({
+      grade: 7,
+      archived: false,
+      archived_at: null,
+    });
+    // 中学1年生は上限なので据え置き。ここでもアーカイブしない
+    expect(await childRow(chuichi)).toMatchObject({
+      grade: 7,
+      archived: false,
+      archived_at: null,
+    });
     // 卒団済み・無効化済みは触らない
     expect(await childRow(archived)).toMatchObject({
       grade: 6,
@@ -233,24 +244,26 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
       [ichinen]: { grade: 1, archived: false },
       [gonen]: { grade: 5, archived: false },
       [rokunen]: { grade: 6, archived: false },
+      [chuichi]: { grade: 7, archived: false },
     });
 
-    // 実行後の状況: 猶予中は取り消せる。卒団した分だけ対象人数が減る
+    // 実行後の状況: 猶予中は取り消せる。誰も卒団しないので対象人数は減らない
     const status = (await (
       await coach.get("/members/year-rollover")
     ).json()) as StatusBody;
     expect(status.latest).toMatchObject({
       undoneAt: null,
       undoable: true,
-      affected: 3,
-      archived: 1,
+      affected: 4,
+      staying: 1,
     });
     // 取り消せる間は期限(実行時刻 + 24時間)を返す。UI はこれをそのまま表示する
     const executedAt = new Date(status.latest?.executedAt ?? "").getTime();
     expect(
       new Date(status.latest?.undoDeadline ?? "").getTime() - executedAt,
     ).toBe(24 * 60 * 60 * 1000);
-    expect(status.preview).toEqual({ total: 2, willArchive: 1 });
+    // 実行後は 6年生 → 中学1年生 が増えるので、次に据え置きになるのは2人
+    expect(status.preview).toEqual({ total: 4, willStay: 2 });
   });
 
   it("猶予中の二重実行は 409(取り消し猶予中の年度更新があります)", async () => {
@@ -266,14 +279,14 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
     expect(await rolloverRows()).toHaveLength(1);
   });
 
-  it("取り消すと学年・卒団が実行前に戻り、二度目の取り消しは 409", async () => {
+  it("取り消すと学年が実行前に戻り、二度目の取り消しは 409", async () => {
     const coach = await coachClient(adminApi());
     await coach.post("/members/year-rollover");
 
     const res = await coach.post("/members/year-rollover/undo");
     expect(res.status).toBe(200);
     expect((await res.json()) as { restored: number }).toEqual({
-      restored: 3,
+      restored: 4,
       missing: 0,
     });
 
@@ -283,6 +296,8 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
     expect(restored.grade).toBe(6);
     expect(restored.archived).toBe(false);
     expect(restored.archived_at).toBeNull();
+    // 据え置きだった中学1年生も snapshot どおりに戻る(学年は変わらない)
+    expect((await childRow(chuichi)).grade).toBe(7);
 
     const [log] = await rolloverRows();
     expect(log?.undone_at).not.toBeNull();
@@ -328,7 +343,7 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
       await other.get("/members/year-rollover")
     ).json()) as StatusBody;
     expect(status.latest).toBeNull();
-    expect(status.preview).toEqual({ total: 0, willArchive: 0 });
+    expect(status.preview).toEqual({ total: 0, willStay: 0 });
 
     const res = await other.post("/members/year-rollover");
     expect(res.status).toBe(400);
@@ -338,7 +353,8 @@ describe("年度更新(GET/POST /members/year-rollover)", () => {
 
     expect((await childRow(ichinen)).grade).toBe(1);
     expect((await childRow(gonen)).grade).toBe(5);
-    expect((await childRow(rokunen)).archived).toBe(false);
+    expect((await childRow(rokunen)).grade).toBe(6);
+    expect((await childRow(chuichi)).grade).toBe(7);
     expect(await rolloverRows()).toEqual([]);
   });
 });
