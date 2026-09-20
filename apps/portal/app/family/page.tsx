@@ -1,7 +1,9 @@
-import { fullName, getFamily, RELATION_LABELS } from "@hoopo/api";
+import { fullName, getFamily, nameInitial, RELATION_LABELS } from "@hoopo/api";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getGuardianSession } from "../../lib/session";
+import { AccountMenuSlot } from "../account-menu-slot";
+import { HomeLogo } from "../home-logo";
 import { ChildEdit } from "./child-edit";
 import { CopyButton } from "./copy-button";
 import { UnlinkButton } from "./unlink-button";
@@ -18,16 +20,20 @@ export default async function FamilyPage() {
   if (!session) redirect("/");
   const family = await getFamily(session.teamId, session.sub);
   if (family.length === 0) redirect("/");
+  // 頭文字はここで取った1人目から作る(お子さんを取り直さない)
+  const first = family[0];
 
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           <Link href="/" className="back" aria-label="戻る">
             ‹
           </Link>
           家族の設定
         </h1>
+        {first && <AccountMenuSlot initial={nameInitial(first)} />}
       </header>
       <main className="sc-body">
         {family.map((child) => (

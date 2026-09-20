@@ -1,12 +1,14 @@
 import {
   getAttendanceSheet,
   monthOf,
+  nameInitial,
   parseMonth,
   todayInTokyo,
 } from "@hoopo/api";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
+import { AccountMenuSlot } from "../account-menu-slot";
 import { AutoLogin } from "../auto-login";
 import {
   ATTENDANCE_VIEW_COOKIE_NAME,
@@ -69,6 +71,9 @@ export default async function AttendancePage({
       {/* お子さんを切り替えたら編集中の内容ごと作り直す(回答は子ごとに別) */}
       <AttendanceEditor
         key={`${child.id}:${month}`}
+        /* 提出はクライアントで持つ画面なので、右上の丸はサーバーで作って差し込む。
+         * 頭文字は getAttendanceSheet で取れているお子さんから作る(取り直さない) */
+        accountMenu={<AccountMenuSlot initial={nameInitial(first)} />}
         month={month}
         initialView={view}
         childList={sheet.children}

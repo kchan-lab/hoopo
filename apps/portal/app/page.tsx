@@ -14,6 +14,7 @@ import {
 } from "@hoopo/api";
 import Link from "next/link";
 import { getGuardianSession } from "../lib/session";
+import { AccountMenuSlot } from "./account-menu-slot";
 import { AutoLogin } from "./auto-login";
 import { Icon } from "./icons";
 import { InviteForm } from "./invite-form";
@@ -101,9 +102,14 @@ export default async function Home() {
             <br />
             {TEAM_NAME[1]}
           </h1>
-          <span className="avatar" aria-hidden="true">
-            {first ? nameInitial(first) : ""}
-          </span>
+          {/* 右上の丸は「自分まわりのこと」をまとめて選べる場所という慣習に合わせ、
+           * 押すとメニュー(家族の設定 / プライバシーポリシー / ログアウト)が開く
+           * (family-settings-entry/plan.md 設計判断0・1)。
+           * お子さんが1人もいないときは上で分岐画面を返しているのでここは通らないが、
+           * 型のうえでは first が undefined になりうる。頭文字が出ない空の丸を押せる形で
+           * 置いても何のボタンか伝わらないので、そのときは出さない
+           * (家族の設定へはホームのカードから行ける) */}
+          {first && <AccountMenuSlot initial={nameInitial(first)} />}
         </div>
       </header>
       <main className="sc-body">
@@ -148,7 +154,10 @@ export default async function Home() {
             </li>
           ))}
         </ul>
-        <Link href="/family" className="card choice">
+        {/* .choice は「お子さんを新しく登録する」「ホームへ戻る」でも使う中央寄せの選択肢。
+         * 家族の設定だけを「次の画面へ進む行」に見せたいので、修飾クラスで足す
+         * (family-settings-entry/plan.md 設計判断3・4) */}
+        <Link href="/family" className="card choice nav">
           家族の設定
           <small>招待コードの共有・連携済みの家族</small>
         </Link>

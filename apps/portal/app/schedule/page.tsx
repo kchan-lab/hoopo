@@ -15,7 +15,9 @@ import {
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
+import { AccountMenuSlot } from "../account-menu-slot";
 import { AutoLogin } from "../auto-login";
+import { HomeLogo } from "../home-logo";
 import { Icon } from "../icons";
 import { TabBar } from "../tab-bar";
 import { type ScheduleView, VIEW_COOKIE_NAME, ViewToggle } from "./view-toggle";
@@ -70,10 +72,12 @@ export default async function SchedulePage({
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           練習日程
           <ViewToggle view={view} month={month} />
         </h1>
+        <AccountMenuSlot session={session} />
       </header>
       <main className="sc-body">
         <nav className="month-nav" aria-label="表示する月">
