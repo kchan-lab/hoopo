@@ -4,6 +4,7 @@ import {
   fullName,
   getFeeSheet,
   monthOf,
+  nameInitial,
   parseYear,
   todayInTokyo,
   YEAR_MAX,
@@ -11,7 +12,9 @@ import {
 } from "@hoopo/api";
 import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
+import { AccountMenuSlot } from "../account-menu-slot";
 import { AutoLogin } from "../auto-login";
+import { HomeLogo } from "../home-logo";
 import { Icon } from "../icons";
 import { TabBar } from "../tab-bar";
 
@@ -99,6 +102,7 @@ export default async function FeesPage({
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           月謝確認
           <nav className="year-nav" aria-label="表示する年">
@@ -123,6 +127,8 @@ export default async function FeesPage({
             )}
           </nav>
         </h1>
+        {/* 頭文字は getFeeSheet で取れているお子さんから作る(取り直さない) */}
+        <AccountMenuSlot initial={nameInitial(first.child)} />
       </header>
       <main className="sc-body">
         {sheet.children.length > 1 && (

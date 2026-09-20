@@ -10,6 +10,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getGuardianSession } from "../../../lib/session";
+import { AccountMenuSlot } from "../../account-menu-slot";
+import { HomeLogo } from "../../home-logo";
 import { Icon } from "../../icons";
 import { TabBar } from "../../tab-bar";
 
@@ -41,6 +43,7 @@ export default async function PracticePage({
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           <Link
             href={`/schedule?month=${monthOf(practice.heldOn)}&view=${view}`}
@@ -51,6 +54,7 @@ export default async function PracticePage({
           </Link>
           練習の詳細
         </h1>
+        <AccountMenuSlot session={session} />
       </header>
       <main className="sc-body">
         <section className="card">

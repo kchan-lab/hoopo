@@ -167,3 +167,28 @@ describe("GET /me", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("POST /auth/logout", () => {
+  it("ログアウトで Cookie が失効指示され、以後 /me は 401", async () => {
+    // family-settings-entry/plan.md 設計判断0。ホーム右上のメニューから呼ぶ導線
+    const app = api();
+    const loginRes = await login(app);
+    const cookie = sessionCookie(loginRes);
+    expect((await app.request("/me", { headers: { cookie } })).status).toBe(
+      200,
+    );
+
+    const res = await app.request("/auth/logout", { method: "POST" });
+    expect(res.status).toBe(204);
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    // 発行時と同じ path で空値+即時失効を返す(ブラウザ側で Cookie が消える)
+    expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=;`);
+    expect(setCookie).toContain("Path=/");
+    expect((await app.request("/me")).status).toBe(401);
+  });
+
+  it("セッションが無くてもログアウトは 204(押し直し・期限切れでも詰まらない)", async () => {
+    const res = await api().request("/auth/logout", { method: "POST" });
+    expect(res.status).toBe(204);
+  });
+});

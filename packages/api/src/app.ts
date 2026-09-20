@@ -8,7 +8,7 @@ import {
 } from "@hoopo/line";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
 import {
   ANNOUNCEMENT_LIMIT_DEFAULT,
   getPublishedAnnouncement,
@@ -178,6 +178,15 @@ export function createApi(deps: ApiDeps) {
       maxAge: SESSION_TTL_SECONDS,
     });
     return c.json({ guardianId: guardian.id, isNew: guardian.isNew });
+  });
+
+  // ログアウト(family-settings-entry/plan.md 設計判断0)。ホーム右上のメニューから呼ぶ。
+  // 管理画面の POST /auth/logout と同じく、発行時と同じ path のセッション Cookie を消すだけ。
+  // LIFF から開き直すと自動ログインで入り直すので、効くのは外部ブラウザと端末を人に渡すとき。
+  // セッションが無くても成功扱いにする(guardian ミドルウェアは通さない)
+  app.post("/auth/logout", (c) => {
+    deleteCookie(c, SESSION_COOKIE_NAME, { path: "/" });
+    return c.body(null, 204);
   });
 
   // セッション確認(guardian 行の存在確認はミドルウェアが行う)

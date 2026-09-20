@@ -144,7 +144,10 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await expect(page.locator("main")).toContainText("4年");
 
   // 家族の設定に招待コード(5-5 区切り)と、生年月日から決まった学年・身長が出る
-  await page.getByRole("link", { name: /家族の設定/ }).click();
+  await page
+    .locator("main")
+    .getByRole("link", { name: /家族の設定/ })
+    .click();
   await expect(page.locator("h1")).toContainText("家族の設定");
   await expect(page.locator(".invite-code").first()).toHaveText(
     /^[0-9A-Z]{5}-[0-9A-Z]{5}$/,
@@ -302,7 +305,10 @@ test("第二保護者が招待コードで連携すると同じ子どもが見�
   await expect(page.locator("main")).toContainText("北粉浜 次郎", {
     timeout: 15000,
   });
-  await page.getByRole("link", { name: /家族の設定/ }).click();
+  await page
+    .locator("main")
+    .getByRole("link", { name: /家族の設定/ })
+    .click();
   await expect(page.locator("main")).toContainText("あなた(父)");
   await expect(page.locator("main")).toContainText("母");
   await expect(page.locator("main")).toContainText("連携済み");

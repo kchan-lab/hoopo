@@ -2,6 +2,8 @@ import { formatShortDate, getPublishedAnnouncement, isUuid } from "@hoopo/api";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getGuardianSession } from "../../../lib/session";
+import { AccountMenuSlot } from "../../account-menu-slot";
+import { HomeLogo } from "../../home-logo";
 import { Icon } from "../../icons";
 import { TabBar } from "../../tab-bar";
 
@@ -25,6 +27,7 @@ export default async function AnnouncementPage({
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           <Link
             href="/announcements"
@@ -35,6 +38,7 @@ export default async function AnnouncementPage({
           </Link>
           お知らせ
         </h1>
+        <AccountMenuSlot session={session} />
       </header>
       <main className="sc-body">
         <article className="card article">

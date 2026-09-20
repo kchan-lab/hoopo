@@ -2,7 +2,9 @@ import { listTeamMembers } from "@hoopo/api";
 import { fullName, nameInitial } from "@hoopo/api/shared";
 import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
+import { AccountMenuSlot } from "../account-menu-slot";
 import { AutoLogin } from "../auto-login";
+import { HomeLogo } from "../home-logo";
 import { TabBar } from "../tab-bar";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +27,12 @@ export default async function TeamPage() {
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           チーム
           <span className="count">{members.length}人</span>
         </h1>
+        <AccountMenuSlot session={session} />
       </header>
       <main className="sc-body">
         {members.length === 0 ? (

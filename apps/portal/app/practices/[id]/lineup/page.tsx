@@ -9,6 +9,8 @@ import {
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getGuardianSession } from "../../../../lib/session";
+import { AccountMenuSlot } from "../../../account-menu-slot";
+import { HomeLogo } from "../../../home-logo";
 import { Icon } from "../../../icons";
 import { TabBar } from "../../../tab-bar";
 
@@ -50,6 +52,7 @@ export default async function LineupPage({
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           <Link
             href={`/practices/${practice.id}`}
@@ -74,6 +77,7 @@ export default async function LineupPage({
             </button>
           </span>
         </h1>
+        <AccountMenuSlot session={session} />
       </header>
       <main className="sc-body">
         <div className="court-cap">

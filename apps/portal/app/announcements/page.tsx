@@ -6,6 +6,8 @@ import {
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getGuardianSession } from "../../lib/session";
+import { AccountMenuSlot } from "../account-menu-slot";
+import { HomeLogo } from "../home-logo";
 import { Icon } from "../icons";
 import { TabBar } from "../tab-bar";
 
@@ -25,12 +27,14 @@ export default async function AnnouncementsPage() {
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           <Link href="/" className="back" aria-label="ホームへ戻る">
             <Icon name="chevl" />
           </Link>
           お知らせ
         </h1>
+        <AccountMenuSlot session={session} />
       </header>
       <main className="sc-body">
         {announcements.length === 0 ? (
