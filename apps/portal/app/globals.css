@@ -119,8 +119,10 @@ a {
  * 同じものを使う(family-settings-entry/plan.md 設計判断7)。
  * .team-head 配下だけの規則にせず単独のクラスにしておき、両方から使えるようにする */
 .logo {
-  width: 34px;
-  height: 34px;
+  /* アカウントの丸(.avatar)と同じ 30px。画面によって丸の大きさが変わると、
+     ヘッダーが画面ごとに違って見える(承認者の指摘 2026-09-19) */
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--ink);
   color: #fff;
@@ -134,17 +136,15 @@ a {
 /* ヘッダー(.sc-head)に置くときは一段小さくする。見出し(20px)と右上の丸(30px)と
  * 並ぶので、34px のままだと iPhone 15(393px)で見出しの幅が足りなくなる */
 .logo.sm {
-  width: 28px;
-  height: 28px;
-  font-size: 8.5px;
+  /* 大きさはホームと同じ。ホーム以外はタップできるので、その範囲を広げるためだけの修飾 */
   position: relative;
 }
-/* 見た目は28pxのまま、タップできる範囲だけ44pxに広げる
+/* 見た目は30pxのまま、タップできる範囲だけ44pxに広げる
  * (DESIGN_GUIDELINES §3 タップ領域44px)。.avatar::after と同じ作り */
 .logo.sm::after {
   content: "";
   position: absolute;
-  inset: -8px;
+  inset: -7px;
   border-radius: 50%;
 }
 .team-head .name {
