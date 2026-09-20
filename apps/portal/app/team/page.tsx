@@ -1,4 +1,5 @@
 import { listTeamMembers } from "@hoopo/api";
+import { gradeShortLabel } from "@hoopo/api/grade-shared";
 import { fullName, nameInitial } from "@hoopo/api/shared";
 import Link from "next/link";
 import { getGuardianSession } from "../../lib/session";
@@ -48,7 +49,7 @@ export default async function TeamPage() {
                 {m.nicknameKana && (
                   <span className="kana">{m.nicknameKana}</span>
                 )}
-                <span className="pill">{m.grade}年</span>
+                <span className="pill">{gradeShortLabel(m.grade)}</span>
               </li>
             ))}
           </ul>

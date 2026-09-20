@@ -3,11 +3,10 @@
 // クライアント(admin の年度更新 UI)の両方から使える。
 // DB を触る手続きは year-rollover.ts 側に置く
 
+import { GRADE_MAX } from "./grade-shared";
+
 /** 取り消し猶予(24時間・1回。設計判断2) */
 export const UNDO_GRACE_MS = 24 * 60 * 60 * 1000;
-
-/** 卒団する学年。学年は据え置きで archived=true にする(§7) */
-export const GRADUATION_GRADE = 6;
 
 /**
  * 実行前の学年・アーカイブ状態(`{ childId: { grade, archived } }`)。
@@ -34,18 +33,22 @@ export function isUndoable(
   return undoDeadline(executedAt).getTime() > at.getTime();
 }
 
-/** 年度更新で「学年+1」する部員と「卒団アーカイブ」する部員の振り分け(§7) */
+/**
+ * 年度更新で「学年+1」する部員と「据え置き」の部員の振り分け(§7)。
+ * 上限の学年(GRADE_MAX = 中学1年生)はこれ以上上げられないので据え置く。
+ * 卒団はここでは起こさない(grade-junior-high/plan.md 設計判断2: 卒団は部員管理から1人ずつ)
+ */
 export function partitionMembers(members: { id: string; grade: number }[]): {
   promoting: string[];
-  graduating: string[];
+  staying: string[];
 } {
   const promoting: string[] = [];
-  const graduating: string[] = [];
+  const staying: string[] = [];
   for (const m of members) {
-    if (m.grade === GRADUATION_GRADE) graduating.push(m.id);
+    if (m.grade >= GRADE_MAX) staying.push(m.id);
     else promoting.push(m.id);
   }
-  return { promoting, graduating };
+  return { promoting, staying };
 }
 
 /** 実行前の状態を丸ごと snapshot にする(取り消しはここからの復元だけで完結。設計判断1) */
@@ -88,8 +91,7 @@ export function buildRestoreGroups(snapshot: RolloverSnapshot): RestoreGroup[] {
   return [...groups.values()];
 }
 
-/** snapshot は実行前の状態なので、卒団した人数 = 実行前に 6 年生だった人数 */
-export function countGraduating(snapshot: RolloverSnapshot): number {
-  return Object.values(snapshot).filter((s) => s.grade === GRADUATION_GRADE)
-    .length;
+/** snapshot は実行前の状態なので、据え置きの人数 = 実行前に上限の学年だった人数 */
+export function countStaying(snapshot: RolloverSnapshot): number {
+  return Object.values(snapshot).filter((s) => s.grade >= GRADE_MAX).length;
 }

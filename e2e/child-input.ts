@@ -4,7 +4,7 @@
 // E2E はワークスペースのパッケージに依存しないので、packages/api/src/grade-shared.ts の
 // 規則(4月2日〜翌4月1日生まれが同学年)を最小限だけ写している
 
-/** grade(1..6)になる生年月日 "YYYY-MM-DD" */
+/** grade(1..7。7 = 中学1年生)になる生年月日 "YYYY-MM-DD" */
 export function birthDateForGrade(
   grade: number,
   now: Date = new Date(),

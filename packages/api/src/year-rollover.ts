@@ -1,10 +1,10 @@
 import { children, type TeamTx, withTeam, yearRollovers } from "@hoopo/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { GRADE_MAX } from "./grade-shared";
 import {
   buildRestoreGroups,
   buildSnapshot,
-  countGraduating,
-  GRADUATION_GRADE,
+  countStaying,
   isUndoable,
   partitionMembers,
   type RolloverSnapshot,
@@ -12,8 +12,10 @@ import {
 } from "./year-rollover-shared";
 
 // 年度更新(year-rollover/plan.md。REQUIREMENTS §5.2・§7)。
-// 全部員の学年+1、6年生は卒団アーカイブ(学年は据え置き)。破壊的操作なので実行ログを
-// year_rollovers に残し、実行前の学年・アーカイブ状態を snapshot から 24 時間以内に1回だけ戻せる。
+// 全部員の学年+1。上限の学年(中学1年生)は据え置き、卒団アーカイブはしない
+// (grade-junior-high/plan.md 設計判断2: 卒団は部員管理から1人ずつ手で行う)。
+// 破壊的操作なので実行ログを year_rollovers に残し、実行前の学年・アーカイブ状態を
+// snapshot から 24 時間以内に1回だけ戻せる。
 // 猶予中に手で直した学年・卒団は取り消しで上書きされる(設計判断1。UI に明記)。
 // 純ロジック(振り分け・snapshot・猶予判定)は year-rollover-shared.ts
 // (UNDO_GRACE_MS などの定数もそちら。@hoopo/api / @hoopo/api/year-rollover-shared から import する)
@@ -27,13 +29,15 @@ export interface YearRolloverLatest {
   /** 取り消せる期限(ISO)。取り消せないときは null */
   undoDeadline: string | null;
   affected: number;
-  archived: number;
+  /** 上限の学年で据え置かれた人数(中学1年生) */
+  staying: number;
 }
 
 /** 「今実行したら」の人数 */
 export interface YearRolloverPreview {
   total: number;
-  willArchive: number;
+  /** そのうち学年が変わらない人数(すでに中学1年生) */
+  willStay: number;
 }
 
 export interface YearRolloverStatus {
@@ -45,7 +49,7 @@ export interface YearRolloverResult {
   id: string;
   executedAt: string;
   affected: number;
-  archived: number;
+  staying: number;
 }
 
 export type ExecuteYearRolloverResult =
@@ -95,7 +99,7 @@ export async function getYearRolloverStatus(
     const [counts] = await tx
       .select({
         total: sql<number>`count(*)::int`,
-        willArchive: sql<number>`(count(*) filter (where ${children.grade} = ${GRADUATION_GRADE}))::int`,
+        willStay: sql<number>`(count(*) filter (where ${children.grade} >= ${GRADE_MAX}))::int`,
       })
       .from(children)
       .where(targetCondition);
@@ -114,7 +118,7 @@ export async function getYearRolloverStatus(
           ? undoDeadline(latest.executedAt).toISOString()
           : null,
         affected: Object.keys(latest.snapshot).length,
-        archived: countGraduating(latest.snapshot),
+        staying: countStaying(latest.snapshot),
       };
     }
 
@@ -122,7 +126,7 @@ export async function getYearRolloverStatus(
       latest: latestStatus,
       preview: {
         total: counts?.total ?? 0,
-        willArchive: counts?.willArchive ?? 0,
+        willStay: counts?.willStay ?? 0,
       },
     };
   });
@@ -164,16 +168,10 @@ export async function executeYearRollover(
 
     // 実行前の状態を丸ごと残す。取り消しはここからの復元だけで完結させる(設計判断1)
     const snapshot: RolloverSnapshot = buildSnapshot(targets);
-    const { promoting, graduating } = partitionMembers(targets);
+    const { promoting, staying } = partitionMembers(targets);
 
-    // 6年生: 学年は据え置きで卒団アーカイブ(§7)
-    if (graduating.length > 0) {
-      await tx
-        .update(children)
-        .set({ archived: true, archivedAt: now, updatedAt: now })
-        .where(inArray(children.id, graduating));
-    }
-    // それ以外: 学年+1
+    // 上限の学年(中学1年生)は据え置き。誰もアーカイブしない(設計判断2)。
+    // 据え置きの部員も snapshot に入れて「対象」に数える(取り消しの復元対象に含める)
     if (promoting.length > 0) {
       await tx
         .update(children)
@@ -199,7 +197,7 @@ export async function executeYearRollover(
         id: row.id,
         executedAt: row.executedAt.toISOString(),
         affected: targets.length,
-        archived: graduating.length,
+        staying: staying.length,
       },
     };
   });
@@ -234,8 +232,8 @@ export async function undoYearRollover(
 
     // 同じ学年ごとにまとめて戻す(1件ずつの UPDATE を避ける)。
     // 実行の対象は archived=false の部員だけなので snapshot の archived は常に false。
-    // よって復元は archived=false / archived_at=null で固定でよい(卒団を取り消すと
-    // archived_at も実行前どおり未設定に戻る)
+    // よって復元は archived=false / archived_at=null で固定でよい(猶予中に手で卒団させた
+    // 部員は、取り消しで在籍中に戻る。設計判断1のとおり UI にも明記してある)
     let restored = 0;
     for (const group of buildRestoreGroups(latest.snapshot)) {
       const rows = await tx

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  BIRTH_DATE_RANGE_ERROR,
   birthDateForGrade,
+  GRADE_MAX,
+  GRADE_MIN,
   gradeFromBirthDate,
+  gradeLabel,
+  gradeShortLabel,
   HEIGHT_MAX,
   HEIGHT_MIN,
   parseBirthDate,
@@ -44,15 +49,19 @@ describe("gradeFromBirthDate", () => {
     ["2016-06-01", 4],
     ["2015-06-01", 5],
     ["2014-06-01", 6],
+    // 中学1年生(grade-junior-high/plan.md 設計判断1)
+    ["2013-06-01", 7],
   ])("%s 生まれは %i 年", (birthDate, grade) => {
     expect(gradeFromBirthDate(birthDate, TODAY)).toBe(grade);
   });
 
-  it("入学前・卒業後は null", () => {
-    // 2020-05-01 生まれは 0 年、2014-04-01 生まれは 7 年にあたる
+  it("入学前・中学2年以上は null", () => {
+    // 2020-05-01 生まれは 0 年、2013-04-01 生まれは 8 年(中学2年)にあたる
     expect(gradeFromBirthDate("2020-05-01", TODAY)).toBeNull();
-    expect(gradeFromBirthDate("2014-04-01", TODAY)).toBeNull();
-    expect(gradeFromBirthDate("2014-04-02", TODAY)).toBe(6);
+    expect(gradeFromBirthDate("2013-04-01", TODAY)).toBeNull();
+    expect(gradeFromBirthDate("2013-04-02", TODAY)).toBe(7);
+    // 小学6年の1つ上は弾かれず、中学1年生になる(#187 の不具合の再発防止)
+    expect(gradeFromBirthDate("2014-04-01", TODAY)).toBe(7);
   });
 
   it("うるう日生まれも学齢の年度で判定する", () => {
@@ -73,11 +82,23 @@ describe("gradeFromBirthDate", () => {
   });
 });
 
+describe("gradeLabel / gradeShortLabel", () => {
+  it.each([
+    [1, "小学1年生", "1年"],
+    [4, "小学4年生", "4年"],
+    [6, "小学6年生", "6年"],
+    [7, "中学1年生", "中1"],
+  ])("%i 年は「%s」/「%s」", (grade, label, short) => {
+    expect(gradeLabel(grade)).toBe(label);
+    expect(gradeShortLabel(grade)).toBe(short);
+  });
+});
+
 describe("birthDateForGrade", () => {
   it.each(["2026-04-01", "2026-09-13", "2027-03-31"])(
-    "基準日 %s で 1〜6 年を往復できる",
+    "基準日 %s で 1〜7 年を往復できる",
     (today) => {
-      for (let grade = 1; grade <= 6; grade++) {
+      for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
         expect(gradeFromBirthDate(birthDateForGrade(grade, today), today)).toBe(
           grade,
         );
@@ -94,6 +115,13 @@ describe("parseBirthDate", () => {
     });
   });
 
+  it("中学1年生の生年月日も受け付ける(#187)", () => {
+    expect(parseBirthDate("2013-06-01", TODAY)).toEqual({
+      ok: true,
+      value: "2013-06-01",
+    });
+  });
+
   it("未入力・形式不正は入力を促す", () => {
     for (const value of ["", "2019/06/01", "2019-02-30", 20190601, null]) {
       const r = parseBirthDate(value, TODAY);
@@ -102,10 +130,16 @@ describe("parseBirthDate", () => {
     }
   });
 
-  it("小学生にならない生年月日は拒否する", () => {
-    const r = parseBirthDate("2020-05-01", TODAY);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toBe("小学生の生年月日を入力してください");
+  it("受け付ける範囲の外は、範囲が分かる文言で拒否する", () => {
+    expect(BIRTH_DATE_RANGE_ERROR).toBe(
+      "生年月日は小学1年生〜中学1年生の範囲で入力してください",
+    );
+    // 入学前(0 年)と中学2年(8 年)の両端
+    for (const value of ["2020-05-01", "2012-06-01"]) {
+      const r = parseBirthDate(value, TODAY);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toBe(BIRTH_DATE_RANGE_ERROR);
+    }
   });
 });
 

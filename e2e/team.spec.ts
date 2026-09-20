@@ -50,8 +50,9 @@ test("タブバーの「チーム」から名簿を開くと、登録した部�
   const row = page.locator(".rrow", { hasText: name });
   await expect(row).toContainText("ろすたー");
   await expect(row.locator(".pill")).toHaveText("6年");
-  // 学年降順なので先頭行は6年
+  // 学年降順なので先頭行は最上級の学年。seed には中学1年生がいるので「中1」になる
+  // (#187。学年 7 の短い表示は gradeShortLabel)
   await expect(page.locator(".rrow").first().locator(".pill")).toHaveText(
-    "6年",
+    "中1",
   );
 });

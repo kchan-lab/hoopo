@@ -120,6 +120,20 @@ await withTeam(skcId, async (tx) => {
           heightCm: 118,
           gender: "male",
         },
+        // 例外的に在籍している中学1年生(grade 7。grade-junior-high/plan.md)。
+        // 学年の表示(「中1」/「中学1年生」)と並び順(学年降順で先頭)を手元で確認できるように置く。
+        // 保護者は紐づけない(下の c1..c3 の並びを変えないため。保護者 0 人の行の見た目も確認できる)
+        {
+          familyName: "粉浜",
+          givenName: "健一",
+          familyNameKana: "こはま",
+          givenNameKana: "けんいち",
+          nicknameKana: "けんちゃん",
+          grade: 7,
+          birthDate: "2013-07-10",
+          heightCm: 160,
+          gender: "male",
+        },
       ].map((c) => ({ ...c, teamId: skcId, inviteCode: generateInviteCode() })),
     )
     .returning();

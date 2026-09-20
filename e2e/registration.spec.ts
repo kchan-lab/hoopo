@@ -235,8 +235,65 @@ test("確認画面から修正して戻ると、直した内容で登録され�
   });
 });
 
-test("小学生にならない生年月日では次へ進めない", async ({ context, page }) => {
-  // 学年が 1〜6 に入らない生年月日は登録できない(REQUIREMENTS §3)。
+test("中学1年生の生年月日で登録でき、学年が中学1年生になる(#187)", async ({
+  context,
+  page,
+}) => {
+  // このチームには例外として中学1年生が在籍している(REQUIREMENTS §3。学年 7)。
+  // 生年月日を入れた時点で弾かれず、確認画面・ホームまで「中学1年生」で通ることを見る
+  await loginAsNewGuardian(context);
+  await gotoReady(page, `${urls.portal}/register`);
+  // 同じ DB で繰り返し実行するので、名前は毎回変える
+  const givenName = `一年${randomBytes(2).toString("hex")}`;
+  const name = `中学 ${givenName}`;
+  await page.getByLabel("姓", { exact: true }).fill("中学");
+  await page.getByLabel("姓のよみ").fill("ちゅうがく");
+  await page.getByLabel("名", { exact: true }).fill(givenName);
+  await page.getByLabel("名のよみ").fill("いちねん");
+  await page.getByLabel("生年月日").fill(birthDateForGrade(7));
+  await page
+    .getByRole("spinbutton", { name: "身長", exact: true })
+    .fill(String(heightForGrade(7)));
+  // 入力したその場で「中学1年生」が出る(gradeLabel)
+  await expect(page.locator("fieldset.child-block").first()).toContainText(
+    "中学1年生",
+  );
+  await page.getByRole("button", { name: "男子" }).click();
+  await page.getByRole("button", { name: "次へ" }).click();
+
+  // ②参加情報は最小限だけ入れて進む
+  await expect(page.locator("h1")).toContainText("参加について");
+  await page.getByRole("button", { name: "土", exact: true }).click();
+  await page.getByRole("button", { name: "父", exact: true }).click();
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+
+  // ③確認画面でも「中学1年生」
+  await expect(page.locator("h1")).toContainText("入力内容の確認");
+  await expect(page.locator("section.child-block").first()).toContainText(
+    "中学1年生",
+  );
+  await page.getByRole("button", { name: "この内容で登録する" }).click();
+
+  // ホームの学年ピルは短い形(中1)
+  await expect(page.locator("main")).toContainText(name, { timeout: 15000 });
+  await expect(page.locator("main")).toContainText("中1");
+
+  // 家族の設定では「中学1年生」
+  await page
+    .locator("main")
+    .getByRole("link", { name: /家族の設定/ })
+    .click();
+  await expect(page.locator("h1")).toContainText("家族の設定");
+  await expect(page.locator("section.child-block").first()).toContainText(
+    "中学1年生",
+  );
+});
+
+test("受け付ける学年にならない生年月日では次へ進めない", async ({
+  context,
+  page,
+}) => {
+  // 学年が 1〜7 に入らない生年月日は登録できない(REQUIREMENTS §3)。
   // クライアントの検証はサーバー(parseBirthDate)と同じ純関数なので文言もそろう
   await loginAsNewGuardian(context);
   await gotoReady(page, `${urls.portal}/register`);
@@ -250,7 +307,7 @@ test("小学生にならない生年月日では次へ進めない", async ({ co
     .getByRole("spinbutton", { name: "身長", exact: true })
     .fill(String(heightForGrade(1)));
   await expect(page.locator("fieldset.child-block").first()).toContainText(
-    "小学生の生年月日を入力してください",
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
   );
   await page.getByRole("button", { name: "男子" }).click();
   await page.getByRole("button", { name: "次へ" }).click();
@@ -258,7 +315,7 @@ test("小学生にならない生年月日では次へ進めない", async ({ co
   // ①に留まり、エラーが出る
   // Next.js のルートアナウンサー(空の role="alert")と衝突するので form に絞る
   await expect(page.locator("form").getByRole("alert")).toContainText(
-    "1人目の小学生の生年月日を入力してください",
+    "1人目の生年月日は小学1年生〜中学1年生の範囲で入力してください",
   );
   await expect(page.locator("h1")).toContainText("お子さんの登録");
 });

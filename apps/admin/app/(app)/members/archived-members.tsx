@@ -2,6 +2,7 @@
 
 import type { ArchivedMemberRow } from "@hoopo/api";
 import { formatDateTokyo } from "@hoopo/api/audit-shared";
+import { gradeShortLabel } from "@hoopo/api/grade-shared";
 import { fullName } from "@hoopo/api/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -52,7 +53,7 @@ export function ArchivedMembers({ members }: { members: ArchivedMemberRow[] }) {
           <div className="arow gone" key={m.id}>
             <b>{fullName(m)}</b>
             <span>
-              {m.grade}年 / 卒団{" "}
+              {gradeShortLabel(m.grade)} / 卒団{" "}
               {m.archivedAt === null ? "−" : formatDateTokyo(m.archivedAt)}
             </span>
             {confirmId === m.id ? (

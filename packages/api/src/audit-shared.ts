@@ -1,5 +1,6 @@
 // 実行ログ(audit_logs。member-deletion/plan.md)の純ロジック。DB・React に依存しないので
 // Unit テストと admin の画面の両方から使う。DB を触る手続きは members.ts 側
+import { gradeShortLabel } from "./grade-shared";
 import { TOKYO_TZ } from "./tokyo-date";
 
 /** 実行ログの既定・上限件数(画面から渡る limit はこの範囲に丸める) */
@@ -19,8 +20,14 @@ export interface AuditLogLike {
   detail: Record<string, unknown>;
 }
 
-/** ログに名前は残さない(設計判断3)ので、内容は人数だけで組み立てる */
+/** ログに名前は残さない(設計判断3)ので、内容は学年・人数だけで組み立てる */
 export function describeAuditLog(log: AuditLogLike): string {
+  if (log.action === "child_archived") {
+    // 手動の卒団(grade-junior-high/plan.md 設計判断3)。学年は卒団した時点の学年
+    return typeof log.detail.grade === "number"
+      ? `部員を卒団(${gradeShortLabel(log.detail.grade)})`
+      : "部員を卒団";
+  }
   if (log.action === "child_deleted") {
     const removed =
       typeof log.detail.removedGuardians === "number"

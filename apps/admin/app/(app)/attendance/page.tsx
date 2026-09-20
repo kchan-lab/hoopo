@@ -4,6 +4,7 @@ import {
   formatMonthLabel,
   fullName,
   getAttendanceMatrix,
+  gradeShortLabel,
   monthOf,
   parseMonth,
   todayInTokyo,
@@ -93,7 +94,9 @@ export default async function AttendancePage({
                         <tr key={r.child.id} className={silent ? "muted" : ""}>
                           <td className="c-member">
                             {fullName(r.child)}
-                            <span className="pc">({r.child.grade}年)</span>
+                            <span className="pc">
+                              ({gradeShortLabel(r.child.grade)})
+                            </span>
                           </td>
                           {practices.map((p) => {
                             const cell = r.cells[p.id] ?? null;

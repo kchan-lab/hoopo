@@ -21,6 +21,21 @@ describe("clampAuditLimit", () => {
 });
 
 describe("describeAuditLog", () => {
+  it("手動の卒団は学年だけで説明する(名前は出さない)", () => {
+    expect(
+      describeAuditLog({
+        action: "child_archived",
+        detail: { grade: 7, archivedAt: "2027-04-01T00:00:00.000Z" },
+      }),
+    ).toBe("部員を卒団(中1)");
+    expect(
+      describeAuditLog({ action: "child_archived", detail: { grade: 6 } }),
+    ).toBe("部員を卒団(6年)");
+    expect(describeAuditLog({ action: "child_archived", detail: {} })).toBe(
+      "部員を卒団",
+    );
+  });
+
   it("部員削除は削除した保護者数だけで説明する(名前は出さない)", () => {
     expect(
       describeAuditLog({

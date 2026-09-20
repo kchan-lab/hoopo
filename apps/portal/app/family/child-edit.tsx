@@ -1,6 +1,11 @@
 "use client";
 
-import { HEIGHT_MAX, HEIGHT_MIN, todayTokyo } from "@hoopo/api/grade-shared";
+import {
+  gradeLabel,
+  HEIGHT_MAX,
+  HEIGHT_MIN,
+  todayTokyo,
+} from "@hoopo/api/grade-shared";
 import {
   AVAILABILITY_HINT,
   type AvailabilitySlot,
@@ -236,7 +241,7 @@ export function ChildEdit({ child }: { child: EditableChild }) {
           </li>
           <li className="row">
             <span>学年</span>
-            <span>小学{detail.grade}年生</span>
+            <span>{gradeLabel(detail.grade)}</span>
           </li>
           <li className="row">
             <span>生年月日</span>
