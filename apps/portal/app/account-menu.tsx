@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // ホーム右上の丸ボタン。押すと「家族の設定 / プライバシーポリシー / ログアウト」を選べる
 // メニューが開く(family-settings-entry/plan.md 設計判断0)。
@@ -16,13 +16,14 @@ export function AccountMenu({ initial }: { initial: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLAnchorElement>(null);
 
-  function close() {
+  // useEffect の依存に入れるので、毎回作り直さない(作り直すと Esc の購読が張り直される)
+  const close = useCallback(() => {
     setOpen(false);
     setConfirming(false);
     setError(null);
     // 閉じたら丸ボタンに戻す(キーボード操作で行き先を失わないように)
     triggerRef.current?.focus();
-  }
+  }, []);
 
   // Esc で閉じる。開いたら先頭の項目へ移し、キーボードだけでも辿れるようにする
   // (項目は丸ボタンの直後にあるので Tab でそのまま進める)
@@ -36,7 +37,7 @@ export function AccountMenu({ initial }: { initial: string }) {
     document.addEventListener("keydown", onKey);
     firstItemRef.current?.focus();
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, close]);
 
   async function logout() {
     setBusy(true);
