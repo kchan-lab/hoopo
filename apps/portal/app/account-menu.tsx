@@ -28,12 +28,10 @@ export function AccountMenu({ initial }: { initial: string }) {
   // (項目は丸ボタンの直後にあるので Tab でそのまま進める)
   useEffect(() => {
     if (!open) return;
+    // 閉じ方は1か所にまとめる(ここで書き写すと、close() に手を入れたとき
+    // Esc だけ追従し忘れる。#189 のレビュー指摘)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      setConfirming(false);
-      setError(null);
-      triggerRef.current?.focus();
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     firstItemRef.current?.focus();
@@ -100,7 +98,12 @@ export function AccountMenu({ initial }: { initial: string }) {
                   <button
                     type="button"
                     className="cta inline sec2"
-                    onClick={() => setConfirming(false)}
+                    onClick={() => {
+                      // 前回の失敗の文言も消す。残すと、やり直していないのに
+                      // 失敗したように見える(#189 のレビュー指摘)
+                      setConfirming(false);
+                      setError(null);
+                    }}
                     disabled={busy}
                   >
                     キャンセル
