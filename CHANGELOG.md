@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/kchan-lab/hoopo/compare/v0.5.0...v0.6.0) (2026-09-20)
+
+
+### Features
+
+* ヘッダーにチームのマークとアカウントのメニューを常設する ([#189](https://github.com/kchan-lab/hoopo/issues/189)) ([2b71dd2](https://github.com/kchan-lab/hoopo/commit/2b71dd2f0308437e3a15950be711409b8d296c32))
+* 中学1年生を登録できるようにし、卒団を手動にする ([#191](https://github.com/kchan-lab/hoopo/issues/191)) ([49292ea](https://github.com/kchan-lab/hoopo/commit/49292ea9a9138cfd53cac45bea48a7b20a3c4cfd))
+
+
+### Bug Fixes
+
+* お子さんが未登録のとき、提出と月謝はホームへ送る ([#192](https://github.com/kchan-lab/hoopo/issues/192)) ([0f698d2](https://github.com/kchan-lab/hoopo/commit/0f698d22119de58de7605282a7a7b356e2d37f23))
+
 ## [0.5.0](https://github.com/kchan-lab/hoopo/compare/v0.4.0...v0.5.0) (2026-09-19)
 
 
