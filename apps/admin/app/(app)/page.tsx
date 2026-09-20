@@ -5,6 +5,7 @@ import {
   fullName,
   getDashboard,
   getLineUsage,
+  gradeShortLabel,
   monthOf,
   todayInTokyo,
 } from "@hoopo/api";
@@ -114,7 +115,7 @@ export default async function DashboardPage() {
             unansweredMembers.map((m) => (
               <div key={m.id} className="arow">
                 <b>
-                  {fullName(m)}({m.grade}年)
+                  {fullName(m)}({gradeShortLabel(m.grade)})
                 </b>
                 <span>未回答 {m.unanswered}件</span>
               </div>

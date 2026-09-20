@@ -9,7 +9,11 @@ import {
   withTeam,
 } from "@hoopo/db";
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
-import { gradeFromBirthDate, todayTokyo } from "./grade-shared";
+import {
+  BIRTH_DATE_RANGE_ERROR,
+  gradeFromBirthDate,
+  todayTokyo,
+} from "./grade-shared";
 import type {
   AvailabilitySlot,
   ChildDetail,
@@ -42,12 +46,12 @@ export interface ChildSummary {
 }
 
 /**
- * 生年月日から保存する学年を求める。パース(parseBirthDate)を通っていれば必ず 1..6 に
+ * 生年月日から保存する学年を求める。パース(parseBirthDate)を通っていれば必ず 1..7 に
  * なるので、null は日付をまたいだ等の異常系。黙って古い学年を残さず落とす
  */
 function gradeForBirthDate(birthDate: string): number {
   const grade = gradeFromBirthDate(birthDate, todayTokyo());
-  if (grade === null) throw new Error("小学生の生年月日を入力してください");
+  if (grade === null) throw new Error(BIRTH_DATE_RANGE_ERROR);
   return grade;
 }
 

@@ -1,4 +1,5 @@
 import { listRegistrations, RELATION_LABELS } from "@hoopo/api";
+import { gradeShortLabel } from "@hoopo/api/grade-shared";
 import { redirect } from "next/navigation";
 import { getCoachSession } from "../../../lib/session";
 import { Shell } from "../shell";
@@ -37,8 +38,8 @@ export default async function RegistrationsPage() {
           <article key={e.key} className="acard" data-kind={e.kind}>
             <div className="ttl">
               {e.kind === "child"
-                ? `${e.childName}(${e.grade}年)`
-                : `${e.childName}(${e.grade}年)への家族連携`}
+                ? `${e.childName}(${gradeShortLabel(e.grade)})`
+                : `${e.childName}(${gradeShortLabel(e.grade)})への家族連携`}
             </div>
             <div className="meta">
               {e.kind === "child"

@@ -13,12 +13,14 @@ import { urls } from "./urls";
 // 前提: AUTH_FAKE=1 + pnpm db:seed 済み。
 // registration.spec.ts と同じく、毎回別の保護者としてフェイク ID トークンでログインする
 
-async function loginAsNewGuardian(context: BrowserContext) {
+async function loginAsNewGuardian(context: BrowserContext): Promise<string> {
   const userId = `U${randomBytes(16).toString("hex")}`;
   const res = await context.request.post(`${urls.portal}/api/auth/line`, {
     data: { idToken: `fake:${userId}` },
   });
   expect(res.ok()).toBe(true);
+  const body = (await res.json()) as { guardianId: string };
+  return body.guardianId;
 }
 
 test("家族の設定からお子さんの生年月日・身長を直せる", async ({
@@ -51,13 +53,15 @@ test("家族の設定からお子さんの生年月日・身長を直せる", as
   await expect(block).toContainText("小学3年生");
   await expect(block).toContainText(`${heightForGrade(3)} cm`);
 
-  // 小学生にならない生年月日はサーバーが断る(400 の文言をそのまま出す)
+  // 受け付ける学年(小学1年生〜中学1年生)の外はサーバーが断る(400 の文言をそのまま出す)
   await block.getByRole("button", { name: "編集" }).click();
   await block.getByLabel("生年月日").fill(birthDateForGrade(0));
-  await expect(block).toContainText("小学生の生年月日を入力してください");
+  await expect(block).toContainText(
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
+  );
   await block.getByRole("button", { name: "保存" }).click();
   await expect(block.getByRole("alert")).toContainText(
-    "小学生の生年月日を入力してください",
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
   );
 
   // 生年月日と身長を直すと、学年が再計算されて表示が変わる
@@ -164,6 +168,212 @@ test("家族の設定から参加できる曜日と時間を直せる(Issue #170
   );
 });
 
+test("ホーム右上のメニューから家族の設定とログアウトに行ける(Issue #186)", async ({
+  context,
+  page,
+}) => {
+  // family-settings-entry/plan.md 設計判断0: 右上の丸は家族の設定へ直行せず、
+  // 「家族の設定 / プライバシーポリシー / ログアウト」を選べるメニューを開く。
+  // 読み上げ用の名前が付いている(aria-hidden ではない)ので名前で引ける。
+  // 家族の設定へはホームのカードからも行ける(設計判断5: 導線は2つ残す)
+  const guardianId = await loginAsNewGuardian(context);
+  const childName = `粉浜 導線${randomBytes(3).toString("hex")}`;
+  const created = await context.request.post(`${urls.portal}/api/children`, {
+    data: {
+      children: [
+        {
+          ...childNameInput(childName),
+          nicknameKana: "どうせん",
+          birthDate: birthDateForGrade(2),
+          heightCm: heightForGrade(2),
+          gender: "female",
+        },
+      ],
+      relation: "mother",
+      availabilities: [{ weekday: 6, startTime: "09:00", endTime: "12:00" }],
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  // メニューはクリックで開くので、React が受け持つまで待つ
+  await gotoReady(page, urls.portal, "header .avatar");
+  await expect(page.locator("main")).toContainText(childName, {
+    timeout: 15000,
+  });
+  const trigger = page
+    .locator("header")
+    .getByRole("button", { name: "メニュー", exact: true });
+  const menu = page.locator(".acct-menu");
+
+  // Esc で閉じる
+  await trigger.click();
+  await expect(menu).toContainText("プライバシーポリシー");
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+
+  // 外側をタップしても閉じる
+  await trigger.click();
+  await page.getByRole("button", { name: "メニューを閉じる" }).click();
+  await expect(menu).toHaveCount(0);
+
+  // ログアウトは確認を挟み、LINEから開き直せることを添える
+  await trigger.click();
+  await menu.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await expect(menu).toContainText("ログアウトしますか?");
+  await expect(menu).toContainText(
+    "LINEのトークからこのアプリを開き直すと、また入れます",
+  );
+  await menu.getByRole("button", { name: "キャンセル" }).click();
+  await expect(menu).not.toContainText("ログアウトしますか?");
+
+  // メニューから家族の設定へ行ける
+  await menu.getByRole("link", { name: /家族の設定/ }).click();
+  await expect(page.locator("h1")).toContainText("家族の設定", {
+    timeout: 15000,
+  });
+  await expect(page.locator("main")).toContainText(childName);
+
+  // ホームのカードからも行ける(導線は2つ残す)
+  await page.goto(urls.portal);
+  await page
+    .locator("main")
+    .getByRole("link", { name: /家族の設定/ })
+    .click();
+  await expect(page.locator("h1")).toContainText("家族の設定", {
+    timeout: 15000,
+  });
+
+  // ログアウトするとセッションが消え、自分の子は見えなくなる。
+  // フェイク認証の E2E では未ログインのホームが既定のユーザーとして入り直すので
+  // (LIFF から開き直したときと同じ挙動)、「元の保護者ではなくなること」で確かめる
+  await gotoReady(page, urls.portal, "header .avatar");
+  await trigger.click();
+  await menu.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await menu.getByRole("button", { name: "ログアウトする" }).click();
+  await expect(page.locator("body")).not.toContainText(childName, {
+    timeout: 15000,
+  });
+  const me = await context.request.get(`${urls.portal}/api/me`);
+  const current =
+    me.status() === 200
+      ? ((await me.json()) as { guardianId: string }).guardianId
+      : null;
+  expect(current).not.toBe(guardianId);
+});
+
+test("チームのマークとアカウントのメニューが全画面のヘッダーに出る(privacy と register には出ない)", async ({
+  context,
+  page,
+}) => {
+  // family-settings-entry/plan.md 設計判断6・7: 保護者がログインして見る全画面の
+  // ヘッダーを「チームのマーク / 画面名 / アカウントの丸」で揃える。
+  // 右上の丸はホームに戻ってから押す、を強いない。左上のマークは押すとホームへ戻る
+  // (見出しの中の戻る矢印は「1つ前」で役割が違うので、別に残っている)。
+  // 対象外は /privacy(未ログインでも開く)と /register(登録の途中)
+  await loginAsNewGuardian(context);
+  const childName = `粉浜 全画面${randomBytes(3).toString("hex")}`;
+  const created = await context.request.post(`${urls.portal}/api/children`, {
+    data: {
+      children: [
+        {
+          ...childNameInput(childName),
+          nicknameKana: "ぜんがめん",
+          birthDate: birthDateForGrade(4),
+          heightCm: heightForGrade(4),
+          gender: "male",
+        },
+      ],
+      relation: "father",
+      availabilities: [{ weekday: 0, startTime: "09:00", endTime: "12:00" }],
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  // 見出しに別のものが入っている画面(日程=表示切替・チーム=人数・月謝=年ナビ)も含める。
+  // 丸は見出しの中ではなくヘッダー直下にあり、見出しとは場所を取り合わない
+  const screens: { path: string; title: string }[] = [
+    { path: "/schedule", title: "練習日程" },
+    { path: "/attendance", title: "参加予定の提出" },
+    { path: "/team", title: "チーム" },
+    { path: "/fees", title: "月謝確認" },
+    { path: "/announcements", title: "お知らせ" },
+    { path: "/family", title: "家族の設定" },
+  ];
+  for (const { path, title } of screens) {
+    await gotoReady(page, `${urls.portal}${path}`, "header .avatar");
+    await expect(page.locator("h1.sc-title")).toContainText(title);
+    const trigger = page
+      .locator("header")
+      .getByRole("button", { name: "メニュー", exact: true });
+    await expect(trigger).toBeVisible();
+    // 頭文字は先頭のお子さんの姓の1文字(どの画面でも同じ)
+    await expect(trigger).toHaveText("粉");
+    // 左上のチームのマーク。読み上げ用の名前が付いていて、ホームへのリンクになっている。
+    // チーム名は添えない(モバイル幅で見出しと並べると窮屈になるため)
+    const mark = page
+      .locator("header")
+      .getByRole("link", { name: "ホーム", exact: true });
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveText("SKC");
+    // 見出しは1行に収まる(iPhone 15 = 393px。マークを足しても折り返さない)。
+    // 折り返しても .sc-title は溢れないので幅では分からない。画面名そのものの
+    // 描画矩形が2つ以上に割れていないかで見る
+    const wraps = await page.locator("h1.sc-title").evaluate((el) => {
+      for (const node of el.childNodes) {
+        if (node.nodeType !== Node.TEXT_NODE) continue;
+        if (!node.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        if (range.getClientRects().length > 1) return true;
+      }
+      return false;
+    });
+    expect(wraps, `${path} の見出しが折り返している`).toBe(false);
+  }
+
+  // マークを押すとホームへ戻る(どの画面からでも同じ)
+  await gotoReady(page, `${urls.portal}/fees`, "header .avatar");
+  await page
+    .locator("header")
+    .getByRole("link", { name: "ホーム", exact: true })
+    .click();
+  await expect(page.locator(".team-head .name")).toContainText("SKC粉浜", {
+    timeout: 15000,
+  });
+  await expect(page.locator("main")).toContainText(childName);
+
+  // 見出しの中の戻る矢印は残っている(マークと役割が違う。1つ前へ戻る)
+  await gotoReady(page, `${urls.portal}/announcements`, "header .avatar");
+  await expect(
+    page.locator("h1.sc-title").getByRole("link", { name: "ホームへ戻る" }),
+  ).toBeVisible();
+
+  // ホーム以外(チーム)からでもメニューで家族の設定へ行ける
+  await gotoReady(page, `${urls.portal}/team`, "header .avatar");
+  await page
+    .locator("header")
+    .getByRole("button", { name: "メニュー", exact: true })
+    .click();
+  await page
+    .locator(".acct-menu")
+    .getByRole("link", { name: /家族の設定/ })
+    .click();
+  await expect(page.locator("h1")).toContainText("家族の設定", {
+    timeout: 15000,
+  });
+
+  // 対象外の2画面には、マークもアカウントの丸も出ない
+  await page.goto(`${urls.portal}/privacy`);
+  await expect(page.locator("h1")).toContainText("プライバシーポリシー");
+  await expect(page.locator("header .avatar")).toHaveCount(0);
+  await expect(page.locator("header .logo")).toHaveCount(0);
+
+  await gotoReady(page, `${urls.portal}/register`);
+  await expect(page.locator("h1")).toContainText("お子さんの登録");
+  await expect(page.locator("header .avatar")).toHaveCount(0);
+  await expect(page.locator("header .logo")).toHaveCount(0);
+});
+
 test("第二保護者は自分の連携を解除でき、最後の保護者は解除できない", async ({
   browser,
 }) => {
@@ -210,7 +420,10 @@ test("第二保護者は自分の連携を解除でき、最後の保護者は�
   });
 
   // 家族の設定から二段階確認で解除 → 連携が無くなるので分岐画面に戻る
-  await pageB.getByRole("link", { name: /家族の設定/ }).click();
+  await pageB
+    .locator("main")
+    .getByRole("link", { name: /家族の設定/ })
+    .click();
   await expect(pageB.locator("main")).toContainText("あなた(母)");
   await pageB.getByRole("button", { name: "連携を解除" }).click();
   await expect(pageB.locator("main")).toContainText(

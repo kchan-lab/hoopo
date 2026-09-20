@@ -23,7 +23,8 @@ import {
 } from "@hoopo/api/tokyo-date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { HomeLogo } from "../home-logo";
 import { Icon } from "../icons";
 import {
   ATTENDANCE_VIEW_COOKIE_NAME,
@@ -86,6 +87,7 @@ const labelOf = (status: AttendanceAnswer) =>
   status === null ? UNANSWERED_LABEL : ATTENDANCE_LABELS[status];
 
 export function AttendanceEditor({
+  accountMenu,
   month,
   initialView,
   childList,
@@ -94,6 +96,8 @@ export function AttendanceEditor({
   answers,
   initialSubmittedAt,
 }: {
+  /** 右上の丸(メニュー)。サーバーで作ったものを差し込む(account-menu-slot.tsx) */
+  accountMenu: ReactNode;
   month: string;
   initialView: ScheduleView;
   childList: ChildItem[];
@@ -222,6 +226,7 @@ export function AttendanceEditor({
     return (
       <>
         <header className="sc-head">
+          <HomeLogo />
           <h1 className="sc-title">
             {/* 送信中に編集へ戻れると、戻った先で回答を変えたあとに古い内容の保存が
                 完了して、変えた内容が黙って消える(#178 のレビュー指摘)。
@@ -237,6 +242,7 @@ export function AttendanceEditor({
             </button>
             参加予定の確認
           </h1>
+          {accountMenu}
         </header>
         <main className="sc-body">
           {error !== null && (
@@ -343,6 +349,7 @@ export function AttendanceEditor({
   return (
     <>
       <header className="sc-head">
+        <HomeLogo />
         <h1 className="sc-title">
           参加予定の提出
           <ViewToggle
@@ -352,6 +359,7 @@ export function AttendanceEditor({
             onSelect={setView}
           />
         </h1>
+        {accountMenu}
       </header>
       <main className="sc-body">
         {childList.length > 1 && (

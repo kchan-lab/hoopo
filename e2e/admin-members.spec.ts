@@ -149,6 +149,10 @@ test("部員の生年月日・身長が見え、行詳細から直すと学年�
     String(heightForGrade(5)),
   );
 
+  // 中学1年生になる生年月日も受け付ける(#187。短い形は「中1」)
+  await detail.getByLabel("生年月日").fill(birthDateForGrade(7));
+  await expect(detail).toContainText("この生年月日なら 中1 になります");
+
   // 身長と生年月日を直す。保存前に「この生年月日なら n年」が出る(設計判断4)
   await detail.getByLabel("身長").fill("150");
   await detail.getByLabel("生年月日").fill(birthDateForGrade(3));
@@ -174,7 +178,7 @@ test("部員の生年月日・身長が見え、行詳細から直すと学年�
   await expect(reopened.getByLabel("身長")).toHaveValue("150");
 });
 
-test("生年月日が小学生の範囲外だと保存できず、サーバーの文言が出る", async ({
+test("生年月日が受け付ける範囲の外だと保存できず、サーバーの文言が出る", async ({
   page,
 }) => {
   const name = `E2E 範囲外 ${randomBytes(2).toString("hex")}`;
@@ -186,8 +190,13 @@ test("生年月日が小学生の範囲外だと保存できず、サーバー�
   const detail = page.locator("tr.detail");
   // 入学前(0歳)。クライアントの目安表示と、保存時のサーバーの 400 の両方を確認する
   await detail.getByLabel("生年月日").fill(birthDateForGrade(0));
-  await expect(detail).toContainText("この生年月日は小学生の学年になりません");
+  await expect(detail).toContainText(
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
+  );
   await detail.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(detail).toContainText("小学生の生年月日を入力してください");
+  // クライアントの目安表示と文言が同じなので、サーバーの 400 は role="alert" で見分ける
+  await expect(detail.getByRole("alert")).toContainText(
+    "生年月日は小学1年生〜中学1年生の範囲で入力してください",
+  );
   await expect(detail).not.toContainText("保存しました");
 });

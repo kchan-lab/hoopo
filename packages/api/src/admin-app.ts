@@ -52,6 +52,7 @@ import {
   MAX_FAILED_LOGINS,
 } from "./login-lockout-shared";
 import {
+  archiveMember,
   deleteArchivedMember,
   listArchivedMembers,
   listAuditLogs,
@@ -534,6 +535,19 @@ export function createAdminApi(deps: AdminApiDeps) {
     return c.json({ member: result.value });
   });
 
+  // 手動の卒団(grade-junior-high/plan.md 設計判断3)。年度更新からアーカイブを外した代わりの導線。
+  // 破壊的操作: 確認は UI 側の二段階確認。実行ログは audit_logs に残る(CLAUDE.md 開発ルール)
+  app.post("/members/:childId/archive", coach, async (c) => {
+    const session = c.get("session");
+    const childId = c.req.param("childId");
+    if (!isUuid(childId)) return c.json({ error: "対象が見つかりません" }, 404);
+    const result = await archiveMember(session.teamId, childId, session.sub);
+    if (result.ok) return c.body(null, 204);
+    return result.reason === "already_archived"
+      ? c.json({ error: "この部員はすでに卒団しています" }, 409)
+      : c.json({ error: "対象が見つかりません" }, 404);
+  });
+
   // 破壊的操作: 確認は UI 側の二段階確認。実行ログは audit_logs に残る(CLAUDE.md 開発ルール)。
   // 削除できるのは卒団済みだけ(設計判断1)。関連行は FK CASCADE、孤立した保護者も消える(判断2)
   app.delete("/members/:childId", coach, async (c) => {
@@ -549,8 +563,7 @@ export function createAdminApi(deps: AdminApiDeps) {
     return result.reason === "not_archived"
       ? c.json(
           {
-            error:
-              "在籍中の部員は削除できません(先に年度更新で卒団させてください)",
+            error: "在籍中の部員は削除できません(先に卒団させてください)",
           },
           409,
         )

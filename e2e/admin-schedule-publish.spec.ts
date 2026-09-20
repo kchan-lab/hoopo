@@ -1,18 +1,12 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { gotoReady } from "./hydration";
+import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
 // 予定表の発行(Issue #90 受入条件)。
 // 前提: AUTH_FAKE=1 + pnpm db:seed 済み(coach@example.com / hoopo-dev-login)。
-// 練習は月に蓄積すると「n/total 件」がずれるため、テストごとに別の月を使う
-
-/** 2031〜2090 年のランダムな月(admin-attendance / attendance と同じ流儀) */
-function uniqueMonth(): string {
-  const y = 2031 + randomInt(60);
-  const m = String(1 + randomInt(12)).padStart(2, "0");
-  return `${y}-${m}`;
-}
+// 練習は月に蓄積すると「n/total 件」がずれるため、月は uniqueMonth()(e2e/unique-month.ts)から取る
 
 async function loginAsCoach(page: Page) {
   await gotoReady(page, `${urls.admin}/login`);

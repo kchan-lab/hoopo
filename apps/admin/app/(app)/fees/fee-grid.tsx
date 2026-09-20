@@ -6,6 +6,7 @@ import {
   type FeeMonth,
   MONTHS,
 } from "@hoopo/api/fees-shared";
+import { gradeShortLabel } from "@hoopo/api/grade-shared";
 import { fullName } from "@hoopo/api/shared";
 import { useState } from "react";
 
@@ -152,7 +153,7 @@ export function FeeGrid({
           >
             {rows.map((r) => (
               <option key={r.child.id} value={r.child.id}>
-                {fullName(r.child)}({r.child.grade}年)
+                {fullName(r.child)}({gradeShortLabel(r.child.grade)})
               </option>
             ))}
           </select>
