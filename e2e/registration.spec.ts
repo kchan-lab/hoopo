@@ -5,6 +5,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { expectNoAutoZoom } from "./form-font-size";
 import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
@@ -33,6 +34,8 @@ test("はじめての保護者が兄弟2人を登録するとホームに表示�
   await page.getByRole("link", { name: /お子さんを新しく登録する/ }).click();
   await expect(page.locator("h1")).toContainText("お子さんの登録");
 
+  // フォーム部品はどれも 16px 以上で描かれる(iOS の自動ズーム対策。Issue #205)
+  await expectNoAutoZoom(page);
   // ①子ども情報(兄弟を追加)。学年は選ばず、生年月日から決まる
   // 姓・名とそれぞれのよみは別の欄(child-name-split/plan.md 設計判断6)。
   // 「姓」は「姓のよみ」にも部分一致するので exact で絞る
@@ -353,6 +356,8 @@ test("第二保護者が招待コードで連携すると同じ子どもが見�
   const page = await contextB.newPage();
   await gotoReady(page, urls.portal);
   await expect(page.locator("h1")).toContainText("はじめての方");
+  // フォーム部品はどれも 16px 以上で描かれる(iOS の自動ズーム対策。Issue #205)
+  await expectNoAutoZoom(page);
   await page
     .getByLabel("招待コード")
     .fill(`${code.slice(0, 5).toLowerCase()}-${code.slice(5)}`);

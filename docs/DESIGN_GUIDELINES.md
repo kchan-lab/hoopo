@@ -99,3 +99,16 @@
 - コントラスト: 本文4.5:1以上(両テーマで検証)。tint上は必ず deep を使う
 - フォーカスリング可視、タップ領域44px、アイコンボタンには aria-label
 - 色だけに依存しない(済/未・出欠4値は文字併記、カレンダーは凡例併設)
+- **フォーム部品(input / select / textarea)の実効フォントサイズは 16px 以上**(Issue #205)。
+  iOS Safari はフォーカスした部品が 16px 未満だと自動で拡大し、blur しても倍率を戻さないため、
+  次の欄へ進むたびに手で縮小することになる。§1.2 の本文13px・補助11–12px はフォーム部品には適用しない
+  - **ズーム禁止(`user-scalable=no` / `maximum-scale=1`)では解かない。** iOS 10 以降の Safari は
+    `user-scalable=no` を無視する一方 Android Chrome は効くため、環境で挙動が割れる。
+    拡大できることはコントラスト・タップ領域と同じく視認性の担保であり、保護者には祖父母も含まれうる
+  - タッチ端末限定(`@media (pointer: coarse)`)にせず一律にする。portal はスマホが主導線であり、
+    規則を二重に持つと PC とスマホで見え方が食い違う
+  - 16px にして窮屈になったら**文字を戻さずレイアウト側**(行の高さ・余白・列幅)を調整する。
+    優先順位は「読めること > 既存の見た目の維持」
+  - portal は `apps/portal/app/globals.css` 冒頭の `input, select, textarea { font-size: 16px }` が土台。
+    個別の規則で下回らせない(`font: inherit` は font-size も継承値に戻すので要注意)。
+    回帰は `apps/portal/app/globals.test.ts` が見張る
