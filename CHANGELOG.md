@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/kchan-lab/hoopo/compare/v0.6.0...v0.7.0) (2026-09-21)
+
+
+### Features
+
+* 予定表画像を2カラムにして1か月を1画面で見渡せるようにする ([#208](https://github.com/kchan-lab/hoopo/issues/208)) ([809d1db](https://github.com/kchan-lab/hoopo/commit/809d1db99fec3e00d51a4ac7477543c141167aa4))
+
+
+### Bug Fixes
+
+* 保護者アプリのフォーム入力で iOS が勝手に拡大するのを直す ([#207](https://github.com/kchan-lab/hoopo/issues/207)) ([18a2d2b](https://github.com/kchan-lab/hoopo/commit/18a2d2b24f02d2447ad44e7fb04079b2f931fb8a))
+
 ## [0.6.0](https://github.com/kchan-lab/hoopo/compare/v0.5.0...v0.6.0) (2026-09-20)
 
 
