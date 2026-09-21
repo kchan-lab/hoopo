@@ -1,16 +1,25 @@
 import {
+  SCHEDULE_ENTRY_LINE_HEIGHT,
+  SCHEDULE_FONT_DAY,
+  SCHEDULE_FONT_ENTRY,
+  SCHEDULE_FONT_FOOTER,
+  SCHEDULE_FONT_MONTH,
+  SCHEDULE_FONT_TEAM,
+  SCHEDULE_FONT_WEEKDAY,
   SCHEDULE_FOOTER_HEIGHT,
   SCHEDULE_HEADER_HEIGHT,
   SCHEDULE_IMAGE_WIDTH,
   type ScheduleRow,
   scheduleRowHeight,
+  splitScheduleColumns,
 } from "@hoopo/api";
 import type { ReactElement } from "react";
 
 // 予定表画像の見た目(REQUIREMENTS §6「1ヶ月を1日1行、練習日に時間+学校名」)。
 // 色は apps/portal/app/globals.css のトークンと同じ値(保護者側=薄いオレンジ。CLAUDE.md 絶対原則6)。
-// satori は flexbox のみを解釈するため、display: flex を明示し、テキストは末端の要素に置く。
-// §10 未決(現行アプリのスクリーンショット待ち)のため、まずは素直な縦型で作る
+// satori は flexbox のみを解釈するため、display: flex を明示し、テキストは末端の要素に置く
+// (grid は使えない)。
+// 縦一列だと 720×1524 で1画面に収まらないため、左=月の前半 / 右=後半の2カラムに折り返す(#204)
 
 const BG = "#f5f3ef";
 const PAPER = "#fff";
@@ -22,11 +31,112 @@ const ACCENT = "#ef8432";
 const TINT = "#fcebda";
 const DEEP = "#9c4e0e";
 
+/** 行の左右の余白 */
+const ROW_PADDING = 16;
+/** 日付・曜日・時間の桁を左右のカラムで揃えるための固定幅 */
+const DAY_WIDTH = 46;
+const WEEKDAY_WIDTH = 38;
+const TIME_WIDTH = 146;
+
 /** 日曜は deep、土曜は sub、平日は ink(練習の無い日は薄く) */
 function dayColor(weekday: number, hasPractice: boolean): string {
   if (weekday === 0) return DEEP;
   if (weekday === 6) return SUB;
   return hasPractice ? INK : SUB;
+}
+
+function ScheduleRowView({ row }: { row: ScheduleRow }): ReactElement {
+  const hasPractice = row.entries.length > 0;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        height: scheduleRowHeight(row.entries.length),
+        padding: `0 ${ROW_PADDING}px`,
+        borderBottom: `1px solid ${HAIR}`,
+        background: hasPractice ? TINT : PAPER,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          width: DAY_WIDTH,
+          flexShrink: 0,
+          fontSize: SCHEDULE_FONT_DAY,
+          fontWeight: 700,
+          color: dayColor(row.weekday, hasPractice),
+        }}
+      >
+        {String(row.day)}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          width: WEEKDAY_WIDTH,
+          flexShrink: 0,
+          fontSize: SCHEDULE_FONT_WEEKDAY,
+          color: dayColor(row.weekday, hasPractice),
+        }}
+      >
+        {row.weekdayLabel}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          // flexBasis: 0 + overflow: hidden で、長い場所名がこのカラムの外へ
+          // はみ出したり日付・曜日を押し出したりしないようにする
+          flexGrow: 1,
+          flexBasis: 0,
+          minWidth: 0,
+          overflow: "hidden",
+        }}
+      >
+        {row.entries.map((entry) => (
+          <div
+            key={`${entry.time}-${entry.location}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              height: SCHEDULE_ENTRY_LINE_HEIGHT,
+              fontSize: SCHEDULE_FONT_ENTRY,
+              color: INK,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                width: TIME_WIDTH,
+                flexShrink: 0,
+                fontWeight: 700,
+              }}
+            >
+              {entry.time}
+            </div>
+            {/* 想定より長い場所名は1行に収めて末尾を省略する(行が折り返すと高さの計算とずれる) */}
+            <div
+              style={{
+                flexGrow: 1,
+                flexShrink: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {entry.location}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export interface ScheduleImageProps {
@@ -42,6 +152,7 @@ export function ScheduleImage({
   rows,
   height,
 }: ScheduleImageProps): ReactElement {
+  const [left, right] = splitScheduleColumns(rows);
   return (
     <div
       style={{
@@ -60,90 +171,49 @@ export function ScheduleImage({
           flexDirection: "column",
           justifyContent: "center",
           height: SCHEDULE_HEADER_HEIGHT,
-          padding: "0 28px",
+          padding: "0 32px",
           background: PAPER,
           borderBottom: `3px solid ${ACCENT}`,
         }}
       >
-        <div style={{ fontSize: 28, fontWeight: 700, color: INK }}>
+        <div
+          style={{ fontSize: SCHEDULE_FONT_TEAM, fontWeight: 700, color: INK }}
+        >
           {teamName}
         </div>
-        <div style={{ fontSize: 20, color: SUB, marginTop: 6 }}>
+        <div
+          style={{ fontSize: SCHEDULE_FONT_MONTH, color: SUB, marginTop: 8 }}
+        >
           {`${monthLabel} 練習予定`}
         </div>
       </div>
 
-      <div
-        style={{ display: "flex", flexDirection: "column", background: PAPER }}
-      >
-        {rows.map((row) => {
-          const hasPractice = row.entries.length > 0;
-          return (
-            <div
-              key={row.date}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                height: scheduleRowHeight(row.entries.length),
-                padding: "0 28px",
-                borderBottom: `1px solid ${HAIR}`,
-                background: hasPractice ? TINT : PAPER,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  width: 34,
-                  fontSize: 20,
-                  fontWeight: 700,
-                  color: dayColor(row.weekday, hasPractice),
-                }}
-              >
-                {String(row.day)}
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  width: 34,
-                  fontSize: 15,
-                  color: dayColor(row.weekday, hasPractice),
-                }}
-              >
-                {row.weekdayLabel}
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  flexGrow: 1,
-                }}
-              >
-                {row.entries.map((entry) => (
-                  <div
-                    key={`${entry.time}-${entry.location}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      height: 22,
-                      fontSize: 16,
-                      color: INK,
-                    }}
-                  >
-                    <div
-                      style={{ display: "flex", width: 120, fontWeight: 700 }}
-                    >
-                      {entry.time}
-                    </div>
-                    <div style={{ display: "flex" }}>{entry.location}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div style={{ display: "flex", flexGrow: 1, background: PAPER }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flexGrow: 1,
+            flexBasis: 0,
+            borderRight: `1px solid ${HAIR}`,
+          }}
+        >
+          {left.map((row) => (
+            <ScheduleRowView key={row.date} row={row} />
+          ))}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flexGrow: 1,
+            flexBasis: 0,
+          }}
+        >
+          {right.map((row) => (
+            <ScheduleRowView key={row.date} row={row} />
+          ))}
+        </div>
       </div>
 
       <div
@@ -151,10 +221,9 @@ export function ScheduleImage({
           display: "flex",
           alignItems: "center",
           justifyContent: "flex-end",
-          flexGrow: 1,
-          minHeight: SCHEDULE_FOOTER_HEIGHT,
-          padding: "0 28px",
-          fontSize: 13,
+          height: SCHEDULE_FOOTER_HEIGHT,
+          padding: "0 32px",
+          fontSize: SCHEDULE_FONT_FOOTER,
           color: FAINT,
         }}
       >

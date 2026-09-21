@@ -1,6 +1,5 @@
 import {
   collectScheduleText,
-  countExtraEntryLines,
   getScheduleImageData,
   isMonthString,
   SCHEDULE_IMAGE_WIDTH,
@@ -22,8 +21,10 @@ const MONTH_PNG_PATTERN = /^(\d{4}-\d{2})\.png$/;
 const CACHE_CONTROL = "public, s-maxage=600, stale-while-revalidate=86400";
 
 const FONT_FAMILY = "Noto Sans JP";
+// 「…」は長い場所名を省略するときに satori が入れる文字(textOverflow: ellipsis)。
+// サブセットに無いと豆腐になるのでここに含める
 /** 画像に必ず出る固定文言(サブセットに含める) */
-const STATIC_TEXT = "powered by hoopo 練習予定 場所未定";
+const STATIC_TEXT = "powered by hoopo 練習予定 場所未定…";
 // satori が読めるのは TTF / OTF / WOFF で woff2 は不可。woff2 を知らない古い UA で要求すると
 // Google Fonts が WOFF を返す(設計判断3: フォントはリポジトリに同梱せず実行時にサブセット取得)
 const LEGACY_USER_AGENT =
@@ -118,10 +119,8 @@ export async function GET(
     );
   }
 
-  const height = scheduleImageHeight(
-    data.rows.length,
-    countExtraEntryLines(data.rows),
-  );
+  // 高さは2カラムに割ったあとの左右の高いほうで決まる(schedule-layout.ts)
+  const height = scheduleImageHeight(data.rows);
   // Content-Type: image/png は ImageResponse が付ける
   return new ImageResponse(
     ScheduleImage({
