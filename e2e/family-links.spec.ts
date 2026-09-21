@@ -6,6 +6,7 @@ import {
   fullName,
   heightForGrade,
 } from "./child-input";
+import { expectNoAutoZoom } from "./form-font-size";
 import { gotoReady } from "./hydration";
 import { urls } from "./urls";
 
@@ -55,6 +56,8 @@ test("家族の設定からお子さんの生年月日・身長を直せる", as
 
   // 受け付ける学年(小学1年生〜中学1年生)の外はサーバーが断る(400 の文言をそのまま出す)
   await block.getByRole("button", { name: "編集" }).click();
+  // フォーム部品はどれも 16px 以上で描かれる(iOS の自動ズーム対策。Issue #205)
+  await expectNoAutoZoom(block);
   await block.getByLabel("生年月日").fill(birthDateForGrade(0));
   await expect(block).toContainText(
     "生年月日は小学1年生〜中学1年生の範囲で入力してください",

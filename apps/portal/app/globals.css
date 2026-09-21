@@ -39,8 +39,20 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: inherit;
   color: inherit;
+}
+button {
+  font-size: inherit;
+}
+/* フォーム部品の実効フォントサイズは 16px 以上にする(DESIGN_GUIDELINES §3)。
+ * iOS Safari はフォーカスした入力欄が 16px 未満だと自動で拡大し、blur しても倍率を戻さないため、
+ * 次の欄へ進むたびに手で縮小することになる(Issue #205)。
+ * ズーム禁止(user-scalable=no / maximum-scale=1)では解かない。ここを土台にして、
+ * 個別の規則が下回らないようにする(apps/portal/app/globals.test.ts が見張る) */
+input,
+select,
+textarea {
+  font-size: 16px;
 }
 
 a {
@@ -399,12 +411,14 @@ legend {
 .fld2 > legend.lbl {
   margin-bottom: 5px;
 }
+/* 入力欄の共通部品。文字は 16px(DESIGN_GUIDELINES §3。冒頭の input/select/textarea を参照)。
+ * 13px から上げたぶん、狭い画面で窮屈にならないよう左右の余白を 12px → 10px にしている */
 .inbox {
   background: var(--field);
   border: 1px solid var(--hair);
   border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 13px;
+  padding: 10px;
+  font-size: 16px;
   color: var(--ink);
   width: 100%;
   appearance: none;
@@ -412,8 +426,9 @@ legend {
 .inbox::placeholder {
   color: var(--faint);
 }
+/* 文字が 13px → 16px になって1行が高くなったぶん、見える行数(約3行)が変わらないよう高さを足す */
 textarea.inbox {
-  min-height: 70px;
+  min-height: 84px;
   resize: vertical;
 }
 .inbox.code {
@@ -1171,6 +1186,11 @@ textarea.inbox {
   align-items: center;
   gap: 8px;
 }
+/* 右のプルダウンが 16px になって幅を要るぶん、左(日付・時間・場所)を縮む側にする。
+ * min-width: 0 がないと flex アイテムは最小内容幅より縮まず、行がはみ出す */
+.sbr .top > :first-child {
+  min-width: 0;
+}
 .sbr .d {
   font-size: 13px;
   font-weight: 600;
@@ -1180,27 +1200,34 @@ textarea.inbox {
   font-size: 10.5px;
   color: var(--sub);
 }
+/* 回答のプルダウン。文字は 16px(DESIGN_GUIDELINES §3)。11.5px から 4.5px 上げたぶん、
+ * 「途中参加・早退」(全角7文字)が入るよう最大幅を 132px → 156px に広げた。
+ * 左の日付・場所と幅を取り合わないよう flex: none で縮まない側にしている(左は .top の min-width: 0 で折り返す)。
+ * font: inherit のあとに font-size を置かないと body の 13px に戻る(ここが Issue #205 の罠) */
 .sbr select {
   margin-left: auto;
+  flex: none;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--ink);
   background: #f1ede6;
   border: 1px solid var(--hair);
   border-radius: 9px;
   padding: 5px 6px;
-  max-width: 132px;
+  max-width: 156px;
+  /* タップ領域44px(DESIGN_GUIDELINES §3) */
+  min-height: 44px;
 }
 .sbr input {
   margin-top: 8px;
   width: 100%;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 16px;
   background: #fbf8f3;
   border: 1px solid var(--hair);
   border-radius: 9px;
-  padding: 7px 9px;
+  padding: 8px 9px;
   color: var(--ink);
 }
 .sbr input::placeholder {
