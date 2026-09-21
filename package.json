@@ -2,7 +2,7 @@
   "name": "hoopo",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@11.27.0",
   "engines": {
     "node": ">=22"
   },
