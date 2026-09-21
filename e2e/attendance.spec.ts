@@ -5,6 +5,7 @@ import {
   childNameInput,
   heightForGrade,
 } from "./child-input";
+import { expectNoAutoZoom } from "./form-font-size";
 import { uniqueMonth } from "./unique-month";
 import { urls } from "./urls";
 
@@ -101,6 +102,8 @@ test("リストで提出 → 再表示で保持され、カレンダーと同期
   await expect(page.locator(".sbr input")).toHaveCount(1);
   await expect(rows.first().locator("input")).toHaveCount(0);
   await rows.nth(1).locator("input").fill("11:00ごろ早退します");
+  // フォーム部品はどれも 16px 以上で描かれる(iOS の自動ズーム対策。Issue #205)
+  await expectNoAutoZoom(page.locator("main"));
   await expect(page.locator(".cta")).toContainText("( 回答 2 / 2 件 )");
 
   // CTA は確定させず確認へ進む(Issue #176)。実際に提出するのは確認の CTA

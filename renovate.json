@@ -15,6 +15,11 @@
       "groupName": "devDependencies (minor/patch)"
     },
     {
+      "description": "@types/node は実行環境(CI・Vercel・Docker の Node 24)と同じメジャーに固定する。系統が分かれていると devDependencies のまとめ PR でロックファイルが壊れる(#197)。Node 本体を上げるときにここも上げる",
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "<25"
+    },
+    {
       "description": "GitHub Actions もまとめる",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions"

@@ -2,7 +2,7 @@
   "name": "hoopo",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@11.27.0",
   "engines": {
     "node": ">=22"
   },
@@ -22,9 +22,9 @@
     "db:seed": "pnpm --filter @hoopo/db db:seed"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.12",
+    "@biomejs/biome": "2.5.14",
     "@playwright/test": "1.63.0",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.6",
     "supabase": "2.117.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"

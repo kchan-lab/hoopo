@@ -1,9 +1,19 @@
 import { closeAppDb } from "@hoopo/db";
 import postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { getScheduleImageData } from "../src/schedule-image";
+import {
+  getScheduleImageData,
+  SCHEDULE_FOOTER_HEIGHT,
+  SCHEDULE_HEADER_HEIGHT,
+  SCHEDULE_IMAGE_WIDTH,
+  SCHEDULE_ROW_HEIGHT,
+  scheduleColumnHeight,
+  scheduleImageHeight,
+  splitScheduleColumns,
+} from "../src/schedule-image";
 
 // 予定表画像のデータ取得(schedule-publish/plan.md 6b-2)を RLS 配下で検証する。
+// 実データから組んだ rows が2カラムのレイアウト計算に載ること(#204)もここで押さえる。
 // 画像そのものの描画は apps/portal(E2E)で確認する
 
 const owner = postgres(process.env.DATABASE_URL ?? "", {
@@ -72,5 +82,38 @@ describe("getScheduleImageData", () => {
     expect(data.rows.flatMap((r) => r.entries.map((e) => e.location))).toEqual([
       "他校",
     ]);
+  });
+});
+
+describe("実データの2カラムレイアウト(#204)", () => {
+  it("月の全日が左右どちらかのカラムに入り、縦横比が 1:1.2 に収まる", async () => {
+    const data = await getScheduleImageData(teamId, "2099-09");
+    const [left, right] = splitScheduleColumns(data.rows);
+    // 30日 → 左15行・右15行。日付は左が前半、右が後半で重複しない
+    expect([left.length, right.length]).toEqual([15, 15]);
+    expect([...left, ...right].map((r) => r.date)).toEqual(
+      data.rows.map((r) => r.date),
+    );
+    const height = scheduleImageHeight(data.rows);
+    expect(height).toBe(
+      SCHEDULE_HEADER_HEIGHT +
+        Math.max(scheduleColumnHeight(left), scheduleColumnHeight(right)) +
+        SCHEDULE_FOOTER_HEIGHT,
+    );
+    expect(height / SCHEDULE_IMAGE_WIDTH).toBeLessThanOrEqual(1.2);
+  });
+
+  it("練習ゼロの31日の月でも1画面に収まる高さになる", async () => {
+    const data = await getScheduleImageData(teamId, "2099-10");
+    const [left, right] = splitScheduleColumns(data.rows);
+    expect([left.length, right.length]).toEqual([16, 15]);
+    const height = scheduleImageHeight(data.rows);
+    expect(height / SCHEDULE_IMAGE_WIDTH).toBeLessThanOrEqual(1.2);
+    // 縦一列(31行)より確実に短い
+    expect(height).toBeLessThan(
+      SCHEDULE_HEADER_HEIGHT +
+        31 * SCHEDULE_ROW_HEIGHT +
+        SCHEDULE_FOOTER_HEIGHT,
+    );
   });
 });
