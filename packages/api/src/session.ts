@@ -24,7 +24,8 @@ export interface SessionPayload {
   exp: number;
 }
 
-async function importHmacKey(secretHex: string): Promise<CryptoKey> {
+// 戻り値の型は importKey から推論させる(@types/node 24 は CryptoKey を型として公開していない)
+async function importHmacKey(secretHex: string) {
   if (!KEY_HEX_PATTERN.test(secretHex)) {
     throw new Error(
       "SESSION_SECRET は 64 桁の hex(32 バイト)で指定してください",
