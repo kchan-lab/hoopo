@@ -1,5 +1,4 @@
 import {
-  SCHEDULE_ENTRY_LINE_HEIGHT,
   SCHEDULE_FONT_DAY,
   SCHEDULE_FONT_ENTRY,
   SCHEDULE_FONT_FOOTER,
@@ -9,9 +8,10 @@ import {
   SCHEDULE_FOOTER_HEIGHT,
   SCHEDULE_HEADER_HEIGHT,
   SCHEDULE_IMAGE_WIDTH,
+  SCHEDULE_ROW_HEIGHT,
   type ScheduleRow,
-  scheduleRowHeight,
-  splitScheduleColumns,
+  scheduleEntryFontSize,
+  scheduleEntryLineHeight,
 } from "@hoopo/api";
 import type { ReactElement } from "react";
 
@@ -19,7 +19,8 @@ import type { ReactElement } from "react";
 // 色は apps/portal/app/globals.css のトークンと同じ値(保護者側=薄いオレンジ。CLAUDE.md 絶対原則6)。
 // satori は flexbox のみを解釈するため、display: flex を明示し、テキストは末端の要素に置く
 // (grid は使えない)。
-// 縦一列だと 720×1524 で1画面に収まらないため、左=月の前半 / 右=後半の2カラムに折り返す(#204)
+// 縦1列・1日1行で、スマホの全画面表示に1か月が収まる縦長にする(#215。#204 の2カラムを見直し)。
+// 行の高さは固定で、同じ日に複数コマある日は行の中に縦に積んで文字を小さくする
 
 const BG = "#f5f3ef";
 const PAPER = "#fff";
@@ -32,11 +33,13 @@ const TINT = "#fcebda";
 const DEEP = "#9c4e0e";
 
 /** 行の左右の余白 */
-const ROW_PADDING = 16;
-/** 日付・曜日・時間の桁を左右のカラムで揃えるための固定幅 */
-const DAY_WIDTH = 46;
-const WEEKDAY_WIDTH = 38;
-const TIME_WIDTH = 146;
+const ROW_PADDING = 28;
+/** 日付・曜日・時間の桁を揃えるための固定幅(時間は 1件のときの文字サイズで「18:30–21:00」が入る幅) */
+const DAY_WIDTH = 64;
+const WEEKDAY_WIDTH = 64;
+const TIME_WIDTH = 250;
+/** 曜日と時間の間 */
+const ENTRY_GAP = 12;
 
 /** 日曜は deep、土曜は sub、平日は ink(練習の無い日は薄く) */
 function dayColor(weekday: number, hasPractice: boolean): string {
@@ -47,12 +50,14 @@ function dayColor(weekday: number, hasPractice: boolean): string {
 
 function ScheduleRowView({ row }: { row: ScheduleRow }): ReactElement {
   const hasPractice = row.entries.length > 0;
+  const entryHeight = scheduleEntryLineHeight(row.entries.length);
+  const entryFont = scheduleEntryFontSize(row.entries.length);
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        height: scheduleRowHeight(row.entries.length),
+        height: SCHEDULE_ROW_HEIGHT,
         padding: `0 ${ROW_PADDING}px`,
         borderBottom: `1px solid ${HAIR}`,
         background: hasPractice ? TINT : PAPER,
@@ -94,6 +99,7 @@ function ScheduleRowView({ row }: { row: ScheduleRow }): ReactElement {
           flexBasis: 0,
           minWidth: 0,
           overflow: "hidden",
+          marginLeft: ENTRY_GAP,
         }}
       >
         {row.entries.map((entry) => (
@@ -103,8 +109,8 @@ function ScheduleRowView({ row }: { row: ScheduleRow }): ReactElement {
               display: "flex",
               alignItems: "center",
               width: "100%",
-              height: SCHEDULE_ENTRY_LINE_HEIGHT,
-              fontSize: SCHEDULE_FONT_ENTRY,
+              height: entryHeight,
+              fontSize: entryFont,
               color: INK,
               overflow: "hidden",
             }}
@@ -112,7 +118,8 @@ function ScheduleRowView({ row }: { row: ScheduleRow }): ReactElement {
             <div
               style={{
                 display: "flex",
-                width: TIME_WIDTH,
+                // 複数コマの日は文字が小さいぶん時間の幅も縮めて、場所に幅を回す
+                width: (TIME_WIDTH * entryFont) / SCHEDULE_FONT_ENTRY,
                 flexShrink: 0,
                 fontWeight: 700,
               }}
@@ -152,7 +159,6 @@ export function ScheduleImage({
   rows,
   height,
 }: ScheduleImageProps): ReactElement {
-  const [left, right] = splitScheduleColumns(rows);
   return (
     <div
       style={{
@@ -182,38 +188,23 @@ export function ScheduleImage({
           {teamName}
         </div>
         <div
-          style={{ fontSize: SCHEDULE_FONT_MONTH, color: SUB, marginTop: 8 }}
+          style={{ fontSize: SCHEDULE_FONT_MONTH, color: SUB, marginTop: 6 }}
         >
           {`${monthLabel} 練習予定`}
         </div>
       </div>
 
-      <div style={{ display: "flex", flexGrow: 1, background: PAPER }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flexGrow: 1,
-            flexBasis: 0,
-            borderRight: `1px solid ${HAIR}`,
-          }}
-        >
-          {left.map((row) => (
-            <ScheduleRowView key={row.date} row={row} />
-          ))}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flexGrow: 1,
-            flexBasis: 0,
-          }}
-        >
-          {right.map((row) => (
-            <ScheduleRowView key={row.date} row={row} />
-          ))}
-        </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flexGrow: 1,
+          background: PAPER,
+        }}
+      >
+        {rows.map((row) => (
+          <ScheduleRowView key={row.date} row={row} />
+        ))}
       </div>
 
       <div
