@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/kchan-lab/hoopo/compare/v0.7.0...v0.8.0) (2026-09-22)
+
+
+### Features
+
+* 予定表画像を縦1列に戻し、スマホ1画面に1か月が収まる縦長にする ([#216](https://github.com/kchan-lab/hoopo/issues/216)) ([1b1db4a](https://github.com/kchan-lab/hoopo/commit/1b1db4a69c99fcae8fec19ad5e6f11c35dce1328))
+
 ## [0.7.0](https://github.com/kchan-lab/hoopo/compare/v0.6.0...v0.7.0) (2026-09-21)
 
 
