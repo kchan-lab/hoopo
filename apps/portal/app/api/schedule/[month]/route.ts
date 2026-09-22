@@ -119,7 +119,7 @@ export async function GET(
     );
   }
 
-  // 高さは2カラムに割ったあとの左右の高いほうで決まる(schedule-layout.ts)
+  // 行の高さは固定なので高さは日数で決まる(schedule-layout.ts)
   const height = scheduleImageHeight(data.rows);
   // Content-Type: image/png は ImageResponse が付ける
   return new ImageResponse(
